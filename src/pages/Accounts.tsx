@@ -12,37 +12,25 @@ export default function Accounts() {
       <h1>Accounts API</h1>
       <p>View and test account management endpoints</p>
 
-      <div style={{ marginBottom: '20px', padding: '15px', backgroundColor: '#e7f3ff', borderRadius: '4px' }}>
-        <label style={{ display: 'block', marginBottom: '10px' }}>
+      <div className="mb-5 p-4 bg-blue-50 rounded">
+        <label className="block mb-2.5">
           <strong>Filter by User ID:</strong>
           <input
             type="text"
             value={userId}
             onChange={(e) => setUserId(e.target.value)}
             placeholder="Enter user ID (optional)"
-            style={{
-              marginLeft: '10px',
-              padding: '5px',
-              width: '300px',
-              border: '1px solid #ddd',
-              borderRadius: '4px',
-            }}
+            className="ml-2.5 p-1 w-[300px] border border-gray-300 rounded"
           />
         </label>
-        <label style={{ display: 'block' }}>
+        <label className="block">
           <strong>Account ID (for single operations):</strong>
           <input
             type="text"
             value={accountId}
             onChange={(e) => setAccountId(e.target.value)}
             placeholder="Enter account ID"
-            style={{
-              marginLeft: '10px',
-              padding: '5px',
-              width: '300px',
-              border: '1px solid #ddd',
-              borderRadius: '4px',
-            }}
+            className="ml-2.5 p-1 w-[300px] border border-gray-300 rounded"
           />
         </label>
       </div>
@@ -71,7 +59,7 @@ export default function Accounts() {
         }}
       />
 
-      <div style={{ marginTop: '30px' }}>
+      <div className="mt-8">
         <h2>Test Endpoints</h2>
         <EndpointTester
           method="GET"
@@ -80,15 +68,7 @@ export default function Accounts() {
           children={
             <button
               onClick={() => setRefreshKey((k) => k + 1)}
-              style={{
-                marginBottom: '10px',
-                padding: '5px 10px',
-                backgroundColor: '#28a745',
-                color: 'white',
-                border: 'none',
-                borderRadius: '4px',
-                cursor: 'pointer',
-              }}
+              className="mb-2.5 px-2.5 py-1 bg-green-600 text-white border-none rounded cursor-pointer hover:bg-green-700"
             >
               Refresh Data After Test
             </button>
@@ -107,15 +87,7 @@ export default function Accounts() {
           children={
             <button
               onClick={() => setRefreshKey((k) => k + 1)}
-              style={{
-                marginBottom: '10px',
-                padding: '5px 10px',
-                backgroundColor: '#28a745',
-                color: 'white',
-                border: 'none',
-                borderRadius: '4px',
-                cursor: 'pointer',
-              }}
+              className="mb-2.5 px-2.5 py-1 bg-green-600 text-white border-none rounded cursor-pointer hover:bg-green-700"
             >
               Refresh Data After Create
             </button>
@@ -141,15 +113,7 @@ export default function Accounts() {
               children={
                 <button
                   onClick={() => setRefreshKey((k) => k + 1)}
-                  style={{
-                    marginBottom: '10px',
-                    padding: '5px 10px',
-                    backgroundColor: '#28a745',
-                    color: 'white',
-                    border: 'none',
-                    borderRadius: '4px',
-                    cursor: 'pointer',
-                  }}
+                  className="mb-2.5 px-2.5 py-1 bg-green-600 text-white border-none rounded cursor-pointer hover:bg-green-700"
                 >
                   Refresh Data After Update
                 </button>
@@ -165,15 +129,7 @@ export default function Accounts() {
                     setRefreshKey((k) => k + 1)
                     setAccountId('')
                   }}
-                  style={{
-                    marginBottom: '10px',
-                    padding: '5px 10px',
-                    backgroundColor: '#28a745',
-                    color: 'white',
-                    border: 'none',
-                    borderRadius: '4px',
-                    cursor: 'pointer',
-                  }}
+                  className="mb-2.5 px-2.5 py-1 bg-green-600 text-white border-none rounded cursor-pointer hover:bg-green-700"
                 >
                   Refresh Data After Delete
                 </button>

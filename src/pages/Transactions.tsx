@@ -14,8 +14,8 @@ export default function Transactions() {
       <h1>Transactions API</h1>
       <p>View and test transaction management endpoints</p>
 
-      <div style={{ marginBottom: '20px', padding: '15px', backgroundColor: '#e7f3ff', borderRadius: '4px' }}>
-        <div style={{ display: 'flex', gap: '15px', flexWrap: 'wrap', marginBottom: '10px' }}>
+      <div className="mb-5 p-4 bg-blue-50 rounded">
+        <div className="flex gap-4 flex-wrap mb-2.5">
           <label>
             <strong>Filter by Account ID:</strong>
             <input
@@ -23,13 +23,7 @@ export default function Transactions() {
               value={accountId}
               onChange={(e) => setAccountId(e.target.value)}
               placeholder="Optional"
-              style={{
-                marginLeft: '10px',
-                padding: '5px',
-                width: '200px',
-                border: '1px solid #ddd',
-                borderRadius: '4px',
-              }}
+              className="ml-2.5 p-1 w-[200px] border border-gray-300 rounded"
             />
           </label>
           <label>
@@ -39,13 +33,7 @@ export default function Transactions() {
               value={assetId}
               onChange={(e) => setAssetId(e.target.value)}
               placeholder="Optional"
-              style={{
-                marginLeft: '10px',
-                padding: '5px',
-                width: '200px',
-                border: '1px solid #ddd',
-                borderRadius: '4px',
-              }}
+              className="ml-2.5 p-1 w-[200px] border border-gray-300 rounded"
             />
           </label>
           <label>
@@ -55,30 +43,18 @@ export default function Transactions() {
               value={type}
               onChange={(e) => setType(e.target.value)}
               placeholder="Optional"
-              style={{
-                marginLeft: '10px',
-                padding: '5px',
-                width: '200px',
-                border: '1px solid #ddd',
-                borderRadius: '4px',
-              }}
+              className="ml-2.5 p-1 w-[200px] border border-gray-300 rounded"
             />
           </label>
         </div>
-        <label style={{ display: 'block' }}>
+        <label className="block">
           <strong>Transaction ID (for single operations):</strong>
           <input
             type="text"
             value={transactionId}
             onChange={(e) => setTransactionId(e.target.value)}
             placeholder="Enter transaction ID"
-            style={{
-              marginLeft: '10px',
-              padding: '5px',
-              width: '300px',
-              border: '1px solid #ddd',
-              borderRadius: '4px',
-            }}
+            className="ml-2.5 p-1 w-[300px] border border-gray-300 rounded"
           />
         </label>
       </div>
@@ -136,7 +112,7 @@ export default function Transactions() {
         }}
       />
 
-      <div style={{ marginTop: '30px' }}>
+      <div className="mt-8">
         <h2>Test Endpoints</h2>
         <EndpointTester
           method="GET"
@@ -149,15 +125,7 @@ export default function Transactions() {
           children={
             <button
               onClick={() => setRefreshKey((k) => k + 1)}
-              style={{
-                marginBottom: '10px',
-                padding: '5px 10px',
-                backgroundColor: '#28a745',
-                color: 'white',
-                border: 'none',
-                borderRadius: '4px',
-                cursor: 'pointer',
-              }}
+              className="mb-2.5 px-2.5 py-1 bg-green-600 text-white border-none rounded cursor-pointer hover:bg-green-700"
             >
               Refresh Data After Test
             </button>
@@ -181,15 +149,7 @@ export default function Transactions() {
           children={
             <button
               onClick={() => setRefreshKey((k) => k + 1)}
-              style={{
-                marginBottom: '10px',
-                padding: '5px 10px',
-                backgroundColor: '#28a745',
-                color: 'white',
-                border: 'none',
-                borderRadius: '4px',
-                cursor: 'pointer',
-              }}
+              className="mb-2.5 px-2.5 py-1 bg-green-600 text-white border-none rounded cursor-pointer hover:bg-green-700"
             >
               Refresh Data After Create
             </button>
@@ -213,15 +173,7 @@ export default function Transactions() {
               children={
                 <button
                   onClick={() => setRefreshKey((k) => k + 1)}
-                  style={{
-                    marginBottom: '10px',
-                    padding: '5px 10px',
-                    backgroundColor: '#28a745',
-                    color: 'white',
-                    border: 'none',
-                    borderRadius: '4px',
-                    cursor: 'pointer',
-                  }}
+                  className="mb-2.5 px-2.5 py-1 bg-green-600 text-white border-none rounded cursor-pointer hover:bg-green-700"
                 >
                   Refresh Data After Update
                 </button>
@@ -237,15 +189,7 @@ export default function Transactions() {
                     setRefreshKey((k) => k + 1)
                     setTransactionId('')
                   }}
-                  style={{
-                    marginBottom: '10px',
-                    padding: '5px 10px',
-                    backgroundColor: '#28a745',
-                    color: 'white',
-                    border: 'none',
-                    borderRadius: '4px',
-                    cursor: 'pointer',
-                  }}
+                  className="mb-2.5 px-2.5 py-1 bg-green-600 text-white border-none rounded cursor-pointer hover:bg-green-700"
                 >
                   Refresh Data After Delete
                 </button>
@@ -261,15 +205,7 @@ export default function Transactions() {
                     setRefreshKey((k) => k + 1)
                     setTransactionId('')
                   }}
-                  style={{
-                    marginBottom: '10px',
-                    padding: '5px 10px',
-                    backgroundColor: '#28a745',
-                    color: 'white',
-                    border: 'none',
-                    borderRadius: '4px',
-                    cursor: 'pointer',
-                  }}
+                  className="mb-2.5 px-2.5 py-1 bg-green-600 text-white border-none rounded cursor-pointer hover:bg-green-700"
                 >
                   Refresh Data After Hard Delete
                 </button>

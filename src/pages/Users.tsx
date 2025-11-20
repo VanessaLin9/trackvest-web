@@ -31,7 +31,7 @@ export default function Users() {
         }}
       />
 
-      <div style={{ marginTop: '30px' }}>
+      <div className="mt-8">
         <h2>Test Endpoints</h2>
         <EndpointTester
           method="GET"
@@ -39,15 +39,7 @@ export default function Users() {
           children={
             <button
               onClick={() => setRefreshKey((k) => k + 1)}
-              style={{
-                marginBottom: '10px',
-                padding: '5px 10px',
-                backgroundColor: '#28a745',
-                color: 'white',
-                border: 'none',
-                borderRadius: '4px',
-                cursor: 'pointer',
-              }}
+              className="mb-2.5 px-2.5 py-1 bg-green-600 text-white border-none rounded cursor-pointer hover:bg-green-700"
             >
               Refresh Data After Test
             </button>
@@ -64,15 +56,7 @@ export default function Users() {
           children={
             <button
               onClick={() => setRefreshKey((k) => k + 1)}
-              style={{
-                marginBottom: '10px',
-                padding: '5px 10px',
-                backgroundColor: '#28a745',
-                color: 'white',
-                border: 'none',
-                borderRadius: '4px',
-                cursor: 'pointer',
-              }}
+              className="mb-2.5 px-2.5 py-1 bg-green-600 text-white border-none rounded cursor-pointer hover:bg-green-700"
             >
               Refresh Data After Create
             </button>

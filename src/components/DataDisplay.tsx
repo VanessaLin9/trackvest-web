@@ -44,54 +44,26 @@ export default function DataDisplay({
   }
 
   return (
-    <div
-      style={{
-        marginBottom: '30px',
-        border: '1px solid #ddd',
-        borderRadius: '8px',
-        padding: '20px',
-        backgroundColor: 'white',
-      }}
-    >
-      <div
-        style={{
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'center',
-          marginBottom: '15px',
-        }}
-      >
-        <h2 style={{ margin: 0 }}>{title}</h2>
+    <div className="mb-8 border border-gray-300 rounded-lg p-5 bg-white">
+      <div className="flex justify-between items-center mb-4">
+        <h2 className="m-0">{title}</h2>
         <button
           onClick={() => refetch()}
           disabled={isLoading}
-          style={{
-            padding: '8px 16px',
-            backgroundColor: '#007bff',
-            color: 'white',
-            border: 'none',
-            borderRadius: '4px',
-            cursor: isLoading ? 'not-allowed' : 'pointer',
-            opacity: isLoading ? 0.6 : 1,
-          }}
+          className={`px-4 py-2 bg-blue-600 text-white border-none rounded cursor-pointer transition-opacity ${
+            isLoading ? 'opacity-60 cursor-not-allowed' : 'hover:bg-blue-700'
+          }`}
         >
           {isLoading ? 'Loading...' : '🔄 Refresh'}
         </button>
       </div>
 
       {isLoading && (
-        <div style={{ padding: '20px', textAlign: 'center' }}>Loading...</div>
+        <div className="p-5 text-center">Loading...</div>
       )}
 
       {error && (
-        <div
-          style={{
-            padding: '15px',
-            backgroundColor: '#f8d7da',
-            color: '#721c24',
-            borderRadius: '4px',
-          }}
-        >
+        <div className="p-4 bg-red-100 text-red-800 rounded">
           <strong>Error:</strong>{' '}
           {(error as any)?.response?.data?.message || String(error)}
         </div>
@@ -99,7 +71,7 @@ export default function DataDisplay({
 
       {!isLoading && !error && data && (
         <>
-          <div style={{ marginBottom: '10px', color: '#666', fontSize: '14px' }}>
+          <div className="mb-2.5 text-gray-600 text-sm">
             Found {data.length} {data.length === 1 ? 'item' : 'items'}
           </div>
           <DataTable

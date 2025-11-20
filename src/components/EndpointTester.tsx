@@ -76,80 +76,46 @@ export default function EndpointTester({
     }
   }
 
+  const methodColors = {
+    GET: 'text-green-600',
+    POST: 'text-blue-600',
+    PATCH: 'text-yellow-600',
+    DELETE: 'text-red-600',
+  }
+
   return (
-    <div
-      style={{
-        border: '1px solid #ddd',
-        borderRadius: '8px',
-        padding: '20px',
-        marginBottom: '20px',
-      }}
-    >
-      <div style={{ marginBottom: '15px' }}>
+    <div className="border border-gray-300 rounded-lg p-5 mb-5">
+      <div className="mb-4">
         <code
-          style={{
-            display: 'inline-block',
-            padding: '4px 8px',
-            backgroundColor: '#f0f0f0',
-            borderRadius: '4px',
-            marginRight: '10px',
-            fontWeight: 'bold',
-            color:
-              method === 'GET'
-                ? '#28a745'
-                : method === 'POST'
-                  ? '#007bff'
-                  : method === 'PATCH'
-                    ? '#ffc107'
-                    : '#dc3545',
-          }}
+          className={`inline-block px-2 py-1 bg-gray-100 rounded mr-2.5 font-bold ${methodColors[method]}`}
         >
           {method}
         </code>
-        <code style={{ fontSize: '14px' }}>{endpoint}</code>
+        <code className="text-sm">{endpoint}</code>
       </div>
 
       {children}
 
       {method !== 'GET' && (
-        <div style={{ marginBottom: '15px' }}>
-          <label
-            style={{
-              display: 'block',
-              marginBottom: '5px',
-              fontWeight: 'bold',
-            }}
-          >
+        <div className="mb-4">
+          <label className="block mb-1 font-bold">
             Request Body (JSON):
           </label>
           <textarea
             value={body}
             onChange={(e) => setBody(e.target.value)}
-            style={{
-              width: '100%',
-              minHeight: '150px',
-              fontFamily: 'monospace',
-              padding: '10px',
-              border: '1px solid #ddd',
-              borderRadius: '4px',
-            }}
+            className="w-full min-h-[150px] font-mono p-2.5 border border-gray-300 rounded"
           />
         </div>
       )}
 
       {Object.keys(params).length > 0 && (
-        <div style={{ marginBottom: '15px' }}>
-          <label
-            style={{
-              display: 'block',
-              marginBottom: '5px',
-              fontWeight: 'bold',
-            }}
-          >
+        <div className="mb-4">
+          <label className="block mb-1 font-bold">
             Query Parameters:
           </label>
           {Object.entries(params).map(([key, value]) => (
-            <div key={key} style={{ marginBottom: '5px' }}>
+            <div key={key} className="mb-1">
               <input
                 type="text"
                 placeholder={key}
@@ -157,13 +123,7 @@ export default function EndpointTester({
                 onChange={(e) =>
                   setParams({ ...params, [key]: e.target.value })
                 }
-                style={{
-                  width: '200px',
-                  padding: '5px',
-                  marginRight: '10px',
-                  border: '1px solid #ddd',
-                  borderRadius: '4px',
-                }}
+                className="w-[200px] p-1 mr-2.5 border border-gray-300 rounded"
               />
             </div>
           ))}
@@ -173,64 +133,36 @@ export default function EndpointTester({
       <button
         onClick={handleSubmit}
         disabled={loading}
-        style={{
-          padding: '10px 20px',
-          backgroundColor: '#007bff',
-          color: 'white',
-          border: 'none',
-          borderRadius: '4px',
-          cursor: loading ? 'not-allowed' : 'pointer',
-          opacity: loading ? 0.6 : 1,
-        }}
+        className={`px-5 py-2.5 bg-blue-600 text-white border-none rounded transition-opacity ${
+          loading
+            ? 'opacity-60 cursor-not-allowed'
+            : 'cursor-pointer hover:bg-blue-700'
+        }`}
       >
         {loading ? 'Loading...' : 'Send Request'}
       </button>
 
       {error && (
-        <div
-          style={{
-            marginTop: '15px',
-            padding: '10px',
-            backgroundColor: '#f8d7da',
-            color: '#721c24',
-            borderRadius: '4px',
-          }}
-        >
+        <div className="mt-4 p-2.5 bg-red-100 text-red-800 rounded">
           <strong>Error:</strong> {error}
         </div>
       )}
 
       {response && (
-        <div style={{ marginTop: '15px' }}>
-          <div
-            style={{
-              padding: '10px',
-              backgroundColor: '#f8f9fa',
-              borderRadius: '4px',
-            }}
-          >
+        <div className="mt-4">
+          <div className="p-2.5 bg-gray-50 rounded">
             <strong>Status:</strong>{' '}
             <span
-              style={{
-                color:
-                  response.status >= 200 && response.status < 300
-                    ? '#28a745'
-                    : '#dc3545',
-              }}
+              className={
+                response.status >= 200 && response.status < 300
+                  ? 'text-green-600'
+                  : 'text-red-600'
+              }
             >
               {response.status}
             </span>
           </div>
-          <pre
-            style={{
-              marginTop: '10px',
-              padding: '15px',
-              backgroundColor: '#f8f9fa',
-              borderRadius: '4px',
-              overflow: 'auto',
-              maxHeight: '400px',
-            }}
-          >
+          <pre className="mt-2.5 p-4 bg-gray-50 rounded overflow-auto max-h-[400px]">
             {JSON.stringify(response.data, null, 2)}
           </pre>
         </div>

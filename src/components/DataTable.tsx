@@ -15,42 +15,21 @@ export default function DataTable<T extends Record<string, any>>({
 }: DataTableProps<T>) {
   if (data.length === 0) {
     return (
-      <div
-        style={{
-          padding: '20px',
-          textAlign: 'center',
-          color: '#666',
-          backgroundColor: '#f8f9fa',
-          borderRadius: '4px',
-        }}
-      >
+      <div className="p-5 text-center text-gray-600 bg-gray-50 rounded">
         No data available
       </div>
     )
   }
 
   return (
-    <div style={{ overflowX: 'auto' }}>
-      <table
-        style={{
-          width: '100%',
-          borderCollapse: 'collapse',
-          backgroundColor: 'white',
-          borderRadius: '4px',
-          overflow: 'hidden',
-        }}
-      >
+    <div className="overflow-x-auto">
+      <table className="w-full border-collapse bg-white rounded overflow-hidden">
         <thead>
-          <tr style={{ backgroundColor: '#f8f9fa' }}>
+          <tr className="bg-gray-50">
             {columns.map((col) => (
               <th
                 key={String(col.key)}
-                style={{
-                  padding: '12px',
-                  textAlign: 'left',
-                  fontWeight: 'bold',
-                  borderBottom: '2px solid #dee2e6',
-                }}
+                className="p-3 text-left font-bold border-b-2 border-gray-300"
               >
                 {col.label}
               </th>
@@ -62,19 +41,9 @@ export default function DataTable<T extends Record<string, any>>({
             <tr
               key={idx}
               onClick={() => onRowClick?.(row)}
-              style={{
-                cursor: onRowClick ? 'pointer' : 'default',
-                borderBottom: '1px solid #dee2e6',
-                transition: 'background-color 0.2s',
-              }}
-              onMouseEnter={(e) => {
-                if (onRowClick) {
-                  e.currentTarget.style.backgroundColor = '#f8f9fa'
-                }
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.backgroundColor = 'white'
-              }}
+              className={`border-b border-gray-300 transition-colors ${
+                onRowClick ? 'cursor-pointer hover:bg-gray-50' : ''
+              }`}
             >
               {columns.map((col) => {
                 const value = col.render
@@ -83,10 +52,7 @@ export default function DataTable<T extends Record<string, any>>({
                 return (
                   <td
                     key={String(col.key)}
-                    style={{
-                      padding: '12px',
-                      borderBottom: '1px solid #dee2e6',
-                    }}
+                    className="p-3 border-b border-gray-300"
                   >
                     {value ?? '-'}
                   </td>

@@ -13,30 +13,19 @@ export default function Layout() {
   const location = useLocation()
 
   return (
-    <div style={{ display: 'flex', minHeight: '100vh' }}>
-      <nav
-        style={{
-          width: '200px',
-          backgroundColor: '#f5f5f5',
-          padding: '20px',
-          borderRight: '1px solid #ddd',
-        }}
-      >
-        <h2 style={{ marginTop: 0, marginBottom: '20px' }}>API Testing</h2>
-        <ul style={{ listStyle: 'none', padding: 0, margin: 0 }}>
+    <div className="flex min-h-screen">
+      <nav className="w-[200px] bg-gray-100 p-5 border-r border-gray-300">
+        <h2 className="mt-0 mb-5">API Testing</h2>
+        <ul className="list-none p-0 m-0">
           {navItems.map((item) => (
-            <li key={item.path} style={{ marginBottom: '10px' }}>
+            <li key={item.path} className="mb-2.5">
               <Link
                 to={item.path}
-                style={{
-                  display: 'block',
-                  padding: '10px',
-                  textDecoration: 'none',
-                  color: location.pathname === item.path ? '#007bff' : '#333',
-                  backgroundColor:
-                    location.pathname === item.path ? '#e7f3ff' : 'transparent',
-                  borderRadius: '4px',
-                }}
+                className={`block p-2.5 no-underline rounded ${
+                  location.pathname === item.path
+                    ? 'text-blue-600 bg-blue-50'
+                    : 'text-gray-800 bg-transparent hover:bg-gray-50'
+                }`}
               >
                 {item.label}
               </Link>
@@ -44,7 +33,7 @@ export default function Layout() {
           ))}
         </ul>
       </nav>
-      <main style={{ flex: 1, padding: '20px' }}>
+      <main className="flex-1 p-5">
         <Outlet />
       </main>
     </div>
