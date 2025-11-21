@@ -1,13 +1,7 @@
 import { Outlet, Link, useLocation } from 'react-router-dom'
+import { getNavItems } from '../app/route-config'
 
-const navItems = [
-  { path: '/', label: 'Health' },
-  { path: '/users', label: 'Users' },
-  { path: '/accounts', label: 'Accounts' },
-  { path: '/assets', label: 'Assets' },
-  { path: '/transactions', label: 'Transactions' },
-  { path: '/gl', label: 'GL Ledger' },
-]
+const navItems = getNavItems()
 
 export default function Layout() {
   const location = useLocation()
