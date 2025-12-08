@@ -7,6 +7,7 @@ interface EndpointTesterProps {
   defaultBody?: Record<string, any>
   queryParams?: Record<string, string>
   children?: React.ReactNode
+  defaultHeaders?: Record<string, string>
 }
 
 export default function EndpointTester({
@@ -15,12 +16,17 @@ export default function EndpointTester({
   defaultBody = {},
   queryParams = {},
   children,
+  defaultHeaders = {},
 }: EndpointTesterProps) {
   const [body, setBody] = useState(JSON.stringify(defaultBody, null, 2))
   const [params, setParams] = useState<Record<string, string>>(queryParams)
   const [response, setResponse] = useState<any>(null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const headers = {
+    'Content-Type': 'application/json',
+    ...defaultHeaders,
+  }
 
   const handleSubmit = async () => {
     setLoading(true)
@@ -42,16 +48,16 @@ export default function EndpointTester({
       let result
       switch (method) {
         case 'GET':
-          result = await api.get(url)
+          result = await api.get(url, { headers })
           break
         case 'POST':
-          result = await api.post(endpoint, parsedBody)
+          result = await api.post(endpoint, parsedBody, { headers })
           break
         case 'PATCH':
-          result = await api.patch(endpoint, parsedBody)
+          result = await api.patch(endpoint, parsedBody, { headers })
           break
         case 'DELETE':
-          result = await api.delete(endpoint)
+          result = await api.delete(endpoint, { headers })
           break
       }
 
