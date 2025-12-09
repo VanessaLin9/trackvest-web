@@ -51,13 +51,13 @@ export default function EndpointTester({
           result = await api.get(url, { headers })
           break
         case 'POST':
-          result = await api.post(endpoint, parsedBody, { headers })
+          result = await api.post(url, parsedBody, { headers })
           break
         case 'PATCH':
-          result = await api.patch(endpoint, parsedBody, { headers })
+          result = await api.patch(url, parsedBody, { headers })
           break
         case 'DELETE':
-          result = await api.delete(endpoint, { headers })
+          result = await api.delete(url, { headers })
           break
       }
 
