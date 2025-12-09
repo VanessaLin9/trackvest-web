@@ -36,7 +36,7 @@ type GlEntry = {
 
 type FormMode = 'expense' | 'income'
 
-const DEMO_USER_ID = import.meta.env.VITE_DEMO_USER
+const DEMO_USER_ID = import.meta.env.VITE_DEMO_USER_ID
 
 export default function CashbookPage() {
   const [accounts, setAccounts] = useState<GlAccount[]>([])
