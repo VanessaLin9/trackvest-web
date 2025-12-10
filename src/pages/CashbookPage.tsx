@@ -89,28 +89,15 @@ export default function CashbookPage() {
       try {
         setLoadingAccounts(true)
         setError(null)
-        const res = await api.get<GlAccount[]>('/gl/accounts', { headers })
-        setAccounts(res.data)
-
-        // Auto-select first asset account as default cash/bank account
-        const firstAsset = res.data.find((a) => a.type === 'asset')
-        if (firstAsset) {
-          setSelectedAccountId(firstAsset.id)
-        }
-
-        // Auto-select first expense/income category
-        if (expenseAccounts.length > 0) {
-          setCategoryId(expenseAccounts[0].id)
-        } else if (incomeAccounts.length > 0) {
-          setCategoryId(incomeAccounts[0].id)
-        }
+        const expenseAccounts = await api.get<GlAccount[]>('/gl/accounts', { headers, params: { userId: DEMO_USER_ID, type: 'expense' } })
+        const incomeAccounts = await api.get<GlAccount[]>('/gl/accounts', { headers, params: { userId: DEMO_USER_ID, type: 'income' } })
+        setAccounts([...expenseAccounts.data, ...incomeAccounts.data])
       } catch (err: any) {
         setError(err.response?.data?.message || err.message || 'Failed to load accounts')
       } finally {
         setLoadingAccounts(false)
       }
     }
-
     loadAccounts().catch(console.error)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
