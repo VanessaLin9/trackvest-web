@@ -1,38 +1,10 @@
 // src/pages/CashbookPage.tsx
 import { useEffect, useMemo, useState } from 'react'
-import { api } from '../lib/api'
-
-type GlAccountType = 'asset' | 'liability' | 'equity' | 'income' | 'expense'
-
-type GlAccount = {
-  id: string
-  userId: string
-  name: string
-  type: GlAccountType
-  currency: string
-  linkedAccountId?: string | null
-}
-
-// NOTE: This is a guess based on your docs.
-// Adjust field names to match your real /gl/entries response.
-type GlLine = {
-  id: string
-  glAccountId: string
-  glAccountName?: string
-  side: 'debit' | 'credit'
-  amount: number
-  currency: string
-}
-
-type GlEntry = {
-  id: string
-  userId: string
-  date: string
-  memo?: string | null
-  source?: string
-  refTxId?: string | null
-  lines?: GlLine[]
-}
+import {
+  cashbookService,
+  type GlAccount,
+  type GlEntry,
+} from '../lib/cashbook.service'
 
 type FormMode = 'expense' | 'income'
 
@@ -51,13 +23,6 @@ export default function CashbookPage() {
   const [loadingEntries, setLoadingEntries] = useState(false)
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
-
-  const headers = useMemo(
-    () => ({
-      'X-User-Id': DEMO_USER_ID || '',
-    }),
-    []
-  )
 
   const assetAccounts = useMemo(
     () => accounts.filter((a) => a.type === 'asset'),
@@ -86,56 +51,38 @@ export default function CashbookPage() {
   // Load GL accounts on mount
   useEffect(() => {
     async function loadAccounts() {
+      if (!DEMO_USER_ID) return
       try {
         setLoadingAccounts(true)
         setError(null)
-        const expenseAccounts = await api.get<GlAccount[]>('/gl/accounts', { headers, params: { userId: DEMO_USER_ID, type: 'expense' } })
-        const incomeAccounts = await api.get<GlAccount[]>('/gl/accounts', { headers, params: { userId: DEMO_USER_ID, type: 'income' } })
-        const accounts = [...expenseAccounts.data, ...incomeAccounts.data]
+        const [expenseAccounts, incomeAccounts] = await Promise.all([
+          cashbookService.getGlAccounts(DEMO_USER_ID, 'expense'),
+          cashbookService.getGlAccounts(DEMO_USER_ID, 'income'),
+        ])
+        const accounts = [...expenseAccounts, ...incomeAccounts]
         console.log('accounts', accounts)
         setAccounts(accounts)
         if (accounts.length > 0) {
           setSelectedAccountId(accounts[0].id)
         }
-      } catch (err: any) {
-        setError(err.response?.data?.message || err.message || 'Failed to load accounts')
+      } catch (err: unknown) {
+        const errorMessage =
+          err && typeof err === 'object' && 'response' in err
+            ? (err.response as { data?: { message?: string } })?.data?.message
+            : err instanceof Error
+            ? err.message
+            : 'Failed to load accounts'
+        setError(errorMessage || 'Failed to load accounts')
       } finally {
         setLoadingAccounts(false)
       }
     }
     loadAccounts().catch(console.error)
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
-
-  // Load entries whenever selectedAccountId changes
-  useEffect(() => {
-    if (!selectedAccountId) return
-
-    async function loadEntries() {
-      try {
-        setLoadingEntries(true)
-        setError(null)
-        const res = await api.get<GlEntry[]>('/gl/entries', {
-          headers,
-          params: {
-            accountId: selectedAccountId,
-            // TODO: add from/to filters if you want
-          },
-        })
-        setEntries(res.data)
-      } catch (err: any) {
-        setError(err.response?.data?.message || err.message || 'Failed to load entries')
-      } finally {
-        setLoadingEntries(false)
-      }
-    }
-
-    loadEntries().catch(console.error)
-  }, [selectedAccountId, headers])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (!selectedAccountId || !amount || !categoryId) return
+    if (!selectedAccountId || !amount || !categoryId || !DEMO_USER_ID) return
 
     try {
       setSubmitting(true)
@@ -157,39 +104,40 @@ export default function CashbookPage() {
         memo: memo || undefined,
       }
 
-      let endpoint = ''
-      let body: Record<string, unknown> = {}
-
       if (mode === 'expense') {
-        endpoint = '/gl/expense'
-        body = {
+        await cashbookService.postExpense({
           ...payloadBase,
           payFromGlAccountId: selectedAccountId,
           expenseGlAccountId: categoryId,
-        }
+        })
       } else {
-        endpoint = '/gl/income'
-        body = {
+        await cashbookService.postIncome({
           ...payloadBase,
           receiveToGlAccountId: selectedAccountId,
           incomeGlAccountId: categoryId,
-        }
+        })
       }
-
-      await api.post(endpoint, body, { headers })
 
       // Reset basic fields
       setAmount('')
       setMemo('')
 
       // Reload entries after successful post
-      const res = await api.get<GlEntry[]>('/gl/entries', {
-        headers,
-        params: { accountId: selectedAccountId },
-      })
-      setEntries(res.data)
-    } catch (err: any) {
-      setError(err.response?.data?.message || err.message || 'Failed to post entry')
+      setLoadingEntries(true)
+      try {
+        const entries = await cashbookService.getGlEntries(DEMO_USER_ID, selectedAccountId)
+        setEntries(entries)
+      } finally {
+        setLoadingEntries(false)
+      }
+    } catch (err: unknown) {
+      const errorMessage =
+        err && typeof err === 'object' && 'response' in err
+          ? (err.response as { data?: { message?: string } })?.data?.message
+          : err instanceof Error
+          ? err.message
+          : 'Failed to post entry'
+      setError(errorMessage || 'Failed to post entry')
     } finally {
       setSubmitting(false)
     }
