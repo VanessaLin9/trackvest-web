@@ -48,6 +48,15 @@ export default function CashbookPage() {
     return map
   }, [accounts])
 
+  useEffect(() => {
+    async function loadEntries() {
+      const entries = await cashbookService.getGlEntries(DEMO_USER_ID)
+      console.log('entries', entries)
+      setEntries(entries)
+    }
+    loadEntries().catch(console.error)
+  }, [])
+
   // Load GL accounts on mount
   useEffect(() => {
     async function loadAccounts() {
@@ -60,7 +69,6 @@ export default function CashbookPage() {
           cashbookService.getGlAccounts(DEMO_USER_ID, 'income'),
         ])
         const accounts = [...expenseAccounts, ...incomeAccounts]
-        console.log('accounts', accounts)
         setAccounts(accounts)
         if (accounts.length > 0) {
           setSelectedAccountId(accounts[0].id)

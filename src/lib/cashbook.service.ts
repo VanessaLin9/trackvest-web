@@ -71,7 +71,7 @@ export const cashbookService = {
   /**
    * Get GL entries for a specific account
    */
-  async getGlEntries(userId: string, accountId: string): Promise<GlEntry[]> {
+  async getGlEntries(userId: string, accountId: string = 'All'): Promise<GlEntry[]> {
     const response = await api.get<GlEntry[]>('/gl/entries', {
       headers: getHeaders(userId),
       params: { accountId },
