@@ -91,7 +91,12 @@ export default function CashbookPage() {
         setError(null)
         const expenseAccounts = await api.get<GlAccount[]>('/gl/accounts', { headers, params: { userId: DEMO_USER_ID, type: 'expense' } })
         const incomeAccounts = await api.get<GlAccount[]>('/gl/accounts', { headers, params: { userId: DEMO_USER_ID, type: 'income' } })
-        setAccounts([...expenseAccounts.data, ...incomeAccounts.data])
+        const accounts = [...expenseAccounts.data, ...incomeAccounts.data]
+        console.log('accounts', accounts)
+        setAccounts(accounts)
+        if (accounts.length > 0) {
+          setSelectedAccountId(accounts[0].id)
+        }
       } catch (err: any) {
         setError(err.response?.data?.message || err.message || 'Failed to load accounts')
       } finally {
