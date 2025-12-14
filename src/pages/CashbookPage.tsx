@@ -50,12 +50,17 @@ export default function CashbookPage() {
 
   useEffect(() => {
     async function loadEntries() {
-      const entries = await cashbookService.getGlEntries(DEMO_USER_ID)
-      console.log('entries', entries)
-      setEntries(entries)
+      if (!DEMO_USER_ID || !selectedAccountId) return
+      setLoadingEntries(true)
+      try {
+        const entries = await cashbookService.getGlEntries(DEMO_USER_ID, selectedAccountId)
+        setEntries(entries)
+      } finally {
+        setLoadingEntries(false)
+      }
     }
     loadEntries().catch(console.error)
-  }, [])
+  }, [selectedAccountId])
 
   // Load GL accounts on mount
   useEffect(() => {
@@ -64,15 +69,18 @@ export default function CashbookPage() {
       try {
         setLoadingAccounts(true)
         setError(null)
-        const [expenseAccounts, incomeAccounts] = await Promise.all([
+        const [expenseAccounts, incomeAccounts, assetAccounts] = await Promise.all([
           cashbookService.getGlAccounts(DEMO_USER_ID, 'expense'),
           cashbookService.getGlAccounts(DEMO_USER_ID, 'income'),
+          cashbookService.getGlAccounts(DEMO_USER_ID, 'asset'),
         ])
-        const accounts = [...expenseAccounts, ...incomeAccounts]
+        const accounts = [...expenseAccounts, ...incomeAccounts, ...assetAccounts]
         setAccounts(accounts)
         if (accounts.length > 0) {
           setSelectedAccountId(accounts[0].id)
         }
+        if (mode === 'expense' && expenseAccounts.length > 0) setSelectedAccountId(expenseAccounts[0].id)
+        if (mode === 'income' && incomeAccounts.length > 0) setSelectedAccountId(incomeAccounts[0].id)
       } catch (err: unknown) {
         const errorMessage =
           err && typeof err === 'object' && 'response' in err
