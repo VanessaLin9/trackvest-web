@@ -44,6 +44,16 @@ function formatCurrency(value: number) {
   })
 }
 
+function formatSignedCurrency(value: number) {
+  const prefix = value > 0 ? '+' : value < 0 ? '-' : ''
+  return `${prefix}${formatCurrency(Math.abs(value))}`
+}
+
+function formatPercent(value: number) {
+  const prefix = value > 0 ? '+' : value < 0 ? '-' : ''
+  return `${prefix}${Math.abs(value).toFixed(2)}%`
+}
+
 function formatDateTime(value: string) {
   return new Date(value).toLocaleString()
 }
@@ -189,21 +199,41 @@ export default function Dashboard() {
       'manual:expense',
       monthStart,
     )
-    const monthIncome = sumCashLineAmounts(
-      entries,
-      assetAccountIds,
-      'manual:income',
-      monthStart,
+    const investmentFlows = transactions.reduce(
+      (totals, transaction) => {
+        const amount = Number(transaction.amount)
+        if (!Number.isFinite(amount)) {
+          return totals
+        }
+
+        if (transaction.type === 'buy' || transaction.type === 'deposit') {
+          totals.investedCapital += amount
+        }
+
+        if (transaction.type === 'sell' || transaction.type === 'dividend') {
+          totals.realizedValue += amount
+        }
+
+        return totals
+      },
+      { investedCapital: 0, realizedValue: 0 },
     )
-    const monthInvestmentCount = transactions.filter(
-      (transaction) => new Date(transaction.tradeTime) >= monthStart,
-    ).length
+
+    const totalInvestmentAssets =
+      investmentFlows.investedCapital + investmentFlows.realizedValue
+    const totalReturnAmount =
+      investmentFlows.realizedValue - investmentFlows.investedCapital
+    const totalReturnRate =
+      investmentFlows.investedCapital > 0
+        ? (totalReturnAmount / investmentFlows.investedCapital) * 100
+        : 0
 
     return {
       todayExpense,
       monthExpense,
-      monthIncome,
-      monthInvestmentCount,
+      totalInvestmentAssets,
+      totalReturnAmount,
+      totalReturnRate,
     }
   }, [assetAccountIds, entries, monthStart, todayStart, transactions])
 
@@ -308,16 +338,6 @@ export default function Dashboard() {
         </div>
 
         <div className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm">
-          <p className="text-sm text-gray-500">Month income</p>
-          <p className="mt-3 text-3xl font-semibold text-green-600">
-            {formatCurrency(dashboardMetrics.monthIncome)}
-          </p>
-          <p className="mt-2 text-xs text-gray-500">
-            Based on current `manual:income` cash-side entries.
-          </p>
-        </div>
-
-        <div className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm">
           <p className="text-sm text-gray-500">Month expense</p>
           <p className="mt-3 text-3xl font-semibold text-slate-900">
             {formatCurrency(dashboardMetrics.monthExpense)}
@@ -328,12 +348,33 @@ export default function Dashboard() {
         </div>
 
         <div className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm">
-          <p className="text-sm text-gray-500">Investment actions</p>
+          <p className="text-sm text-gray-500">Total investment assets</p>
           <p className="mt-3 text-3xl font-semibold text-blue-700">
-            {dashboardMetrics.monthInvestmentCount}
+            {formatCurrency(dashboardMetrics.totalInvestmentAssets)}
           </p>
           <p className="mt-2 text-xs text-gray-500">
-            Transactions recorded this month in the investment flow.
+            Temporary estimate from recorded investment transaction flows.
+          </p>
+        </div>
+
+        <div className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm">
+          <p className="text-sm text-gray-500">Total return</p>
+          <p
+            className={`mt-3 text-3xl font-semibold ${
+              dashboardMetrics.totalReturnAmount > 0
+                ? 'text-green-600'
+                : dashboardMetrics.totalReturnAmount < 0
+                ? 'text-red-600'
+                : 'text-slate-900'
+            }`}
+          >
+            {formatSignedCurrency(dashboardMetrics.totalReturnAmount)}
+          </p>
+          <p className="mt-2 text-sm font-medium text-gray-600">
+            {formatPercent(dashboardMetrics.totalReturnRate)}
+          </p>
+          <p className="mt-2 text-xs text-gray-500">
+            Placeholder return model until we add a real portfolio summary API.
           </p>
         </div>
       </section>
