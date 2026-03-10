@@ -50,6 +50,16 @@ type PostIncomePayload = {
   incomeGlAccountId: string
 }
 
+type PostTransferPayload = {
+  userId: string
+  amount: number
+  currency: string
+  date: string
+  memo?: string
+  fromGlAccountId: string
+  toGlAccountId: string
+}
+
 function getHeaders(userId: string) {
   return {
     'X-User-Id': userId,
@@ -96,5 +106,13 @@ export const cashbookService = {
       headers: getHeaders(payload.userId),
     })
   },
-}
 
+  /**
+   * Post a transfer entry
+   */
+  async postTransfer(payload: PostTransferPayload): Promise<void> {
+    await api.post('/gl/transfer', payload, {
+      headers: getHeaders(payload.userId),
+    })
+  },
+}

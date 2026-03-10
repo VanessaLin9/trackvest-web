@@ -1,4 +1,3 @@
-// src/pages/CashbookPage.tsx
 import { useEffect, useMemo, useState } from 'react'
 import {
   cashbookService,
@@ -6,116 +5,205 @@ import {
   type GlEntry,
 } from '../lib/cashbook.service'
 
-type FormMode = 'expense' | 'income'
+type FormMode = 'expense' | 'income' | 'transfer'
 
 const DEMO_USER_ID = import.meta.env.VITE_DEMO_USER_ID
+
+function getErrorMessage(err: unknown, fallback: string) {
+  if (err && typeof err === 'object' && 'response' in err) {
+    return (
+      (err.response as { data?: { message?: string } })?.data?.message ??
+      fallback
+    )
+  }
+
+  if (err instanceof Error) {
+    return err.message
+  }
+
+  return fallback
+}
 
 export default function CashbookPage() {
   const [accounts, setAccounts] = useState<GlAccount[]>([])
   const [entries, setEntries] = useState<GlEntry[]>([])
-  const [selectedAccountId, setSelectedAccountId] = useState<string>('')
   const [mode, setMode] = useState<FormMode>('expense')
+  const [cashAccountId, setCashAccountId] = useState('')
+  const [categoryId, setCategoryId] = useState('')
+  const [transferToAccountId, setTransferToAccountId] = useState('')
+  const [entryFilterAccountId, setEntryFilterAccountId] = useState('All')
   const [amount, setAmount] = useState('')
   const [date, setDate] = useState(() => new Date().toISOString().slice(0, 10))
   const [memo, setMemo] = useState('')
-  const [categoryId, setCategoryId] = useState<string>('')
   const [loadingAccounts, setLoadingAccounts] = useState(false)
   const [loadingEntries, setLoadingEntries] = useState(false)
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [successMessage, setSuccessMessage] = useState<string | null>(null)
 
   const assetAccounts = useMemo(
-    () => accounts.filter((a) => a.type === 'asset'),
-    [accounts]
+    () => accounts.filter((account) => account.type === 'asset'),
+    [accounts],
   )
 
   const expenseAccounts = useMemo(
-    () => accounts.filter((a) => a.type === 'expense'),
-    [accounts]
+    () => accounts.filter((account) => account.type === 'expense'),
+    [accounts],
   )
 
   const incomeAccounts = useMemo(
-    () => accounts.filter((a) => a.type === 'income'),
-    [accounts]
+    () => accounts.filter((account) => account.type === 'income'),
+    [accounts],
   )
 
-  // Build a map for accountId -> name (for rendering entry lines)
+  const categoryOptions = useMemo(
+    () => (mode === 'expense' ? expenseAccounts : incomeAccounts),
+    [expenseAccounts, incomeAccounts, mode],
+  )
+
+  const selectedCashAccount = useMemo(
+    () => assetAccounts.find((account) => account.id === cashAccountId),
+    [assetAccounts, cashAccountId],
+  )
+
+  const transferTargetOptions = useMemo(() => {
+    if (!selectedCashAccount) {
+      return []
+    }
+
+    return assetAccounts.filter(
+      (account) =>
+        account.id !== selectedCashAccount.id &&
+        account.currency === selectedCashAccount.currency,
+    )
+  }, [assetAccounts, selectedCashAccount])
+
   const accountNameMap = useMemo(() => {
     const map: Record<string, string> = {}
-    for (const a of accounts) {
-      map[a.id] = a.name
+
+    for (const account of accounts) {
+      map[account.id] = account.name
     }
+
     return map
   }, [accounts])
 
-  useEffect(() => {
-    async function loadEntries() {
-      if (!DEMO_USER_ID || !selectedAccountId) return
-      setLoadingEntries(true)
-      try {
-        const entries = await cashbookService.getGlEntries(DEMO_USER_ID, selectedAccountId)
-        setEntries(entries)
-      } finally {
-        setLoadingEntries(false)
-      }
+  async function loadEntries(accountId: string) {
+    if (!DEMO_USER_ID) {
+      return
     }
-    loadEntries().catch(console.error)
-  }, [selectedAccountId])
 
-  // Load GL accounts on mount
+    setLoadingEntries(true)
+    try {
+      const loadedEntries = await cashbookService.getGlEntries(
+        DEMO_USER_ID,
+        accountId,
+      )
+      setEntries(loadedEntries)
+    } catch (err: unknown) {
+      setError(getErrorMessage(err, 'Failed to load entries'))
+    } finally {
+      setLoadingEntries(false)
+    }
+  }
+
   useEffect(() => {
+    if (!DEMO_USER_ID) {
+      return
+    }
+
     async function loadAccounts() {
-      if (!DEMO_USER_ID) return
       try {
         setLoadingAccounts(true)
         setError(null)
-        const [expenseAccounts, incomeAccounts, assetAccounts] = await Promise.all([
-          cashbookService.getGlAccounts(DEMO_USER_ID, 'expense'),
-          cashbookService.getGlAccounts(DEMO_USER_ID, 'income'),
-          cashbookService.getGlAccounts(DEMO_USER_ID, 'asset'),
-        ])
-        const accounts = [...expenseAccounts, ...incomeAccounts, ...assetAccounts]
-        setAccounts(accounts)
-        if (accounts.length > 0) {
-          setSelectedAccountId(accounts[0].id)
+        const [loadedExpenseAccounts, loadedIncomeAccounts, loadedAssetAccounts] =
+          await Promise.all([
+            cashbookService.getGlAccounts(DEMO_USER_ID, 'expense'),
+            cashbookService.getGlAccounts(DEMO_USER_ID, 'income'),
+            cashbookService.getGlAccounts(DEMO_USER_ID, 'asset'),
+          ])
+
+        const loadedAccounts = [
+          ...loadedExpenseAccounts,
+          ...loadedIncomeAccounts,
+          ...loadedAssetAccounts,
+        ]
+
+        setAccounts(loadedAccounts)
+
+        if (loadedAssetAccounts.length > 0) {
+          setCashAccountId((current) => current || loadedAssetAccounts[0].id)
         }
-        if (mode === 'expense' && expenseAccounts.length > 0) setSelectedAccountId(expenseAccounts[0].id)
-        if (mode === 'income' && incomeAccounts.length > 0) setSelectedAccountId(incomeAccounts[0].id)
       } catch (err: unknown) {
-        const errorMessage =
-          err && typeof err === 'object' && 'response' in err
-            ? (err.response as { data?: { message?: string } })?.data?.message
-            : err instanceof Error
-            ? err.message
-            : 'Failed to load accounts'
-        setError(errorMessage || 'Failed to load accounts')
+        setError(getErrorMessage(err, 'Failed to load accounts'))
       } finally {
         setLoadingAccounts(false)
       }
     }
+
     loadAccounts().catch(console.error)
   }, [])
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    if (!selectedAccountId || !amount || !categoryId || !DEMO_USER_ID) return
+  useEffect(() => {
+    if (mode === 'transfer') {
+      setCategoryId('')
+      setTransferToAccountId((current) => {
+        if (current && transferTargetOptions.some((account) => account.id === current)) {
+          return current
+        }
+
+        return transferTargetOptions[0]?.id ?? ''
+      })
+      return
+    }
+
+    setTransferToAccountId('')
+    setCategoryId((current) => {
+      if (current && categoryOptions.some((account) => account.id === current)) {
+        return current
+      }
+
+      return categoryOptions[0]?.id ?? ''
+    })
+  }, [categoryOptions, mode, transferTargetOptions])
+
+  useEffect(() => {
+    loadEntries(entryFilterAccountId).catch(console.error)
+  }, [entryFilterAccountId])
+
+  const handleSubmit = async (event: React.FormEvent) => {
+    event.preventDefault()
+
+    if (!DEMO_USER_ID || !selectedCashAccount) {
+      setError('A cash or bank account is required')
+      return
+    }
+
+    const numericAmount = Number(amount)
+    if (!Number.isFinite(numericAmount) || numericAmount <= 0) {
+      setError('Amount must be a positive number')
+      return
+    }
+
+    if (mode !== 'transfer' && !categoryId) {
+      setError(`Please select a ${mode} category`)
+      return
+    }
+
+    if (mode === 'transfer' && !transferToAccountId) {
+      setError('Please select the destination account')
+      return
+    }
 
     try {
       setSubmitting(true)
       setError(null)
-
-      const numericAmount = Number(amount)
-      if (Number.isNaN(numericAmount) || numericAmount <= 0) {
-        setError('Amount must be a positive number')
-        setSubmitting(false)
-        return
-      }
+      setSuccessMessage(null)
 
       const payloadBase = {
         userId: DEMO_USER_ID,
         amount: numericAmount,
-        currency:
-          assetAccounts.find((a) => a.id === selectedAccountId)?.currency ?? 'TWD',
+        currency: selectedCashAccount.currency,
         date: new Date(date).toISOString(),
         memo: memo || undefined,
       }
@@ -123,37 +211,31 @@ export default function CashbookPage() {
       if (mode === 'expense') {
         await cashbookService.postExpense({
           ...payloadBase,
-          payFromGlAccountId: selectedAccountId,
+          payFromGlAccountId: selectedCashAccount.id,
           expenseGlAccountId: categoryId,
         })
-      } else {
+        setSuccessMessage('Expense saved')
+      } else if (mode === 'income') {
         await cashbookService.postIncome({
           ...payloadBase,
-          receiveToGlAccountId: selectedAccountId,
+          receiveToGlAccountId: selectedCashAccount.id,
           incomeGlAccountId: categoryId,
         })
+        setSuccessMessage('Income saved')
+      } else {
+        await cashbookService.postTransfer({
+          ...payloadBase,
+          fromGlAccountId: selectedCashAccount.id,
+          toGlAccountId: transferToAccountId,
+        })
+        setSuccessMessage('Transfer saved')
       }
 
-      // Reset basic fields
       setAmount('')
       setMemo('')
-
-      // Reload entries after successful post
-      setLoadingEntries(true)
-      try {
-        const entries = await cashbookService.getGlEntries(DEMO_USER_ID, selectedAccountId)
-        setEntries(entries)
-      } finally {
-        setLoadingEntries(false)
-      }
+      await loadEntries(entryFilterAccountId)
     } catch (err: unknown) {
-      const errorMessage =
-        err && typeof err === 'object' && 'response' in err
-          ? (err.response as { data?: { message?: string } })?.data?.message
-          : err instanceof Error
-          ? err.message
-          : 'Failed to post entry'
-      setError(errorMessage || 'Failed to post entry')
+      setError(getErrorMessage(err, 'Failed to save entry'))
     } finally {
       setSubmitting(false)
     }
@@ -161,8 +243,8 @@ export default function CashbookPage() {
 
   if (!DEMO_USER_ID) {
     return (
-      <div className="max-w-3xl mx-auto">
-        <h1 className="text-2xl font-semibold mb-4">Cashbook</h1>
+      <div className="mx-auto max-w-5xl">
+        <h1 className="mb-4 text-2xl font-semibold">Cashbook</h1>
         <p className="text-red-600">
           VITE_DEMO_USER_ID is not set. Please set it in your .env file.
         </p>
@@ -171,223 +253,306 @@ export default function CashbookPage() {
   }
 
   return (
-    <div className="max-w-4xl mx-auto space-y-6">
-      <h1 className="text-2xl font-semibold mb-2">Cashbook</h1>
-      <p className="text-sm text-gray-600 mb-4">
-        Simple cash/bank bookkeeping using GL endpoints.
-      </p>
+    <div className="mx-auto max-w-6xl space-y-6">
+      <header className="space-y-2">
+        <h1 className="text-3xl font-semibold">Cashbook</h1>
+        <p className="max-w-2xl text-sm text-gray-600">
+          Record daily expenses, income, and transfers without thinking in
+          debit and credit. The ledger below stays available as a verification
+          layer.
+        </p>
+      </header>
 
       {error && (
-        <div className="p-3 rounded bg-red-100 text-red-800">
+        <div className="rounded border border-red-200 bg-red-50 px-4 py-3 text-red-800">
           <strong>Error:</strong> {error}
         </div>
       )}
 
-      {/* Account selector */}
-      <section className="space-y-2 border border-gray-200 rounded p-4">
-        <h2 className="text-lg font-medium mb-2">Account</h2>
-
-        {loadingAccounts ? (
-          <p>Loading accounts...</p>
-        ) : assetAccounts.length === 0 ? (
-          <p className="text-sm text-gray-600">
-            No asset-type GL accounts found. Please seed some cash/bank GL accounts first.
-          </p>
-        ) : (
-          <div className="space-y-2">
-            <label className="block text-sm font-medium text-gray-700">
-              Cash / Bank account
-            </label>
-            <select
-              className="border rounded px-3 py-2 w-full max-w-md"
-              value={selectedAccountId}
-              onChange={(e) => setSelectedAccountId(e.target.value)}
-            >
-              {assetAccounts.map((acct) => (
-                <option key={acct.id} value={acct.id}>
-                  {acct.name} ({acct.currency})
-                </option>
-              ))}
-            </select>
-          </div>
-        )}
-      </section>
-
-      {/* Entry form */}
-      <section className="space-y-3 border border-gray-200 rounded p-4">
-        <h2 className="text-lg font-medium mb-2">New entry</h2>
-
-        {/* Mode toggle */}
-        <div className="flex gap-2 mb-2">
-          <button
-            type="button"
-            onClick={() => setMode('expense')}
-            className={`px-3 py-1 rounded text-sm border ${
-              mode === 'expense'
-                ? 'bg-red-50 text-red-700 border-red-300'
-                : 'bg-white text-gray-700 border-gray-300'
-            }`}
-          >
-            Expense
-          </button>
-          <button
-            type="button"
-            onClick={() => setMode('income')}
-            className={`px-3 py-1 rounded text-sm border ${
-              mode === 'income'
-                ? 'bg-green-50 text-green-700 border-green-300'
-                : 'bg-white text-gray-700 border-gray-300'
-            }`}
-          >
-            Income
-          </button>
+      {successMessage && (
+        <div className="rounded border border-green-200 bg-green-50 px-4 py-3 text-green-800">
+          {successMessage}
         </div>
+      )}
 
-        <form onSubmit={handleSubmit} className="grid gap-3 md:grid-cols-2">
-          <div className="space-y-1">
-            <label className="block text-sm font-medium text-gray-700">
-              Amount
-            </label>
-            <input
-              type="number"
-              step="0.01"
-              min="0"
-              value={amount}
-              onChange={(e) => setAmount(e.target.value)}
-              className="border rounded px-3 py-2 w-full"
-            />
-          </div>
-
-          <div className="space-y-1">
-            <label className="block text-sm font-medium text-gray-700">
-              Date
-            </label>
-            <input
-              type="date"
-              value={date}
-              onChange={(e) => setDate(e.target.value)}
-              className="border rounded px-3 py-2 w-full"
-            />
-          </div>
-
-          <div className="space-y-1">
-            <label className="block text-sm font-medium text-gray-700">
-              Category
-            </label>
-            <select
-              className="border rounded px-3 py-2 w-full"
-              value={categoryId}
-              onChange={(e) => setCategoryId(e.target.value)}
-            >
-              {(mode === 'expense' ? expenseAccounts : incomeAccounts).map((acct) => (
-                <option key={acct.id} value={acct.id}>
-                  {acct.name}
-                </option>
-              ))}
-            </select>
-            {mode === 'expense' && expenseAccounts.length === 0 && (
-              <p className="text-xs text-gray-500 mt-1">
-                No expense-type GL accounts. You may want to create some (e.g. Food, Rent).
-              </p>
-            )}
-            {mode === 'income' && incomeAccounts.length === 0 && (
-              <p className="text-xs text-gray-500 mt-1">
-                No income-type GL accounts. You may want to create some (e.g. Salary, Dividend).
-              </p>
-            )}
-          </div>
-
-          <div className="space-y-1 md:col-span-2">
-            <label className="block text-sm font-medium text-gray-700">
-              Memo
-            </label>
-            <input
-              type="text"
-              value={memo}
-              onChange={(e) => setMemo(e.target.value)}
-              className="border rounded px-3 py-2 w-full"
-              placeholder={mode === 'expense' ? 'e.g. Lunch' : 'e.g. Salary (partial)'}
-            />
-          </div>
-
-          <div className="md:col-span-2">
+      <section className="grid gap-6 lg:grid-cols-[1.1fr_0.9fr]">
+        <div className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm">
+          <div className="mb-4 flex flex-wrap gap-2">
             <button
-              type="submit"
-              disabled={submitting || !selectedAccountId}
-              className={`px-4 py-2 rounded text-white text-sm ${
-                submitting || !selectedAccountId
-                  ? 'bg-gray-400 cursor-not-allowed'
-                  : mode === 'expense'
-                  ? 'bg-red-600 hover:bg-red-700'
-                  : 'bg-green-600 hover:bg-green-700'
+              type="button"
+              onClick={() => setMode('expense')}
+              className={`rounded-full px-4 py-2 text-sm font-medium ${
+                mode === 'expense'
+                  ? 'bg-red-600 text-white'
+                  : 'bg-red-50 text-red-700'
               }`}
             >
-              {submitting
-                ? 'Saving...'
-                : mode === 'expense'
-                ? 'Save expense'
-                : 'Save income'}
+              Expense
+            </button>
+            <button
+              type="button"
+              onClick={() => setMode('income')}
+              className={`rounded-full px-4 py-2 text-sm font-medium ${
+                mode === 'income'
+                  ? 'bg-green-600 text-white'
+                  : 'bg-green-50 text-green-700'
+              }`}
+            >
+              Income
+            </button>
+            <button
+              type="button"
+              onClick={() => setMode('transfer')}
+              className={`rounded-full px-4 py-2 text-sm font-medium ${
+                mode === 'transfer'
+                  ? 'bg-slate-700 text-white'
+                  : 'bg-slate-100 text-slate-700'
+              }`}
+            >
+              Transfer
             </button>
           </div>
-        </form>
+
+          <form onSubmit={handleSubmit} className="grid gap-4 md:grid-cols-2">
+            <div className="space-y-1">
+              <label className="block text-sm font-medium text-gray-700">
+                Cash / bank account
+              </label>
+              <select
+                value={cashAccountId}
+                onChange={(event) => setCashAccountId(event.target.value)}
+                disabled={loadingAccounts || assetAccounts.length === 0}
+                className="w-full rounded border border-gray-300 px-3 py-2"
+              >
+                {assetAccounts.length === 0 && <option value="">No cash accounts</option>}
+                {assetAccounts.map((account) => (
+                  <option key={account.id} value={account.id}>
+                    {account.name} ({account.currency})
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div className="space-y-1">
+              <label className="block text-sm font-medium text-gray-700">
+                Date
+              </label>
+              <input
+                type="date"
+                value={date}
+                onChange={(event) => setDate(event.target.value)}
+                className="w-full rounded border border-gray-300 px-3 py-2"
+              />
+            </div>
+
+            <div className="space-y-1">
+              <label className="block text-sm font-medium text-gray-700">
+                Amount
+              </label>
+              <input
+                type="number"
+                step="0.01"
+                min="0"
+                value={amount}
+                onChange={(event) => setAmount(event.target.value)}
+                placeholder="0.00"
+                className="w-full rounded border border-gray-300 px-3 py-2"
+              />
+            </div>
+
+            {mode === 'transfer' ? (
+              <div className="space-y-1">
+                <label className="block text-sm font-medium text-gray-700">
+                  To account
+                </label>
+                <select
+                  value={transferToAccountId}
+                  onChange={(event) => setTransferToAccountId(event.target.value)}
+                  disabled={transferTargetOptions.length === 0}
+                  className="w-full rounded border border-gray-300 px-3 py-2"
+                >
+                  {transferTargetOptions.length === 0 && (
+                    <option value="">No same-currency account available</option>
+                  )}
+                  {transferTargetOptions.map((account) => (
+                    <option key={account.id} value={account.id}>
+                      {account.name} ({account.currency})
+                    </option>
+                  ))}
+                </select>
+              </div>
+            ) : (
+              <div className="space-y-1">
+                <label className="block text-sm font-medium text-gray-700">
+                  {mode === 'expense' ? 'Expense category' : 'Income category'}
+                </label>
+                <select
+                  value={categoryId}
+                  onChange={(event) => setCategoryId(event.target.value)}
+                  disabled={categoryOptions.length === 0}
+                  className="w-full rounded border border-gray-300 px-3 py-2"
+                >
+                  {categoryOptions.length === 0 && <option value="">No category available</option>}
+                  {categoryOptions.map((account) => (
+                    <option key={account.id} value={account.id}>
+                      {account.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )}
+
+            <div className="space-y-1 md:col-span-2">
+              <label className="block text-sm font-medium text-gray-700">
+                Memo
+              </label>
+              <input
+                type="text"
+                value={memo}
+                onChange={(event) => setMemo(event.target.value)}
+                placeholder={
+                  mode === 'expense'
+                    ? 'e.g. Lunch, groceries'
+                    : mode === 'income'
+                    ? 'e.g. Salary, reimbursement'
+                    : 'e.g. Move funds to brokerage'
+                }
+                className="w-full rounded border border-gray-300 px-3 py-2"
+              />
+            </div>
+
+            <div className="md:col-span-2 flex items-center justify-between rounded-lg bg-gray-50 px-4 py-3">
+              <div className="text-sm text-gray-600">
+                {selectedCashAccount ? (
+                  <span>
+                    Posting in <strong>{selectedCashAccount.currency}</strong>
+                  </span>
+                ) : (
+                  'Select a cash or bank account to continue'
+                )}
+              </div>
+              <button
+                type="submit"
+                disabled={submitting || !selectedCashAccount}
+                className={`rounded px-4 py-2 text-sm font-medium text-white ${
+                  submitting || !selectedCashAccount
+                    ? 'cursor-not-allowed bg-gray-400'
+                    : mode === 'expense'
+                    ? 'bg-red-600 hover:bg-red-700'
+                    : mode === 'income'
+                    ? 'bg-green-600 hover:bg-green-700'
+                    : 'bg-slate-700 hover:bg-slate-800'
+                }`}
+              >
+                {submitting
+                  ? 'Saving...'
+                  : mode === 'expense'
+                  ? 'Save expense'
+                  : mode === 'income'
+                  ? 'Save income'
+                  : 'Save transfer'}
+              </button>
+            </div>
+          </form>
+        </div>
+
+        <aside className="rounded-xl border border-gray-200 bg-gray-50 p-5 shadow-sm">
+          <h2 className="mb-3 text-lg font-semibold">What this page does</h2>
+          <ul className="space-y-2 text-sm text-gray-700">
+            <li>Uses asset-type GL accounts as cash and bank accounts.</li>
+            <li>Uses expense and income GL accounts as categories.</li>
+            <li>Limits transfers to same-currency accounts to avoid bad entries.</li>
+            <li>Keeps the ledger view visible so you can audit what was posted.</li>
+          </ul>
+        </aside>
       </section>
 
-      {/* Entries list */}
-      <section className="space-y-2 border border-gray-200 rounded p-4">
-        <h2 className="text-lg font-medium mb-2">Entries</h2>
+      <section className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm">
+        <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <h2 className="text-lg font-semibold">Recent ledger entries</h2>
+            <p className="text-sm text-gray-600">
+              Use this as a validation view while the product flow is still
+              maturing.
+            </p>
+          </div>
+
+          <div className="flex items-center gap-2">
+            <label className="text-sm font-medium text-gray-700">
+              View account
+            </label>
+            <select
+              value={entryFilterAccountId}
+              onChange={(event) => setEntryFilterAccountId(event.target.value)}
+              className="rounded border border-gray-300 px-3 py-2 text-sm"
+            >
+              <option value="All">All cash accounts</option>
+              {assetAccounts.map((account) => (
+                <option key={account.id} value={account.id}>
+                  {account.name}
+                </option>
+              ))}
+            </select>
+          </div>
+        </div>
+
         {loadingEntries ? (
-          <p>Loading entries...</p>
+          <p className="text-sm text-gray-600">Loading entries...</p>
         ) : entries.length === 0 ? (
           <p className="text-sm text-gray-600">No entries yet.</p>
         ) : (
-          <table className="w-full border-collapse text-sm">
-            <thead>
-              <tr className="border-b">
-                <th className="text-left py-2 px-1">Date</th>
-                <th className="text-left py-2 px-1">Memo</th>
-                <th className="text-left py-2 px-1">Details</th>
-              </tr>
-            </thead>
-            <tbody>
-              {entries.map((entry) => (
-                <tr key={entry.id} className="border-b align-top">
-                  <td className="py-1 px-1 whitespace-nowrap">
-                    {new Date(entry.date).toLocaleDateString()}
-                  </td>
-                  <td className="py-1 px-1">{entry.memo || '-'}</td>
-                  <td className="py-1 px-1">
-                    {entry.lines && entry.lines.length > 0 ? (
-                      <ul className="space-y-0.5">
-                        {entry.lines.map((line) => (
-                          <li key={line.id}>
-                            <span className="font-mono text-xs mr-1">
-                              {line.side === 'debit' ? 'D' : 'C'}
-                            </span>
-                            <span className="mr-1">
-                              {accountNameMap[line.glAccountId] ||
-                                line.glAccountName ||
-                                line.glAccountId}
-                            </span>
-                            <span className="font-mono">
-                              {line.amount.toLocaleString(undefined, {
-                                minimumFractionDigits: 2,
-                                maximumFractionDigits: 2,
-                              })}{' '}
-                              {line.currency}
-                            </span>
-                          </li>
-                        ))}
-                      </ul>
-                    ) : (
-                      <pre className="text-xs bg-gray-50 p-1 rounded overflow-x-auto">
-                        {JSON.stringify(entry, null, 2)}
-                      </pre>
-                    )}
-                  </td>
+          <div className="overflow-x-auto">
+            <table className="w-full border-collapse text-sm">
+              <thead>
+                <tr className="border-b border-gray-200 text-left">
+                  <th className="px-2 py-3 font-medium text-gray-600">Date</th>
+                  <th className="px-2 py-3 font-medium text-gray-600">Memo</th>
+                  <th className="px-2 py-3 font-medium text-gray-600">Source</th>
+                  <th className="px-2 py-3 font-medium text-gray-600">Lines</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {entries.map((entry) => (
+                  <tr key={entry.id} className="border-b border-gray-100 align-top">
+                    <td className="whitespace-nowrap px-2 py-3">
+                      {new Date(entry.date).toLocaleDateString()}
+                    </td>
+                    <td className="px-2 py-3">{entry.memo || '-'}</td>
+                    <td className="px-2 py-3 text-xs text-gray-500">
+                      {entry.source || '-'}
+                    </td>
+                    <td className="px-2 py-3">
+                      {entry.lines && entry.lines.length > 0 ? (
+                        <ul className="space-y-1">
+                          {entry.lines.map((line) => (
+                            <li key={line.id} className="flex flex-wrap gap-2">
+                              <span className="rounded bg-gray-100 px-1.5 py-0.5 font-mono text-xs">
+                                {line.side === 'debit' ? 'D' : 'C'}
+                              </span>
+                              <span>
+                                {accountNameMap[line.glAccountId] ||
+                                  line.glAccountName ||
+                                  line.glAccountId}
+                              </span>
+                              <span className="font-mono text-gray-600">
+                                {line.amount.toLocaleString(undefined, {
+                                  minimumFractionDigits: 2,
+                                  maximumFractionDigits: 2,
+                                })}{' '}
+                                {line.currency}
+                              </span>
+                            </li>
+                          ))}
+                        </ul>
+                      ) : (
+                        <span className="text-gray-400">No lines</span>
+                      )}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         )}
       </section>
     </div>
