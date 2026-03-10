@@ -18,6 +18,28 @@ type HealthResponse = {
   [key: string]: unknown
 }
 
+type DashboardSummaryResponse = {
+  todayExpense: {
+    amount: number
+    currency: string | null
+  }
+  monthExpense: {
+    amount: number
+    currency: string | null
+  }
+  investment: {
+    totalAssets: {
+      amount: number
+      currency: string | null
+    }
+    totalReturn: {
+      amount: number
+      currency: string | null
+      rate: number
+    }
+  }
+}
+
 type ActivityItem = {
   id: string
   kind: 'cashbook' | 'investment'
@@ -147,6 +169,17 @@ export default function Dashboard() {
     refetchInterval: 5000,
   })
 
+  const summaryQuery = useQuery({
+    queryKey: ['dashboard', 'summary', DEMO_USER_ID],
+    queryFn: async () =>
+      (
+        await api.get<DashboardSummaryResponse>('/dashboard/summary', {
+          headers: { 'X-User-Id': DEMO_USER_ID },
+        })
+      ).data,
+    enabled: Boolean(DEMO_USER_ID),
+  })
+
   const accountsQuery = useQuery({
     queryKey: ['dashboard', 'asset-accounts', DEMO_USER_ID],
     queryFn: () => cashbookService.getGlAccounts(DEMO_USER_ID, 'asset'),
@@ -184,14 +217,13 @@ export default function Dashboard() {
   }, [accounts])
 
   const monthStart = getMonthStart()
-  const todayStart = getTodayStart()
 
-  const dashboardMetrics = useMemo(() => {
+  const fallbackMetrics = useMemo(() => {
     const todayExpense = sumCashLineAmounts(
       entries,
       assetAccountIds,
       'manual:expense',
-      todayStart,
+      getTodayStart(),
     )
     const monthExpense = sumCashLineAmounts(
       entries,
@@ -199,43 +231,37 @@ export default function Dashboard() {
       'manual:expense',
       monthStart,
     )
-    const investmentFlows = transactions.reduce(
-      (totals, transaction) => {
-        const amount = Number(transaction.amount)
-        if (!Number.isFinite(amount)) {
-          return totals
-        }
-
-        if (transaction.type === 'buy' || transaction.type === 'deposit') {
-          totals.investedCapital += amount
-        }
-
-        if (transaction.type === 'sell' || transaction.type === 'dividend') {
-          totals.realizedValue += amount
-        }
-
-        return totals
-      },
-      { investedCapital: 0, realizedValue: 0 },
-    )
-
-    const totalInvestmentAssets =
-      investmentFlows.investedCapital + investmentFlows.realizedValue
-    const totalReturnAmount =
-      investmentFlows.realizedValue - investmentFlows.investedCapital
-    const totalReturnRate =
-      investmentFlows.investedCapital > 0
-        ? (totalReturnAmount / investmentFlows.investedCapital) * 100
-        : 0
 
     return {
       todayExpense,
       monthExpense,
-      totalInvestmentAssets,
-      totalReturnAmount,
-      totalReturnRate,
     }
-  }, [assetAccountIds, entries, monthStart, todayStart, transactions])
+  }, [assetAccountIds, entries, monthStart])
+
+  const dashboardMetrics = summaryQuery.data
+    ? {
+        todayExpense: summaryQuery.data.todayExpense.amount,
+        todayExpenseCurrency: summaryQuery.data.todayExpense.currency,
+        monthExpense: summaryQuery.data.monthExpense.amount,
+        monthExpenseCurrency: summaryQuery.data.monthExpense.currency,
+        totalInvestmentAssets: summaryQuery.data.investment.totalAssets.amount,
+        totalInvestmentAssetsCurrency:
+          summaryQuery.data.investment.totalAssets.currency,
+        totalReturnAmount: summaryQuery.data.investment.totalReturn.amount,
+        totalReturnCurrency: summaryQuery.data.investment.totalReturn.currency,
+        totalReturnRate: summaryQuery.data.investment.totalReturn.rate,
+      }
+    : {
+        todayExpense: fallbackMetrics.todayExpense,
+        todayExpenseCurrency: null,
+        monthExpense: fallbackMetrics.monthExpense,
+        monthExpenseCurrency: null,
+        totalInvestmentAssets: 0,
+        totalInvestmentAssetsCurrency: null,
+        totalReturnAmount: 0,
+        totalReturnCurrency: null,
+        totalReturnRate: 0,
+      }
 
   const activityFeed = useMemo(() => {
     const cashbookActivities = buildCashbookActivities(entries, accountNameMap)
@@ -333,7 +359,9 @@ export default function Dashboard() {
             {formatCurrency(dashboardMetrics.todayExpense)}
           </p>
           <p className="mt-2 text-xs text-gray-500">
-            From manual expense entries hitting cash accounts today.
+            {summaryQuery.data
+              ? `Summary API · ${dashboardMetrics.todayExpenseCurrency ?? 'N/A'}`
+              : 'Fallback from manual expense entries.'}
           </p>
         </div>
 
@@ -343,7 +371,9 @@ export default function Dashboard() {
             {formatCurrency(dashboardMetrics.monthExpense)}
           </p>
           <p className="mt-2 text-xs text-gray-500">
-            Good enough for shape review; likely wants a dedicated API later.
+            {summaryQuery.data
+              ? `Summary API · ${dashboardMetrics.monthExpenseCurrency ?? 'N/A'}`
+              : 'Fallback from manual expense entries.'}
           </p>
         </div>
 
@@ -353,7 +383,9 @@ export default function Dashboard() {
             {formatCurrency(dashboardMetrics.totalInvestmentAssets)}
           </p>
           <p className="mt-2 text-xs text-gray-500">
-            Temporary estimate from recorded investment transaction flows.
+            {summaryQuery.data
+              ? `Summary API · ${dashboardMetrics.totalInvestmentAssetsCurrency ?? 'N/A'}`
+              : 'Waiting for summary API.'}
           </p>
         </div>
 
@@ -374,7 +406,9 @@ export default function Dashboard() {
             {formatPercent(dashboardMetrics.totalReturnRate)}
           </p>
           <p className="mt-2 text-xs text-gray-500">
-            Placeholder return model until we add a real portfolio summary API.
+            {summaryQuery.data
+              ? `Summary API · ${dashboardMetrics.totalReturnCurrency ?? 'N/A'}`
+              : 'Waiting for summary API.'}
           </p>
         </div>
       </section>
