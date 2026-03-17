@@ -36,6 +36,36 @@ function formatMoney(value: number | string | null | undefined) {
   })
 }
 
+function isPositiveNumber(value: string) {
+  const numeric = Number(value)
+  return Number.isFinite(numeric) && numeric > 0
+}
+
+function isZeroOrPositiveNumber(value: string) {
+  const numeric = Number(value || '0')
+  return Number.isFinite(numeric) && numeric >= 0
+}
+
+function buildTransactionDetails(transaction: TransactionListItem) {
+  const segments: string[] = []
+
+  if (transaction.quantity) {
+    segments.push(
+      `${formatMoney(transaction.quantity)} @ ${formatMoney(transaction.price)}`,
+    )
+  }
+
+  if (transaction.fee && Number(transaction.fee) > 0) {
+    segments.push(`fee ${formatMoney(transaction.fee)}`)
+  }
+
+  if (transaction.tax && Number(transaction.tax) > 0) {
+    segments.push(`tax ${formatMoney(transaction.tax)}`)
+  }
+
+  return segments.length > 0 ? segments.join(' · ') : '-'
+}
+
 export default function Transactions() {
   const [accounts, setAccounts] = useState<Account[]>([])
   const [assets, setAssets] = useState<Asset[]>([])
@@ -48,6 +78,7 @@ export default function Transactions() {
   const [quantity, setQuantity] = useState('')
   const [price, setPrice] = useState('')
   const [fee, setFee] = useState('')
+  const [tax, setTax] = useState('')
   const [tradeTime, setTradeTime] = useState(() =>
     new Date().toISOString().slice(0, 16),
   )
@@ -59,7 +90,8 @@ export default function Transactions() {
   const [successMessage, setSuccessMessage] = useState<string | null>(null)
 
   const availableAccounts = useMemo(
-    () => accounts.filter((account) => account.type !== 'cash' || mode === 'deposit'),
+    () =>
+      accounts.filter((account) => account.type !== 'cash' || mode === 'deposit'),
     [accounts, mode],
   )
 
@@ -85,6 +117,7 @@ export default function Transactions() {
     const numericQuantity = Number(quantity)
     const numericPrice = Number(price)
     const numericFee = Number(fee || '0')
+    const numericTax = Number(tax || '0')
 
     if (!requiresTradeFields) {
       return Number(amount || '0')
@@ -95,8 +128,10 @@ export default function Transactions() {
     }
 
     const gross = numericQuantity * numericPrice
-    return mode === 'buy' ? gross + numericFee : gross - numericFee
-  }, [amount, fee, mode, price, quantity, requiresTradeFields])
+    return mode === 'buy'
+      ? gross + numericFee + numericTax
+      : gross - numericFee - numericTax
+  }, [amount, fee, mode, price, quantity, requiresTradeFields, tax])
 
   async function loadTransactions(filterAccountId: string) {
     if (!DEMO_USER_ID) {
@@ -140,7 +175,9 @@ export default function Transactions() {
         }
 
         if (loadedAssets.length > 0) {
-          const firstTradableAsset = loadedAssets.find((asset) => asset.type !== 'cash')
+          const firstTradableAsset = loadedAssets.find(
+            (asset) => asset.type !== 'cash',
+          )
           setAssetId((current) => current || firstTradableAsset?.id || '')
         }
       } catch (err: unknown) {
@@ -183,28 +220,55 @@ export default function Transactions() {
       setQuantity('')
       setPrice('')
       setFee('')
+      setTax('')
     }
   }, [mode])
+
+  const validateForm = () => {
+    if (!DEMO_USER_ID || !accountId) {
+      return 'Please select an investment account'
+    }
+
+    if (!tradeTime || Number.isNaN(new Date(tradeTime).getTime())) {
+      return 'Please provide a valid trade time'
+    }
+
+    if (requiresAsset && !assetId) {
+      return 'Please select an asset'
+    }
+
+    if (requiresTradeFields) {
+      if (!isPositiveNumber(quantity)) {
+        return `Quantity must be a positive number for ${mode} transactions`
+      }
+
+      if (!isPositiveNumber(price)) {
+        return `Price must be a positive number for ${mode} transactions`
+      }
+    }
+
+    if (!isZeroOrPositiveNumber(fee)) {
+      return 'Fee must be zero or a positive number'
+    }
+
+    if (!isZeroOrPositiveNumber(tax)) {
+      return 'Tax must be zero or a positive number'
+    }
+
+    const numericAmount = requiresTradeFields ? computedAmount : Number(amount)
+    if (!Number.isFinite(numericAmount) || numericAmount <= 0) {
+      return 'Amount must be a positive number'
+    }
+
+    return null
+  }
 
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault()
 
-    if (!DEMO_USER_ID || !accountId) {
-      setError('Please select an investment account')
-      return
-    }
-
-    const numericAmount = requiresTradeFields
-      ? computedAmount
-      : Number(amount)
-
-    if (!Number.isFinite(numericAmount) || numericAmount <= 0) {
-      setError('Amount must be a positive number')
-      return
-    }
-
-    if (requiresAsset && !assetId) {
-      setError('Please select an asset')
+    const validationError = validateForm()
+    if (validationError) {
+      setError(validationError)
       return
     }
 
@@ -212,10 +276,11 @@ export default function Transactions() {
       accountId,
       assetId: requiresAsset ? assetId : undefined,
       type: mode,
-      amount: numericAmount,
+      amount: requiresTradeFields ? computedAmount : Number(amount),
       quantity: requiresTradeFields ? Number(quantity) : undefined,
       price: requiresTradeFields ? Number(price) : undefined,
       fee: requiresTradeFields ? Number(fee || '0') : undefined,
+      tax: requiresTradeFields ? Number(tax || '0') : undefined,
       tradeTime: new Date(tradeTime).toISOString(),
       note: note || undefined,
     } as const
@@ -230,6 +295,7 @@ export default function Transactions() {
       setQuantity('')
       setPrice('')
       setFee('')
+      setTax('')
       setNote('')
       await loadTransactions(listAccountId)
     } catch (err: unknown) {
@@ -305,7 +371,9 @@ export default function Transactions() {
                 disabled={loadingMeta || availableAccounts.length === 0}
                 className="w-full rounded border border-gray-300 px-3 py-2"
               >
-                {availableAccounts.length === 0 && <option value="">No account available</option>}
+                {availableAccounts.length === 0 && (
+                  <option value="">No account available</option>
+                )}
                 {availableAccounts.map((account) => (
                   <option key={account.id} value={account.id}>
                     {account.name} ({account.currency})
@@ -337,7 +405,9 @@ export default function Transactions() {
                   disabled={availableAssets.length === 0}
                   className="w-full rounded border border-gray-300 px-3 py-2"
                 >
-                  {availableAssets.length === 0 && <option value="">No asset available</option>}
+                  {availableAssets.length === 0 && (
+                    <option value="">No asset available</option>
+                  )}
                   {availableAssets.map((asset) => (
                     <option key={asset.id} value={asset.id}>
                       {asset.symbol} · {asset.name}
@@ -387,6 +457,20 @@ export default function Transactions() {
                     min="0"
                     value={fee}
                     onChange={(event) => setFee(event.target.value)}
+                    className="w-full rounded border border-gray-300 px-3 py-2"
+                  />
+                </div>
+
+                <div className="space-y-1">
+                  <label className="block text-sm font-medium text-gray-700">
+                    Tax
+                  </label>
+                  <input
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    value={tax}
+                    onChange={(event) => setTax(event.target.value)}
                     className="w-full rounded border border-gray-300 px-3 py-2"
                   />
                 </div>
@@ -461,7 +545,7 @@ export default function Transactions() {
           <h2 className="mb-3 text-lg font-semibold">How this page works</h2>
           <ul className="space-y-2 text-sm text-gray-700">
             <li>Deposit records funding into an investment account.</li>
-            <li>Buy and sell compute total amount from quantity, price, and fee.</li>
+            <li>Buy and sell compute total amount from quantity, price, fee, and tax.</li>
             <li>Dividend records cash income tied to an asset.</li>
             <li>Recent transactions stay visible so you can audit the feed.</li>
           </ul>
@@ -511,6 +595,7 @@ export default function Transactions() {
                   <th className="px-2 py-3 font-medium text-gray-600">Asset</th>
                   <th className="px-2 py-3 font-medium text-gray-600">Amount</th>
                   <th className="px-2 py-3 font-medium text-gray-600">Details</th>
+                  <th className="px-2 py-3 font-medium text-gray-600">Broker Ref</th>
                   <th className="px-2 py-3 font-medium text-gray-600">Note</th>
                 </tr>
               </thead>
@@ -531,11 +616,10 @@ export default function Transactions() {
                       {formatMoney(transaction.amount)}
                     </td>
                     <td className="px-2 py-3 text-gray-600">
-                      {transaction.quantity
-                        ? `${formatMoney(transaction.quantity)} @ ${formatMoney(
-                            transaction.price,
-                          )}${transaction.fee ? ` · fee ${formatMoney(transaction.fee)}` : ''}`
-                        : '-'}
+                      {buildTransactionDetails(transaction)}
+                    </td>
+                    <td className="px-2 py-3 font-mono text-xs text-gray-600">
+                      {transaction.brokerOrderNo || '-'}
                     </td>
                     <td className="px-2 py-3">{transaction.note || '-'}</td>
                   </tr>

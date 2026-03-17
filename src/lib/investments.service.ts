@@ -6,6 +6,7 @@ export type Account = {
   name: string
   type: 'broker' | 'bank' | 'cash'
   currency: string
+  broker?: string | null
   createdAt: string
 }
 
@@ -26,6 +27,8 @@ export type TransactionListItem = {
   quantity?: number | string | null
   price?: number | string | null
   fee?: number | string | null
+  tax?: number | string | null
+  brokerOrderNo?: string | null
   tradeTime: string
   note?: string | null
   isDeleted: boolean
@@ -59,6 +62,8 @@ export type CreateTransactionPayload = {
   quantity?: number
   price?: number
   fee?: number
+  tax?: number
+  brokerOrderNo?: string
   tradeTime: string
   note?: string
 }
