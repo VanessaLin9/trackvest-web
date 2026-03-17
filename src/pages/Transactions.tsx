@@ -3,6 +3,7 @@ import {
   investmentsService,
   type Account,
   type Asset,
+  type ImportTransactionsResponse,
   type TransactionListItem,
 } from '../lib/investments.service'
 
@@ -86,6 +87,11 @@ export default function Transactions() {
   const [loadingMeta, setLoadingMeta] = useState(false)
   const [loadingTransactions, setLoadingTransactions] = useState(false)
   const [submitting, setSubmitting] = useState(false)
+  const [importAccountId, setImportAccountId] = useState('')
+  const [importFile, setImportFile] = useState<File | null>(null)
+  const [importSubmitting, setImportSubmitting] = useState(false)
+  const [importResult, setImportResult] =
+    useState<ImportTransactionsResponse | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [successMessage, setSuccessMessage] = useState<string | null>(null)
 
@@ -103,6 +109,10 @@ export default function Transactions() {
   const availableAssets = useMemo(
     () => assets.filter((asset) => asset.type !== 'cash'),
     [assets],
+  )
+  const importAccounts = useMemo(
+    () => accounts.filter((account) => account.type === 'broker'),
+    [accounts],
   )
 
   const selectedAsset = useMemo(
@@ -200,6 +210,19 @@ export default function Transactions() {
       setAccountId(availableAccounts[0].id)
     }
   }, [accountId, availableAccounts])
+
+  useEffect(() => {
+    if (importAccounts.length === 0) {
+      setImportAccountId('')
+      return
+    }
+
+    if (!importAccounts.some((account) => account.id === importAccountId)) {
+      const selectedBroker =
+        selectedAccount?.type === 'broker' ? selectedAccount.id : undefined
+      setImportAccountId(selectedBroker || importAccounts[0].id)
+    }
+  }, [importAccountId, importAccounts, selectedAccount])
 
   useEffect(() => {
     if (!requiresAsset) {
@@ -302,6 +325,73 @@ export default function Transactions() {
       setError(getErrorMessage(err, 'Failed to save transaction'))
     } finally {
       setSubmitting(false)
+    }
+  }
+
+  const validateImport = () => {
+    if (!DEMO_USER_ID) {
+      return 'VITE_DEMO_USER_ID is not set'
+    }
+
+    if (!importAccountId) {
+      return 'Please select an account for CSV import'
+    }
+
+    if (!importFile) {
+      return 'Please choose a CSV file to import'
+    }
+
+    const loweredName = importFile.name.toLowerCase()
+    if (
+      !loweredName.endsWith('.csv') &&
+      !loweredName.endsWith('.tsv') &&
+      !loweredName.endsWith('.txt')
+    ) {
+      return 'Import file must be a .csv, .tsv, or .txt file'
+    }
+
+    if (importFile.size === 0) {
+      return 'Import file is empty'
+    }
+
+    return null
+  }
+
+  const handleImport = async (event: React.FormEvent) => {
+    event.preventDefault()
+
+    const validationError = validateImport()
+    if (validationError) {
+      setError(validationError)
+      return
+    }
+
+    try {
+      setImportSubmitting(true)
+      setError(null)
+      setSuccessMessage(null)
+      const csvContent = await importFile!.text()
+      if (!csvContent.trim()) {
+        setError('Import file is empty')
+        return
+      }
+
+      const result = await investmentsService.importTransactions(DEMO_USER_ID, {
+        accountId: importAccountId,
+        csvContent,
+      })
+
+      setImportResult(result)
+      if (result.successCount > 0) {
+        setSuccessMessage(`Imported ${result.successCount} transaction(s)`)
+        await loadTransactions(listAccountId)
+      } else {
+        setSuccessMessage(null)
+      }
+    } catch (err: unknown) {
+      setError(getErrorMessage(err, 'Failed to import transactions'))
+    } finally {
+      setImportSubmitting(false)
     }
   }
 
@@ -541,14 +631,121 @@ export default function Transactions() {
           </form>
         </div>
 
-        <aside className="rounded-xl border border-gray-200 bg-gray-50 p-5 shadow-sm">
-          <h2 className="mb-3 text-lg font-semibold">How this page works</h2>
-          <ul className="space-y-2 text-sm text-gray-700">
-            <li>Deposit records funding into an investment account.</li>
-            <li>Buy and sell compute total amount from quantity, price, fee, and tax.</li>
-            <li>Dividend records cash income tied to an asset.</li>
-            <li>Recent transactions stay visible so you can audit the feed.</li>
-          </ul>
+        <aside className="space-y-4">
+          <section className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm">
+            <h2 className="mb-3 text-lg font-semibold">Import CSV</h2>
+            <p className="mb-4 text-sm text-gray-600">
+              Upload a brokerage export and import it into a broker account. The
+              current backend accepts raw CSV or TSV text parsed from this file.
+            </p>
+
+            <form onSubmit={handleImport} className="space-y-4">
+              <div className="space-y-1">
+                <label className="block text-sm font-medium text-gray-700">
+                  Import account
+                </label>
+                <select
+                  value={importAccountId}
+                  onChange={(event) => setImportAccountId(event.target.value)}
+                  disabled={importAccounts.length === 0 || importSubmitting}
+                  className="w-full rounded border border-gray-300 px-3 py-2"
+                >
+                  {importAccounts.length === 0 && (
+                    <option value="">No broker account available</option>
+                  )}
+                  {importAccounts.map((account) => (
+                    <option key={account.id} value={account.id}>
+                      {account.name} ({account.currency})
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="space-y-1">
+                <label className="block text-sm font-medium text-gray-700">
+                  File
+                </label>
+                <input
+                  type="file"
+                  accept=".csv,.tsv,.txt"
+                  onChange={(event) =>
+                    setImportFile(event.target.files?.[0] ?? null)
+                  }
+                  disabled={importSubmitting}
+                  className="block w-full rounded border border-gray-300 px-3 py-2 text-sm"
+                />
+                <p className="text-xs text-gray-500">
+                  Required columns: 股名, 日期, 成交股數, 淨收付, 成交單價, 手續費,
+                  交易稅, 稅款, 委託書號, 幣別.
+                </p>
+              </div>
+
+              <button
+                type="submit"
+                disabled={importSubmitting || importAccounts.length === 0}
+                className={`rounded bg-slate-900 px-4 py-2 text-sm font-medium text-white ${
+                  importSubmitting || importAccounts.length === 0
+                    ? 'cursor-not-allowed bg-gray-400'
+                    : 'hover:bg-slate-700'
+                }`}
+              >
+                {importSubmitting ? 'Importing...' : 'Import CSV'}
+              </button>
+            </form>
+          </section>
+
+          {importResult && (
+            <section className="rounded-xl border border-gray-200 bg-gray-50 p-5 shadow-sm">
+              <h2 className="mb-3 text-lg font-semibold">Import result</h2>
+              <div className="grid grid-cols-3 gap-3 text-sm">
+                <div className="rounded border border-gray-200 bg-white px-3 py-2">
+                  <div className="text-gray-500">Rows</div>
+                  <div className="font-semibold">{importResult.totalRows}</div>
+                </div>
+                <div className="rounded border border-green-200 bg-white px-3 py-2">
+                  <div className="text-gray-500">Success</div>
+                  <div className="font-semibold text-green-700">
+                    {importResult.successCount}
+                  </div>
+                </div>
+                <div className="rounded border border-red-200 bg-white px-3 py-2">
+                  <div className="text-gray-500">Failed</div>
+                  <div className="font-semibold text-red-700">
+                    {importResult.failureCount}
+                  </div>
+                </div>
+              </div>
+
+              {importResult.errors.length > 0 && (
+                <div className="mt-4 space-y-2">
+                  <h3 className="text-sm font-medium text-gray-800">Errors</h3>
+                  <div className="max-h-56 space-y-2 overflow-y-auto">
+                    {importResult.errors.map((item, index) => (
+                      <div
+                        key={`${item.row}-${item.field}-${index}`}
+                        className="rounded border border-red-200 bg-white px-3 py-2 text-sm"
+                      >
+                        <div className="font-medium text-red-700">
+                          Row {item.row} · {item.field}
+                        </div>
+                        <div className="text-gray-700">{item.message}</div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </section>
+          )}
+
+          <section className="rounded-xl border border-gray-200 bg-gray-50 p-5 shadow-sm">
+            <h2 className="mb-3 text-lg font-semibold">How this page works</h2>
+            <ul className="space-y-2 text-sm text-gray-700">
+              <li>Deposit records funding into an investment account.</li>
+              <li>Buy and sell compute total amount from quantity, price, fee, and tax.</li>
+              <li>Dividend records cash income tied to an asset.</li>
+              <li>CSV import supports broker exports and reports row-level failures.</li>
+            </ul>
+          </section>
         </aside>
       </section>
 

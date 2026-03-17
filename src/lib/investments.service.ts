@@ -68,6 +68,23 @@ export type CreateTransactionPayload = {
   note?: string
 }
 
+export type ImportTransactionsPayload = {
+  accountId: string
+  csvContent: string
+}
+
+export type ImportTransactionsResponse = {
+  totalRows: number
+  successCount: number
+  failureCount: number
+  createdTransactionIds: string[]
+  errors: Array<{
+    row: number
+    field: string
+    message: string
+  }>
+}
+
 function getHeaders(userId: string) {
   return {
     'X-User-Id': userId,
@@ -105,6 +122,20 @@ export const investmentsService = {
     const response = await api.post('/transactions', payload, {
       headers: getHeaders(userId),
     })
+    return response.data
+  },
+
+  async importTransactions(
+    userId: string,
+    payload: ImportTransactionsPayload,
+  ): Promise<ImportTransactionsResponse> {
+    const response = await api.post<ImportTransactionsResponse>(
+      '/transactions/import',
+      payload,
+      {
+        headers: getHeaders(userId),
+      },
+    )
     return response.data
   },
 }
