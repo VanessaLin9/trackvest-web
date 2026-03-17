@@ -45,6 +45,7 @@ export default function Accounts() {
           { key: 'name', label: 'Name' },
           { key: 'type', label: 'Type' },
           { key: 'currency', label: 'Currency' },
+          { key: 'broker', label: 'Broker' },
           { key: 'userId', label: 'User ID' },
           {
             key: 'createdAt',
@@ -83,6 +84,7 @@ export default function Accounts() {
             name: 'My Broker Account',
             type: 'broker',
             currency: 'TWD',
+            broker: 'fubon',
           }}
           children={
             <button
@@ -109,6 +111,7 @@ export default function Accounts() {
                 name: 'Updated Account Name',
                 type: 'broker',
                 currency: 'TWD',
+                broker: 'fubon',
               }}
               children={
                 <button
@@ -141,4 +144,3 @@ export default function Accounts() {
     </div>
   )
 }
-
