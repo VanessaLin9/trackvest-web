@@ -22,7 +22,7 @@ export const routeConfig: RouteConfig[] = [
   { path: '/gl', label: 'Ledger', element: <GL />, showInNav: true },
   { path: '/health', label: 'Health', element: <Health />, showInNav: false },
   { path: '/users', label: 'Users', element: <Users />, showInNav: false },
-  { path: '/accounts', label: 'Accounts', element: <Accounts />, showInNav: false },
+  { path: '/accounts', label: 'Accounts', element: <Accounts />, showInNav: true },
   { path: '/assets', label: 'Assets', element: <Assets />, showInNav: false },
 ]
 

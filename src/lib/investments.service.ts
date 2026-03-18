@@ -1,15 +1,6 @@
 import { api } from './api'
 import { getRequiredCurrentUserId } from '../app/current-user'
-
-export type Account = {
-  id: string
-  userId: string
-  name: string
-  type: 'broker' | 'bank' | 'cash'
-  currency: string
-  broker?: string | null
-  createdAt: string
-}
+import type { Account } from './accounts.service'
 
 export type Asset = {
   id: string

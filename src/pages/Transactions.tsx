@@ -1,12 +1,13 @@
 import { useEffect, useMemo, useState } from 'react'
+import { Link } from 'react-router-dom'
 import {
   investmentsService,
-  type Account,
   type Asset,
   type ImportTransactionsResponse,
   type TransactionListItem,
 } from '../lib/investments.service'
 import { useCurrentUserId } from '../app/current-user'
+import { SUPPORTED_BROKER, type Account } from '../lib/accounts.service'
 
 type InvestmentMode = 'deposit' | 'buy' | 'sell' | 'dividend'
 
@@ -111,7 +112,11 @@ export default function Transactions() {
     [assets],
   )
   const importAccounts = useMemo(
-    () => accounts.filter((account) => account.type === 'broker'),
+    () =>
+      accounts.filter(
+        (account) =>
+          account.type === 'broker' && account.broker === SUPPORTED_BROKER,
+      ),
     [accounts],
   )
 
@@ -219,7 +224,10 @@ export default function Transactions() {
 
     if (!importAccounts.some((account) => account.id === importAccountId)) {
       const selectedBroker =
-        selectedAccount?.type === 'broker' ? selectedAccount.id : undefined
+        selectedAccount?.type === 'broker' &&
+        selectedAccount.broker === SUPPORTED_BROKER
+          ? selectedAccount.id
+          : undefined
       setImportAccountId(selectedBroker || importAccounts[0].id)
     }
   }, [importAccountId, importAccounts, selectedAccount])
@@ -635,9 +643,21 @@ export default function Transactions() {
           <section className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm">
             <h2 className="mb-3 text-lg font-semibold">Import CSV</h2>
             <p className="mb-4 text-sm text-gray-600">
-              Upload a brokerage export and import it into a broker account. The
-              current backend accepts raw CSV or TSV text parsed from this file.
+              Upload a Cathay brokerage export and import it into a configured
+              broker account. Broker accounts without a parser configuration stay
+              manual-only. Set up the account first in{' '}
+              <Link to="/accounts" className="font-medium text-blue-700 underline">
+                Accounts
+              </Link>
+              .
             </p>
+
+            {importAccounts.length === 0 && (
+              <div className="mb-4 rounded border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+                No broker account configured for CSV import. Go to Accounts and
+                create a Cathay broker account first.
+              </div>
+            )}
 
             <form onSubmit={handleImport} className="space-y-4">
               <div className="space-y-1">
@@ -651,7 +671,7 @@ export default function Transactions() {
                   className="w-full rounded border border-gray-300 px-3 py-2"
                 >
                   {importAccounts.length === 0 && (
-                    <option value="">No broker account available</option>
+                    <option value="">No broker account configured for CSV import</option>
                   )}
                   {importAccounts.map((account) => (
                     <option key={account.id} value={account.id}>
@@ -743,7 +763,7 @@ export default function Transactions() {
               <li>Deposit records funding into an investment account.</li>
               <li>Buy and sell compute total amount from quantity, price, fee, and tax.</li>
               <li>Dividend records cash income tied to an asset.</li>
-              <li>CSV import supports broker exports and reports row-level failures.</li>
+              <li>CSV import is enabled only for broker accounts with a configured broker.</li>
             </ul>
           </section>
         </aside>
