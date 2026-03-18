@@ -1,4 +1,5 @@
 import { api } from './api'
+import { getRequiredCurrentUserId } from '../app/current-user'
 
 export type GlAccountType = 'asset' | 'liability' | 'equity' | 'income' | 'expense'
 
@@ -31,7 +32,6 @@ export type GlEntry = {
 }
 
 type PostExpensePayload = {
-  userId: string
   amount: number
   currency: string
   date: string
@@ -41,7 +41,6 @@ type PostExpensePayload = {
 }
 
 type PostIncomePayload = {
-  userId: string
   amount: number
   currency: string
   date: string
@@ -51,7 +50,6 @@ type PostIncomePayload = {
 }
 
 type PostTransferPayload = {
-  userId: string
   amount: number
   currency: string
   date: string
@@ -60,20 +58,15 @@ type PostTransferPayload = {
   toGlAccountId: string
 }
 
-function getHeaders(userId: string) {
-  return {
-    'X-User-Id': userId,
-  }
-}
-
 export const cashbookService = {
   /**
    * Get GL accounts by type
    */
-  async getGlAccounts(userId: string, type: GlAccountType): Promise<GlAccount[]> {
+  async getGlAccounts(type: GlAccountType): Promise<GlAccount[]> {
+    getRequiredCurrentUserId()
+
     const response = await api.get<GlAccount[]>('/gl/accounts', {
-      headers: getHeaders(userId),
-      params: { userId, type },
+      params: { type },
     })
     return response.data
   },
@@ -81,9 +74,10 @@ export const cashbookService = {
   /**
    * Get GL entries for a specific account
    */
-  async getGlEntries(userId: string, accountId: string = 'All'): Promise<GlEntry[]> {
+  async getGlEntries(accountId: string = 'All'): Promise<GlEntry[]> {
+    getRequiredCurrentUserId()
+
     const response = await api.get<GlEntry[]>('/gl/entries', {
-      headers: getHeaders(userId),
       params: { accountId },
     })
     return response.data
@@ -93,26 +87,26 @@ export const cashbookService = {
    * Post an expense entry
    */
   async postExpense(payload: PostExpensePayload): Promise<void> {
-    await api.post('/gl/expense', payload, {
-      headers: getHeaders(payload.userId),
-    })
+    const userId = getRequiredCurrentUserId()
+
+    await api.post('/gl/expense', { ...payload, userId })
   },
 
   /**
    * Post an income entry
    */
   async postIncome(payload: PostIncomePayload): Promise<void> {
-    await api.post('/gl/income', payload, {
-      headers: getHeaders(payload.userId),
-    })
+    const userId = getRequiredCurrentUserId()
+
+    await api.post('/gl/income', { ...payload, userId })
   },
 
   /**
    * Post a transfer entry
    */
   async postTransfer(payload: PostTransferPayload): Promise<void> {
-    await api.post('/gl/transfer', payload, {
-      headers: getHeaders(payload.userId),
-    })
+    const userId = getRequiredCurrentUserId()
+
+    await api.post('/gl/transfer', { ...payload, userId })
   },
 }

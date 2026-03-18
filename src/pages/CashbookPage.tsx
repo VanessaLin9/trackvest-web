@@ -4,10 +4,9 @@ import {
   type GlAccount,
   type GlEntry,
 } from '../lib/cashbook.service'
+import { useCurrentUserId } from '../app/current-user'
 
 type FormMode = 'expense' | 'income' | 'transfer'
-
-const DEMO_USER_ID = import.meta.env.VITE_DEMO_USER_ID
 
 function getErrorMessage(err: unknown, fallback: string) {
   if (err && typeof err === 'object' && 'response' in err) {
@@ -25,6 +24,7 @@ function getErrorMessage(err: unknown, fallback: string) {
 }
 
 export default function CashbookPage() {
+  const currentUserId = useCurrentUserId()
   const [accounts, setAccounts] = useState<GlAccount[]>([])
   const [entries, setEntries] = useState<GlEntry[]>([])
   const [mode, setMode] = useState<FormMode>('expense')
@@ -89,16 +89,13 @@ export default function CashbookPage() {
   }, [accounts])
 
   async function loadEntries(accountId: string) {
-    if (!DEMO_USER_ID) {
+    if (!currentUserId) {
       return
     }
 
     setLoadingEntries(true)
     try {
-      const loadedEntries = await cashbookService.getGlEntries(
-        DEMO_USER_ID,
-        accountId,
-      )
+      const loadedEntries = await cashbookService.getGlEntries(accountId)
       setEntries(loadedEntries)
     } catch (err: unknown) {
       setError(getErrorMessage(err, 'Failed to load entries'))
@@ -108,7 +105,7 @@ export default function CashbookPage() {
   }
 
   useEffect(() => {
-    if (!DEMO_USER_ID) {
+    if (!currentUserId) {
       return
     }
 
@@ -118,9 +115,9 @@ export default function CashbookPage() {
         setError(null)
         const [loadedExpenseAccounts, loadedIncomeAccounts, loadedAssetAccounts] =
           await Promise.all([
-            cashbookService.getGlAccounts(DEMO_USER_ID, 'expense'),
-            cashbookService.getGlAccounts(DEMO_USER_ID, 'income'),
-            cashbookService.getGlAccounts(DEMO_USER_ID, 'asset'),
+            cashbookService.getGlAccounts('expense'),
+            cashbookService.getGlAccounts('income'),
+            cashbookService.getGlAccounts('asset'),
           ])
 
         const loadedAccounts = [
@@ -142,7 +139,7 @@ export default function CashbookPage() {
     }
 
     loadAccounts().catch(console.error)
-  }, [])
+  }, [currentUserId])
 
   useEffect(() => {
     if (mode === 'transfer') {
@@ -169,12 +166,12 @@ export default function CashbookPage() {
 
   useEffect(() => {
     loadEntries(entryFilterAccountId).catch(console.error)
-  }, [entryFilterAccountId])
+  }, [currentUserId, entryFilterAccountId])
 
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault()
 
-    if (!DEMO_USER_ID || !selectedCashAccount) {
+    if (!currentUserId || !selectedCashAccount) {
       setError('A cash or bank account is required')
       return
     }
@@ -201,7 +198,6 @@ export default function CashbookPage() {
       setSuccessMessage(null)
 
       const payloadBase = {
-        userId: DEMO_USER_ID,
         amount: numericAmount,
         currency: selectedCashAccount.currency,
         date: new Date(date).toISOString(),
@@ -241,7 +237,7 @@ export default function CashbookPage() {
     }
   }
 
-  if (!DEMO_USER_ID) {
+  if (!currentUserId) {
     return (
       <div className="mx-auto max-w-5xl">
         <h1 className="mb-4 text-2xl font-semibold">Cashbook</h1>

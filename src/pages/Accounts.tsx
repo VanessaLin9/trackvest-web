@@ -1,11 +1,23 @@
 import EndpointTester from '../components/EndpointTester'
 import DataDisplay from '../components/DataDisplay'
 import { useState } from 'react'
+import { useCurrentUserId } from '../app/current-user'
 
 export default function Accounts() {
   const [accountId, setAccountId] = useState('')
-  const [userId, setUserId] = useState('')
   const [refreshKey, setRefreshKey] = useState(0)
+  const currentUserId = useCurrentUserId()
+
+  if (!currentUserId) {
+    return (
+      <div>
+        <h1>Accounts API</h1>
+        <p className="text-red-600">
+          VITE_DEMO_USER_ID is not set. Please set it in your .env file.
+        </p>
+      </div>
+    )
+  }
 
   return (
     <div>
@@ -13,16 +25,9 @@ export default function Accounts() {
       <p>View and test account management endpoints</p>
 
       <div className="mb-5 p-4 bg-blue-50 rounded">
-        <label className="block mb-2.5">
-          <strong>Filter by User ID:</strong>
-          <input
-            type="text"
-            value={userId}
-            onChange={(e) => setUserId(e.target.value)}
-            placeholder="Enter user ID (optional)"
-            className="ml-2.5 p-1 w-[300px] border border-gray-300 rounded"
-          />
-        </label>
+        <div className="mb-2.5">
+          <strong>Current User ID:</strong> {currentUserId}
+        </div>
         <label className="block">
           <strong>Account ID (for single operations):</strong>
           <input
@@ -38,8 +43,7 @@ export default function Accounts() {
       <DataDisplay
         key={refreshKey}
         endpoint="/accounts"
-        queryKey={['accounts']}
-        queryParams={userId ? { userId } : {}}
+        queryKey={['accounts', currentUserId]}
         columns={[
           { key: 'id', label: 'ID' },
           { key: 'name', label: 'Name' },
@@ -65,7 +69,6 @@ export default function Accounts() {
         <EndpointTester
           method="GET"
           endpoint="/accounts"
-          queryParams={{ userId: userId }}
           children={
             <button
               onClick={() => setRefreshKey((k) => k + 1)}
@@ -80,7 +83,7 @@ export default function Accounts() {
           method="POST"
           endpoint="/accounts"
           defaultBody={{
-            userId: 'c2610e4e-1cca-401e-afa7-1ebf541d0000',
+            userId: currentUserId,
             name: 'My Broker Account',
             type: 'broker',
             currency: 'TWD',
@@ -107,7 +110,7 @@ export default function Accounts() {
               method="PATCH"
               endpoint={`/accounts/${accountId}`}
               defaultBody={{
-                userId: 'c2610e4e-1cca-401e-afa7-1ebf541d0000',
+                userId: currentUserId,
                 name: 'Updated Account Name',
                 type: 'broker',
                 currency: 'TWD',

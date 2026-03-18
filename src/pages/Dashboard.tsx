@@ -10,8 +10,7 @@ import {
   investmentsService,
   type TransactionListItem,
 } from '../lib/investments.service'
-
-const DEMO_USER_ID = import.meta.env.VITE_DEMO_USER_ID
+import { useCurrentUserId } from '../app/current-user'
 
 type HealthResponse = {
   status?: string
@@ -163,6 +162,7 @@ function buildInvestmentActivities(transactions: TransactionListItem[]) {
 }
 
 export default function Dashboard() {
+  const currentUserId = useCurrentUserId()
   const healthQuery = useQuery({
     queryKey: ['dashboard', 'health'],
     queryFn: async () => (await api.get<HealthResponse>('/health')).data,
@@ -170,33 +170,27 @@ export default function Dashboard() {
   })
 
   const summaryQuery = useQuery({
-    queryKey: ['dashboard', 'summary', DEMO_USER_ID],
-    queryFn: async () =>
-      (
-        await api.get<DashboardSummaryResponse>('/dashboard/summary', {
-          headers: { 'X-User-Id': DEMO_USER_ID },
-        })
-      ).data,
-    enabled: Boolean(DEMO_USER_ID),
+    queryKey: ['dashboard', 'summary', currentUserId],
+    queryFn: async () => (await api.get<DashboardSummaryResponse>('/dashboard/summary')).data,
+    enabled: Boolean(currentUserId),
   })
 
   const accountsQuery = useQuery({
-    queryKey: ['dashboard', 'asset-accounts', DEMO_USER_ID],
-    queryFn: () => cashbookService.getGlAccounts(DEMO_USER_ID, 'asset'),
-    enabled: Boolean(DEMO_USER_ID),
+    queryKey: ['dashboard', 'asset-accounts', currentUserId],
+    queryFn: () => cashbookService.getGlAccounts('asset'),
+    enabled: Boolean(currentUserId),
   })
 
   const entriesQuery = useQuery({
-    queryKey: ['dashboard', 'gl-entries', DEMO_USER_ID],
-    queryFn: () => cashbookService.getGlEntries(DEMO_USER_ID, 'All'),
-    enabled: Boolean(DEMO_USER_ID),
+    queryKey: ['dashboard', 'gl-entries', currentUserId],
+    queryFn: () => cashbookService.getGlEntries('All'),
+    enabled: Boolean(currentUserId),
   })
 
   const transactionsQuery = useQuery({
-    queryKey: ['dashboard', 'transactions', DEMO_USER_ID],
-    queryFn: () =>
-      investmentsService.getTransactions(DEMO_USER_ID, { take: 10 }),
-    enabled: Boolean(DEMO_USER_ID),
+    queryKey: ['dashboard', 'transactions', currentUserId],
+    queryFn: () => investmentsService.getTransactions({ take: 10 }),
+    enabled: Boolean(currentUserId),
   })
 
   const accounts = (accountsQuery.data ?? []) as GlAccount[]
@@ -281,7 +275,7 @@ export default function Dashboard() {
   const dataError =
     accountsQuery.error || entriesQuery.error || transactionsQuery.error
 
-  if (!DEMO_USER_ID) {
+  if (!currentUserId) {
     return (
       <div className="mx-auto max-w-6xl">
         <h1 className="mb-4 text-3xl font-semibold">Dashboard</h1>

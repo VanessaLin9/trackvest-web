@@ -6,10 +6,9 @@ import {
   type ImportTransactionsResponse,
   type TransactionListItem,
 } from '../lib/investments.service'
+import { useCurrentUserId } from '../app/current-user'
 
 type InvestmentMode = 'deposit' | 'buy' | 'sell' | 'dividend'
-
-const DEMO_USER_ID = import.meta.env.VITE_DEMO_USER_ID
 
 function getErrorMessage(err: unknown, fallback: string) {
   if (err && typeof err === 'object' && 'response' in err) {
@@ -68,6 +67,7 @@ function buildTransactionDetails(transaction: TransactionListItem) {
 }
 
 export default function Transactions() {
+  const currentUserId = useCurrentUserId()
   const [accounts, setAccounts] = useState<Account[]>([])
   const [assets, setAssets] = useState<Asset[]>([])
   const [transactions, setTransactions] = useState<TransactionListItem[]>([])
@@ -144,13 +144,13 @@ export default function Transactions() {
   }, [amount, fee, mode, price, quantity, requiresTradeFields, tax])
 
   async function loadTransactions(filterAccountId: string) {
-    if (!DEMO_USER_ID) {
+    if (!currentUserId) {
       return
     }
 
     setLoadingTransactions(true)
     try {
-      const response = await investmentsService.getTransactions(DEMO_USER_ID, {
+      const response = await investmentsService.getTransactions({
         accountId: filterAccountId !== 'All' ? filterAccountId : undefined,
         take: 20,
       })
@@ -163,7 +163,7 @@ export default function Transactions() {
   }
 
   useEffect(() => {
-    if (!DEMO_USER_ID) {
+    if (!currentUserId) {
       return
     }
 
@@ -173,7 +173,7 @@ export default function Transactions() {
         setError(null)
 
         const [loadedAccounts, loadedAssets] = await Promise.all([
-          investmentsService.getAccounts(DEMO_USER_ID),
+          investmentsService.getAccounts(),
           investmentsService.getAssets(),
         ])
 
@@ -198,7 +198,7 @@ export default function Transactions() {
     }
 
     loadMeta().catch(console.error)
-  }, [])
+  }, [currentUserId])
 
   useEffect(() => {
     if (availableAccounts.length === 0) {
@@ -236,7 +236,7 @@ export default function Transactions() {
 
   useEffect(() => {
     loadTransactions(listAccountId).catch(console.error)
-  }, [listAccountId])
+  }, [currentUserId, listAccountId])
 
   useEffect(() => {
     if (mode === 'deposit' || mode === 'dividend') {
@@ -248,7 +248,7 @@ export default function Transactions() {
   }, [mode])
 
   const validateForm = () => {
-    if (!DEMO_USER_ID || !accountId) {
+    if (!currentUserId || !accountId) {
       return 'Please select an investment account'
     }
 
@@ -312,7 +312,7 @@ export default function Transactions() {
       setSubmitting(true)
       setError(null)
       setSuccessMessage(null)
-      await investmentsService.createTransaction(DEMO_USER_ID, payload)
+      await investmentsService.createTransaction(payload)
       setSuccessMessage(`${mode} saved`)
       setAmount('')
       setQuantity('')
@@ -329,7 +329,7 @@ export default function Transactions() {
   }
 
   const validateImport = () => {
-    if (!DEMO_USER_ID) {
+    if (!currentUserId) {
       return 'VITE_DEMO_USER_ID is not set'
     }
 
@@ -376,7 +376,7 @@ export default function Transactions() {
         return
       }
 
-      const result = await investmentsService.importTransactions(DEMO_USER_ID, {
+      const result = await investmentsService.importTransactions({
         accountId: importAccountId,
         csvContent,
       })
@@ -395,7 +395,7 @@ export default function Transactions() {
     }
   }
 
-  if (!DEMO_USER_ID) {
+  if (!currentUserId) {
     return (
       <div className="mx-auto max-w-5xl">
         <h1 className="mb-4 text-2xl font-semibold">Investments</h1>

@@ -1,8 +1,21 @@
 import EndpointTester from '../components/EndpointTester'
-const DEMO_USER_ID = import.meta.env.VITE_DEMO_USER_ID
+import { useCurrentUserId } from '../app/current-user'
 
 
 export default function GL() {
+  const currentUserId = useCurrentUserId()
+
+  if (!currentUserId) {
+    return (
+      <div>
+        <h1>GL Ledger API</h1>
+        <p className="text-red-600">
+          VITE_DEMO_USER_ID is not set. Please set it in your .env file.
+        </p>
+      </div>
+    )
+  }
+
   return (
     <div>
       <h1>GL Ledger API</h1>
@@ -11,11 +24,8 @@ export default function GL() {
       <EndpointTester
         method="POST"
         endpoint="/gl/transfer"
-        defaultHeaders={{
-          'X-User-Id': DEMO_USER_ID,
-        }}
         defaultBody={{
-          userId: DEMO_USER_ID,
+          userId: currentUserId,
           fromGlAccountId: '4eb5d88d-368f-4fbd-84d7-c6f2803d5d7c',
           toGlAccountId: '4eb5d88d-368f-4fbd-84d7-c6f2803d5d7c',
           amount: 1000,
@@ -28,11 +38,8 @@ export default function GL() {
       <EndpointTester
         method="POST"
         endpoint="/gl/expense"
-        defaultHeaders={{
-          'X-User-Id': DEMO_USER_ID,
-        }}
         defaultBody={{
-          userId: 'c2610e4e-1cca-401e-afa7-1ebf541d0000',
+          userId: currentUserId,
           payFromGlAccountId: 'c2610e4e-1cca-401e-afa7-1ebf541d0000',
           expenseGlAccountId: 'c2610e4e-1cca-401e-afa7-1ebf541d0000',
           amount: 320,
@@ -45,11 +52,8 @@ export default function GL() {
       <EndpointTester
         method="POST"
         endpoint="/gl/income"
-        defaultHeaders={{
-          'X-User-Id': DEMO_USER_ID,
-        }}
         defaultBody={{
-          userId: 'c2610e4e-1cca-401e-afa7-1ebf541d0000',
+          userId: currentUserId,
           receiveToGlAccountId: 'c2610e4e-1cca-401e-afa7-1ebf541d0000',
           incomeGlAccountId: 'c2610e4e-1cca-401e-afa7-1ebf541d0000',
           amount: 1500,
@@ -61,4 +65,3 @@ export default function GL() {
     </div>
   )
 }
-
