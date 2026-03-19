@@ -23,7 +23,7 @@ export const routeConfig: RouteConfig[] = [
   { path: '/health', label: 'Health', element: <Health />, showInNav: false },
   { path: '/users', label: 'Users', element: <Users />, showInNav: false },
   { path: '/accounts', label: 'Accounts', element: <Accounts />, showInNav: true },
-  { path: '/assets', label: 'Assets', element: <Assets />, showInNav: false },
+  { path: '/assets', label: 'Assets', element: <Assets />, showInNav: true },
 ]
 
 // Helper to get nav items (filtered by showInNav)

@@ -1,14 +1,9 @@
 import { api } from './api'
 import { getRequiredCurrentUserId } from '../app/current-user'
 import type { Account } from './accounts.service'
+import type { Asset } from './assets.service'
 
-export type Asset = {
-  id: string
-  symbol: string
-  name: string
-  type: 'equity' | 'etf' | 'crypto' | 'cash'
-  baseCurrency: string
-}
+export type { Asset } from './assets.service'
 
 export type TransactionListItem = {
   id: string

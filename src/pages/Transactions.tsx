@@ -127,6 +127,7 @@ export default function Transactions() {
 
   const requiresAsset = mode === 'buy' || mode === 'sell' || mode === 'dividend'
   const requiresTradeFields = mode === 'buy' || mode === 'sell'
+  const hasTradableAssets = availableAssets.length > 0
 
   const computedAmount = useMemo(() => {
     const numericQuantity = Number(quantity)
@@ -258,6 +259,10 @@ export default function Transactions() {
   const validateForm = () => {
     if (!currentUserId || !accountId) {
       return 'Please select an investment account'
+    }
+
+    if (requiresAsset && !hasTradableAssets) {
+      return 'No asset available. Create one in Assets first.'
     }
 
     if (!tradeTime || Number.isNaN(new Date(tradeTime).getTime())) {
@@ -500,10 +505,10 @@ export default function Transactions() {
                 <select
                   value={assetId}
                   onChange={(event) => setAssetId(event.target.value)}
-                  disabled={availableAssets.length === 0}
+                  disabled={!hasTradableAssets}
                   className="w-full rounded border border-gray-300 px-3 py-2"
                 >
-                  {availableAssets.length === 0 && (
+                  {!hasTradableAssets && (
                     <option value="">No asset available</option>
                   )}
                   {availableAssets.map((asset) => (
@@ -512,6 +517,18 @@ export default function Transactions() {
                     </option>
                   ))}
                 </select>
+                {!hasTradableAssets && (
+                  <div className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-3 text-sm text-amber-900">
+                    No asset available. Create one in{' '}
+                    <Link
+                      to="/assets"
+                      className="font-medium underline underline-offset-2"
+                    >
+                      Assets
+                    </Link>{' '}
+                    first.
+                  </div>
+                )}
               </div>
             )}
 
@@ -626,9 +643,11 @@ export default function Transactions() {
               </div>
               <button
                 type="submit"
-                disabled={submitting || !accountId}
+                disabled={
+                  submitting || !accountId || (requiresAsset && !hasTradableAssets)
+                }
                 className={`rounded bg-blue-600 px-4 py-2 text-sm font-medium text-white ${
-                  submitting || !accountId
+                  submitting || !accountId || (requiresAsset && !hasTradableAssets)
                     ? 'cursor-not-allowed bg-gray-400'
                     : 'hover:bg-blue-700'
                 }`}
