@@ -2,14 +2,14 @@ import { useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import {
   investmentsService,
-  type Account,
   type Asset,
+  type ImportTransactionsResponse,
   type TransactionListItem,
 } from '../lib/investments.service'
+import { useCurrentUserId } from '../app/current-user'
+import { SUPPORTED_BROKER, type Account } from '../lib/accounts.service'
 
 type InvestmentMode = 'deposit' | 'buy' | 'sell' | 'dividend'
-
-const DEMO_USER_ID = import.meta.env.VITE_DEMO_USER_ID
 
 function getErrorMessage(err: unknown, fallback: string) {
   if (err && typeof err === 'object' && 'response' in err) {
@@ -37,7 +37,38 @@ function formatMoney(value: number | string | null | undefined) {
   })
 }
 
+function isPositiveNumber(value: string) {
+  const numeric = Number(value)
+  return Number.isFinite(numeric) && numeric > 0
+}
+
+function isZeroOrPositiveNumber(value: string) {
+  const numeric = Number(value || '0')
+  return Number.isFinite(numeric) && numeric >= 0
+}
+
+function buildTransactionDetails(transaction: TransactionListItem) {
+  const segments: string[] = []
+
+  if (transaction.quantity) {
+    segments.push(
+      `${formatMoney(transaction.quantity)} @ ${formatMoney(transaction.price)}`,
+    )
+  }
+
+  if (transaction.fee && Number(transaction.fee) > 0) {
+    segments.push(`fee ${formatMoney(transaction.fee)}`)
+  }
+
+  if (transaction.tax && Number(transaction.tax) > 0) {
+    segments.push(`tax ${formatMoney(transaction.tax)}`)
+  }
+
+  return segments.length > 0 ? segments.join(' · ') : '-'
+}
+
 export default function Transactions() {
+  const currentUserId = useCurrentUserId()
   const [accounts, setAccounts] = useState<Account[]>([])
   const [assets, setAssets] = useState<Asset[]>([])
   const [transactions, setTransactions] = useState<TransactionListItem[]>([])
@@ -49,6 +80,7 @@ export default function Transactions() {
   const [quantity, setQuantity] = useState('')
   const [price, setPrice] = useState('')
   const [fee, setFee] = useState('')
+  const [tax, setTax] = useState('')
   const [tradeTime, setTradeTime] = useState(() =>
     new Date().toISOString().slice(0, 16),
   )
@@ -56,11 +88,17 @@ export default function Transactions() {
   const [loadingMeta, setLoadingMeta] = useState(false)
   const [loadingTransactions, setLoadingTransactions] = useState(false)
   const [submitting, setSubmitting] = useState(false)
+  const [importAccountId, setImportAccountId] = useState('')
+  const [importFile, setImportFile] = useState<File | null>(null)
+  const [importSubmitting, setImportSubmitting] = useState(false)
+  const [importResult, setImportResult] =
+    useState<ImportTransactionsResponse | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [successMessage, setSuccessMessage] = useState<string | null>(null)
 
   const availableAccounts = useMemo(
-    () => accounts.filter((account) => account.type !== 'cash' || mode === 'deposit'),
+    () =>
+      accounts.filter((account) => account.type !== 'cash' || mode === 'deposit'),
     [accounts, mode],
   )
 
@@ -72,6 +110,14 @@ export default function Transactions() {
   const availableAssets = useMemo(
     () => assets.filter((asset) => asset.type !== 'cash'),
     [assets],
+  )
+  const importAccounts = useMemo(
+    () =>
+      accounts.filter(
+        (account) =>
+          account.type === 'broker' && account.broker === SUPPORTED_BROKER,
+      ),
+    [accounts],
   )
 
   const selectedAsset = useMemo(
@@ -87,6 +133,7 @@ export default function Transactions() {
     const numericQuantity = Number(quantity)
     const numericPrice = Number(price)
     const numericFee = Number(fee || '0')
+    const numericTax = Number(tax || '0')
 
     if (!requiresTradeFields) {
       return Number(amount || '0')
@@ -97,17 +144,19 @@ export default function Transactions() {
     }
 
     const gross = numericQuantity * numericPrice
-    return mode === 'buy' ? gross + numericFee : gross - numericFee
-  }, [amount, fee, mode, price, quantity, requiresTradeFields])
+    return mode === 'buy'
+      ? gross + numericFee + numericTax
+      : gross - numericFee - numericTax
+  }, [amount, fee, mode, price, quantity, requiresTradeFields, tax])
 
   async function loadTransactions(filterAccountId: string) {
-    if (!DEMO_USER_ID) {
+    if (!currentUserId) {
       return
     }
 
     setLoadingTransactions(true)
     try {
-      const response = await investmentsService.getTransactions(DEMO_USER_ID, {
+      const response = await investmentsService.getTransactions({
         accountId: filterAccountId !== 'All' ? filterAccountId : undefined,
         take: 20,
       })
@@ -120,7 +169,7 @@ export default function Transactions() {
   }
 
   useEffect(() => {
-    if (!DEMO_USER_ID) {
+    if (!currentUserId) {
       return
     }
 
@@ -130,7 +179,7 @@ export default function Transactions() {
         setError(null)
 
         const [loadedAccounts, loadedAssets] = await Promise.all([
-          investmentsService.getAccounts(DEMO_USER_ID),
+          investmentsService.getAccounts(),
           investmentsService.getAssets(),
         ])
 
@@ -142,7 +191,9 @@ export default function Transactions() {
         }
 
         if (loadedAssets.length > 0) {
-          const firstTradableAsset = loadedAssets.find((asset) => asset.type !== 'cash')
+          const firstTradableAsset = loadedAssets.find(
+            (asset) => asset.type !== 'cash',
+          )
           setAssetId((current) => current || firstTradableAsset?.id || '')
         }
       } catch (err: unknown) {
@@ -153,7 +204,7 @@ export default function Transactions() {
     }
 
     loadMeta().catch(console.error)
-  }, [])
+  }, [currentUserId])
 
   useEffect(() => {
     if (availableAccounts.length === 0) {
@@ -167,6 +218,22 @@ export default function Transactions() {
   }, [accountId, availableAccounts])
 
   useEffect(() => {
+    if (importAccounts.length === 0) {
+      setImportAccountId('')
+      return
+    }
+
+    if (!importAccounts.some((account) => account.id === importAccountId)) {
+      const selectedBroker =
+        selectedAccount?.type === 'broker' &&
+        selectedAccount.broker === SUPPORTED_BROKER
+          ? selectedAccount.id
+          : undefined
+      setImportAccountId(selectedBroker || importAccounts[0].id)
+    }
+  }, [importAccountId, importAccounts, selectedAccount])
+
+  useEffect(() => {
     if (!requiresAsset) {
       return
     }
@@ -178,44 +245,66 @@ export default function Transactions() {
 
   useEffect(() => {
     loadTransactions(listAccountId).catch(console.error)
-  }, [listAccountId])
+  }, [currentUserId, listAccountId])
 
   useEffect(() => {
     if (mode === 'deposit' || mode === 'dividend') {
       setQuantity('')
       setPrice('')
       setFee('')
+      setTax('')
     }
   }, [mode])
+
+  const validateForm = () => {
+    if (!currentUserId || !accountId) {
+      return 'Please select an investment account'
+    }
+
+    if (requiresAsset && !hasTradableAssets) {
+      return 'No asset available. Create one in Assets first.'
+    }
+
+    if (!tradeTime || Number.isNaN(new Date(tradeTime).getTime())) {
+      return 'Please provide a valid trade time'
+    }
+
+    if (requiresAsset && !assetId) {
+      return 'Please select an asset'
+    }
+
+    if (requiresTradeFields) {
+      if (!isPositiveNumber(quantity)) {
+        return `Quantity must be a positive number for ${mode} transactions`
+      }
+
+      if (!isPositiveNumber(price)) {
+        return `Price must be a positive number for ${mode} transactions`
+      }
+    }
+
+    if (!isZeroOrPositiveNumber(fee)) {
+      return 'Fee must be zero or a positive number'
+    }
+
+    if (!isZeroOrPositiveNumber(tax)) {
+      return 'Tax must be zero or a positive number'
+    }
+
+    const numericAmount = requiresTradeFields ? computedAmount : Number(amount)
+    if (!Number.isFinite(numericAmount) || numericAmount <= 0) {
+      return 'Amount must be a positive number'
+    }
+
+    return null
+  }
 
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault()
 
-    if (!DEMO_USER_ID || !accountId) {
-      setError('Please select an investment account')
-      return
-    }
-
-    if (requiresAsset && !hasTradableAssets) {
-      setError('No asset available. Create one in Assets first.')
-      return
-    }
-
-    const numericAmount = requiresTradeFields
-      ? computedAmount
-      : Number(amount)
-
-    if (!Number.isFinite(numericAmount) || numericAmount <= 0) {
-      setError('Amount must be a positive number')
-      return
-    }
-
-    if (requiresAsset && !assetId) {
-      setError(
-        hasTradableAssets
-          ? 'Please select an asset'
-          : 'No asset available. Create one in Assets first.',
-      )
+    const validationError = validateForm()
+    if (validationError) {
+      setError(validationError)
       return
     }
 
@@ -223,10 +312,11 @@ export default function Transactions() {
       accountId,
       assetId: requiresAsset ? assetId : undefined,
       type: mode,
-      amount: numericAmount,
+      amount: requiresTradeFields ? computedAmount : Number(amount),
       quantity: requiresTradeFields ? Number(quantity) : undefined,
       price: requiresTradeFields ? Number(price) : undefined,
       fee: requiresTradeFields ? Number(fee || '0') : undefined,
+      tax: requiresTradeFields ? Number(tax || '0') : undefined,
       tradeTime: new Date(tradeTime).toISOString(),
       note: note || undefined,
     } as const
@@ -235,12 +325,13 @@ export default function Transactions() {
       setSubmitting(true)
       setError(null)
       setSuccessMessage(null)
-      await investmentsService.createTransaction(DEMO_USER_ID, payload)
+      await investmentsService.createTransaction(payload)
       setSuccessMessage(`${mode} saved`)
       setAmount('')
       setQuantity('')
       setPrice('')
       setFee('')
+      setTax('')
       setNote('')
       await loadTransactions(listAccountId)
     } catch (err: unknown) {
@@ -250,7 +341,74 @@ export default function Transactions() {
     }
   }
 
-  if (!DEMO_USER_ID) {
+  const validateImport = () => {
+    if (!currentUserId) {
+      return 'VITE_DEMO_USER_ID is not set'
+    }
+
+    if (!importAccountId) {
+      return 'Please select an account for CSV import'
+    }
+
+    if (!importFile) {
+      return 'Please choose a CSV file to import'
+    }
+
+    const loweredName = importFile.name.toLowerCase()
+    if (
+      !loweredName.endsWith('.csv') &&
+      !loweredName.endsWith('.tsv') &&
+      !loweredName.endsWith('.txt')
+    ) {
+      return 'Import file must be a .csv, .tsv, or .txt file'
+    }
+
+    if (importFile.size === 0) {
+      return 'Import file is empty'
+    }
+
+    return null
+  }
+
+  const handleImport = async (event: React.FormEvent) => {
+    event.preventDefault()
+
+    const validationError = validateImport()
+    if (validationError) {
+      setError(validationError)
+      return
+    }
+
+    try {
+      setImportSubmitting(true)
+      setError(null)
+      setSuccessMessage(null)
+      const csvContent = await importFile!.text()
+      if (!csvContent.trim()) {
+        setError('Import file is empty')
+        return
+      }
+
+      const result = await investmentsService.importTransactions({
+        accountId: importAccountId,
+        csvContent,
+      })
+
+      setImportResult(result)
+      if (result.successCount > 0) {
+        setSuccessMessage(`Imported ${result.successCount} transaction(s)`)
+        await loadTransactions(listAccountId)
+      } else {
+        setSuccessMessage(null)
+      }
+    } catch (err: unknown) {
+      setError(getErrorMessage(err, 'Failed to import transactions'))
+    } finally {
+      setImportSubmitting(false)
+    }
+  }
+
+  if (!currentUserId) {
     return (
       <div className="mx-auto max-w-5xl">
         <h1 className="mb-4 text-2xl font-semibold">Investments</h1>
@@ -316,7 +474,9 @@ export default function Transactions() {
                 disabled={loadingMeta || availableAccounts.length === 0}
                 className="w-full rounded border border-gray-300 px-3 py-2"
               >
-                {availableAccounts.length === 0 && <option value="">No account available</option>}
+                {availableAccounts.length === 0 && (
+                  <option value="">No account available</option>
+                )}
                 {availableAccounts.map((account) => (
                   <option key={account.id} value={account.id}>
                     {account.name} ({account.currency})
@@ -348,7 +508,9 @@ export default function Transactions() {
                   disabled={!hasTradableAssets}
                   className="w-full rounded border border-gray-300 px-3 py-2"
                 >
-                  {!hasTradableAssets && <option value="">No asset available</option>}
+                  {!hasTradableAssets && (
+                    <option value="">No asset available</option>
+                  )}
                   {availableAssets.map((asset) => (
                     <option key={asset.id} value={asset.id}>
                       {asset.symbol} · {asset.name}
@@ -358,7 +520,10 @@ export default function Transactions() {
                 {!hasTradableAssets && (
                   <div className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-3 text-sm text-amber-900">
                     No asset available. Create one in{' '}
-                    <Link to="/assets" className="font-medium underline underline-offset-2">
+                    <Link
+                      to="/assets"
+                      className="font-medium underline underline-offset-2"
+                    >
                       Assets
                     </Link>{' '}
                     first.
@@ -407,6 +572,20 @@ export default function Transactions() {
                     min="0"
                     value={fee}
                     onChange={(event) => setFee(event.target.value)}
+                    className="w-full rounded border border-gray-300 px-3 py-2"
+                  />
+                </div>
+
+                <div className="space-y-1">
+                  <label className="block text-sm font-medium text-gray-700">
+                    Tax
+                  </label>
+                  <input
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    value={tax}
+                    onChange={(event) => setTax(event.target.value)}
                     className="w-full rounded border border-gray-300 px-3 py-2"
                   />
                 </div>
@@ -479,14 +658,134 @@ export default function Transactions() {
           </form>
         </div>
 
-        <aside className="rounded-xl border border-gray-200 bg-gray-50 p-5 shadow-sm">
-          <h2 className="mb-3 text-lg font-semibold">How this page works</h2>
-          <ul className="space-y-2 text-sm text-gray-700">
-            <li>Deposit records funding into an investment account.</li>
-            <li>Buy and sell compute total amount from quantity, price, and fee.</li>
-            <li>Dividend records cash income tied to an asset.</li>
-            <li>Recent transactions stay visible so you can audit the feed.</li>
-          </ul>
+        <aside className="space-y-4">
+          <section className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm">
+            <h2 className="mb-3 text-lg font-semibold">Import CSV</h2>
+            <p className="mb-4 text-sm text-gray-600">
+              Upload a Cathay brokerage export and import it into a configured
+              broker account. Broker accounts without a parser configuration stay
+              manual-only. Set up the account first in{' '}
+              <Link to="/accounts" className="font-medium text-blue-700 underline">
+                Accounts
+              </Link>
+              .
+            </p>
+
+            {importAccounts.length === 0 && (
+              <div className="mb-4 rounded border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+                No broker account configured for CSV import. Go to Accounts and
+                create a Cathay broker account first.
+              </div>
+            )}
+
+            <form onSubmit={handleImport} className="space-y-4">
+              <div className="space-y-1">
+                <label className="block text-sm font-medium text-gray-700">
+                  Import account
+                </label>
+                <select
+                  value={importAccountId}
+                  onChange={(event) => setImportAccountId(event.target.value)}
+                  disabled={importAccounts.length === 0 || importSubmitting}
+                  className="w-full rounded border border-gray-300 px-3 py-2"
+                >
+                  {importAccounts.length === 0 && (
+                    <option value="">No broker account configured for CSV import</option>
+                  )}
+                  {importAccounts.map((account) => (
+                    <option key={account.id} value={account.id}>
+                      {account.name} ({account.currency})
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="space-y-1">
+                <label className="block text-sm font-medium text-gray-700">
+                  File
+                </label>
+                <input
+                  type="file"
+                  accept=".csv,.tsv,.txt"
+                  onChange={(event) =>
+                    setImportFile(event.target.files?.[0] ?? null)
+                  }
+                  disabled={importSubmitting}
+                  className="block w-full rounded border border-gray-300 px-3 py-2 text-sm"
+                />
+                <p className="text-xs text-gray-500">
+                  Required columns: 股名, 日期, 成交股數, 淨收付, 成交單價, 手續費,
+                  交易稅, 稅款, 委託書號, 幣別.
+                </p>
+              </div>
+
+              <button
+                type="submit"
+                disabled={importSubmitting || importAccounts.length === 0}
+                className={`rounded bg-slate-900 px-4 py-2 text-sm font-medium text-white ${
+                  importSubmitting || importAccounts.length === 0
+                    ? 'cursor-not-allowed bg-gray-400'
+                    : 'hover:bg-slate-700'
+                }`}
+              >
+                {importSubmitting ? 'Importing...' : 'Import CSV'}
+              </button>
+            </form>
+          </section>
+
+          {importResult && (
+            <section className="rounded-xl border border-gray-200 bg-gray-50 p-5 shadow-sm">
+              <h2 className="mb-3 text-lg font-semibold">Import result</h2>
+              <div className="grid grid-cols-3 gap-3 text-sm">
+                <div className="rounded border border-gray-200 bg-white px-3 py-2">
+                  <div className="text-gray-500">Rows</div>
+                  <div className="font-semibold">{importResult.totalRows}</div>
+                </div>
+                <div className="rounded border border-green-200 bg-white px-3 py-2">
+                  <div className="text-gray-500">Success</div>
+                  <div className="font-semibold text-green-700">
+                    {importResult.successCount}
+                  </div>
+                </div>
+                <div className="rounded border border-red-200 bg-white px-3 py-2">
+                  <div className="text-gray-500">Failed</div>
+                  <div className="font-semibold text-red-700">
+                    {importResult.failureCount}
+                  </div>
+                </div>
+              </div>
+
+              {importResult.errors.length > 0 && (
+                <div className="mt-4 space-y-2">
+                  <h3 className="text-sm font-medium text-gray-800">Errors</h3>
+                  <div className="space-y-2">
+                    {importResult.errors.map((item, index) => (
+                      <div
+                        key={`${item.row}-${item.field}-${index}`}
+                        className="rounded border border-red-200 bg-white px-3 py-2 text-sm"
+                      >
+                        <div className="font-medium text-red-700">
+                          Row {item.row} · {item.field}
+                        </div>
+                        <div className="text-gray-700">{item.message}</div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </section>
+          )}
+
+          <section className="rounded-xl border border-gray-200 bg-gray-50 p-5 shadow-sm">
+            <h2 className="mb-3 text-lg font-semibold">How this page works</h2>
+            <ul className="space-y-2 text-sm text-gray-700">
+              <li>Deposit records funding into an investment account.</li>
+              <li>Buy and sell compute total amount from quantity, price, fee, and tax.</li>
+              <li>Dividend records cash income tied to an asset.</li>
+              <li>CSV import stays limited to configured Cathay broker accounts.</li>
+              <li>Recent transactions stay visible so you can audit the feed.</li>
+            </ul>
+          </section>
         </aside>
       </section>
 
@@ -533,6 +832,7 @@ export default function Transactions() {
                   <th className="px-2 py-3 font-medium text-gray-600">Asset</th>
                   <th className="px-2 py-3 font-medium text-gray-600">Amount</th>
                   <th className="px-2 py-3 font-medium text-gray-600">Details</th>
+                  <th className="px-2 py-3 font-medium text-gray-600">Order no</th>
                   <th className="px-2 py-3 font-medium text-gray-600">Note</th>
                 </tr>
               </thead>
@@ -553,11 +853,10 @@ export default function Transactions() {
                       {formatMoney(transaction.amount)}
                     </td>
                     <td className="px-2 py-3 text-gray-600">
-                      {transaction.quantity
-                        ? `${formatMoney(transaction.quantity)} @ ${formatMoney(
-                            transaction.price,
-                          )}${transaction.fee ? ` · fee ${formatMoney(transaction.fee)}` : ''}`
-                        : '-'}
+                      {buildTransactionDetails(transaction)}
+                    </td>
+                    <td className="px-2 py-3 text-gray-600">
+                      {transaction.brokerOrderNo || '-'}
                     </td>
                     <td className="px-2 py-3">{transaction.note || '-'}</td>
                   </tr>

@@ -1,7 +1,6 @@
 import { useQuery } from '@tanstack/react-query'
 import { api } from '../lib/api'
-
-const DEMO_USER_ID = import.meta.env.VITE_DEMO_USER_ID
+import { useCurrentUserId } from '../app/current-user'
 
 type HealthResponse = {
   status?: string
@@ -106,6 +105,7 @@ function getErrorMessage(err: unknown, fallback: string) {
 }
 
 export default function Dashboard() {
+  const currentUserId = useCurrentUserId()
   const healthQuery = useQuery({
     queryKey: ['dashboard', 'health'],
     queryFn: async () => (await api.get<HealthResponse>('/health')).data,
@@ -113,26 +113,20 @@ export default function Dashboard() {
   })
 
   const summaryQuery = useQuery({
-    queryKey: ['dashboard', 'summary', DEMO_USER_ID],
-    queryFn: async () =>
-      (
-        await api.get<DashboardSummaryResponse>('/dashboard/summary', {
-          headers: { 'X-User-Id': DEMO_USER_ID },
-        })
-      ).data,
-    enabled: Boolean(DEMO_USER_ID),
+    queryKey: ['dashboard', 'summary', currentUserId],
+    queryFn: async () => (await api.get<DashboardSummaryResponse>('/dashboard/summary')).data,
+    enabled: Boolean(currentUserId),
   })
 
   const activityQuery = useQuery({
-    queryKey: ['dashboard', 'activity', DEMO_USER_ID],
+    queryKey: ['dashboard', 'activity', currentUserId],
     queryFn: () =>
       api
         .get<DashboardActivityResponse>('/dashboard/activity', {
-          headers: { 'X-User-Id': DEMO_USER_ID },
           params: { take: 10 },
         })
         .then((response) => response.data),
-    enabled: Boolean(DEMO_USER_ID),
+    enabled: Boolean(currentUserId),
   })
 
   const dashboardMetrics = summaryQuery.data
@@ -165,7 +159,7 @@ export default function Dashboard() {
   const dataLoading = activityQuery.isLoading
   const dataError = activityQuery.error
 
-  if (!DEMO_USER_ID) {
+  if (!currentUserId) {
     return (
       <div className="mx-auto max-w-6xl">
         <h1 className="mb-4 text-3xl font-semibold">Dashboard</h1>

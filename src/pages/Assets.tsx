@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom'
 import {
   assetsService,
   ASSET_TYPE_OPTIONS,
-  BASE_CURRENCY_SUGGESTIONS,
+  BASE_CURRENCY_OPTIONS,
   type Asset,
   type AssetType,
 } from '../lib/assets.service'
@@ -195,7 +195,7 @@ export default function Assets() {
                 }
                 className="w-full rounded border border-gray-300 px-3 py-2"
               >
-                {BASE_CURRENCY_SUGGESTIONS.map((currency) => (
+                {BASE_CURRENCY_OPTIONS.map((currency) => (
                   <option key={currency} value={currency}>
                     {currency}
                   </option>

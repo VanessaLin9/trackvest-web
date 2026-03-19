@@ -12,7 +12,7 @@ export interface RouteConfig {
   path: string
   label: string
   element: React.ReactNode
-  showInNav?: boolean // Optional: hide from nav if needed
+  showInNav?: boolean
 }
 
 export const routeConfig: RouteConfig[] = [
@@ -22,11 +22,10 @@ export const routeConfig: RouteConfig[] = [
   { path: '/gl', label: 'Ledger', element: <GL />, showInNav: true },
   { path: '/health', label: 'Health', element: <Health />, showInNav: false },
   { path: '/users', label: 'Users', element: <Users />, showInNav: false },
-  { path: '/accounts', label: 'Accounts', element: <Accounts />, showInNav: false },
+  { path: '/accounts', label: 'Accounts', element: <Accounts />, showInNav: true },
   { path: '/assets', label: 'Assets', element: <Assets />, showInNav: true },
 ]
 
-// Helper to get nav items (filtered by showInNav)
 export const getNavItems = () => {
   return routeConfig.filter((route) => route.showInNav !== false)
 }

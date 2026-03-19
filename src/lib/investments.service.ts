@@ -1,16 +1,9 @@
 import { api } from './api'
+import { getRequiredCurrentUserId } from '../app/current-user'
+import type { Account } from './accounts.service'
 import type { Asset } from './assets.service'
 
 export type { Asset } from './assets.service'
-
-export type Account = {
-  id: string
-  userId: string
-  name: string
-  type: 'broker' | 'bank' | 'cash'
-  currency: string
-  createdAt: string
-}
 
 export type TransactionListItem = {
   id: string
@@ -21,6 +14,8 @@ export type TransactionListItem = {
   quantity?: number | string | null
   price?: number | string | null
   fee?: number | string | null
+  tax?: number | string | null
+  brokerOrderNo?: string | null
   tradeTime: string
   note?: string | null
   isDeleted: boolean
@@ -54,21 +49,34 @@ export type CreateTransactionPayload = {
   quantity?: number
   price?: number
   fee?: number
+  tax?: number
+  brokerOrderNo?: string
   tradeTime: string
   note?: string
 }
 
-function getHeaders(userId: string) {
-  return {
-    'X-User-Id': userId,
-  }
+export type ImportTransactionsPayload = {
+  accountId: string
+  csvContent: string
+}
+
+export type ImportTransactionsResponse = {
+  totalRows: number
+  successCount: number
+  failureCount: number
+  createdTransactionIds: string[]
+  errors: Array<{
+    row: number
+    field: string
+    message: string
+  }>
 }
 
 export const investmentsService = {
-  async getAccounts(userId: string): Promise<Account[]> {
-    const response = await api.get<Account[]>('/accounts', {
-      headers: getHeaders(userId),
-    })
+  async getAccounts(): Promise<Account[]> {
+    getRequiredCurrentUserId()
+
+    const response = await api.get<Account[]>('/accounts')
     return response.data
   },
 
@@ -78,23 +86,30 @@ export const investmentsService = {
   },
 
   async getTransactions(
-    userId: string,
     params: { accountId?: string; assetId?: string; take?: number } = {},
   ): Promise<TransactionsResponse> {
-    const response = await api.get<TransactionsResponse>('/transactions', {
-      headers: getHeaders(userId),
-      params,
-    })
+    getRequiredCurrentUserId()
+
+    const response = await api.get<TransactionsResponse>('/transactions', { params })
     return response.data
   },
 
-  async createTransaction(
-    userId: string,
-    payload: CreateTransactionPayload,
-  ) {
-    const response = await api.post('/transactions', payload, {
-      headers: getHeaders(userId),
-    })
+  async createTransaction(payload: CreateTransactionPayload) {
+    getRequiredCurrentUserId()
+
+    const response = await api.post('/transactions', payload)
+    return response.data
+  },
+
+  async importTransactions(
+    payload: ImportTransactionsPayload,
+  ): Promise<ImportTransactionsResponse> {
+    getRequiredCurrentUserId()
+
+    const response = await api.post<ImportTransactionsResponse>(
+      '/transactions/import',
+      payload,
+    )
     return response.data
   },
 }

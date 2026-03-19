@@ -1,7 +1,7 @@
 import { api } from './api'
 
 export const ASSET_TYPE_OPTIONS = ['equity', 'etf', 'crypto', 'cash'] as const
-export const BASE_CURRENCY_SUGGESTIONS = ['USD', 'TWD', 'JPY', 'EUR'] as const
+export const BASE_CURRENCY_OPTIONS = ['USD', 'TWD', 'JPY', 'EUR'] as const
 
 export type AssetType = (typeof ASSET_TYPE_OPTIONS)[number]
 
