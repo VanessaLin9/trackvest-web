@@ -37,7 +37,11 @@ function getErrorMessage(err: unknown, fallback: string) {
   return fallback
 }
 
-function formatTypeLabel(type: AssetType) {
+function formatTypeLabel(type?: string | null) {
+  if (!type) {
+    return 'UNKNOWN'
+  }
+
   return type.toUpperCase()
 }
 
@@ -181,24 +185,22 @@ export default function Assets() {
               <label className="block text-sm font-medium text-gray-700">
                 Base currency
               </label>
-              <input
-                list="asset-base-currencies"
-                type="text"
+              <select
                 value={form.baseCurrency}
                 onChange={(event) =>
                   setForm((current) => ({
                     ...current,
-                    baseCurrency: event.target.value.toUpperCase(),
+                    baseCurrency: event.target.value,
                   }))
                 }
-                placeholder="e.g. USD"
                 className="w-full rounded border border-gray-300 px-3 py-2"
-              />
-              <datalist id="asset-base-currencies">
+              >
                 {BASE_CURRENCY_SUGGESTIONS.map((currency) => (
-                  <option key={currency} value={currency} />
+                  <option key={currency} value={currency}>
+                    {currency}
+                  </option>
                 ))}
-              </datalist>
+              </select>
             </div>
 
             <div className="space-y-1 md:col-span-2">
