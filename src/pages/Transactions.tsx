@@ -758,7 +758,7 @@ export default function Transactions() {
               {importResult.errors.length > 0 && (
                 <div className="mt-4 space-y-2">
                   <h3 className="text-sm font-medium text-gray-800">Errors</h3>
-                  <div className="max-h-56 space-y-2 overflow-y-auto">
+                  <div className="space-y-2">
                     {importResult.errors.map((item, index) => (
                       <div
                         key={`${item.row}-${item.field}-${index}`}
@@ -782,7 +782,8 @@ export default function Transactions() {
               <li>Deposit records funding into an investment account.</li>
               <li>Buy and sell compute total amount from quantity, price, fee, and tax.</li>
               <li>Dividend records cash income tied to an asset.</li>
-              <li>CSV import is enabled only for broker accounts with a configured broker.</li>
+              <li>CSV import stays limited to configured Cathay broker accounts.</li>
+              <li>Recent transactions stay visible so you can audit the feed.</li>
             </ul>
           </section>
         </aside>
@@ -831,7 +832,7 @@ export default function Transactions() {
                   <th className="px-2 py-3 font-medium text-gray-600">Asset</th>
                   <th className="px-2 py-3 font-medium text-gray-600">Amount</th>
                   <th className="px-2 py-3 font-medium text-gray-600">Details</th>
-                  <th className="px-2 py-3 font-medium text-gray-600">Broker Ref</th>
+                  <th className="px-2 py-3 font-medium text-gray-600">Order no</th>
                   <th className="px-2 py-3 font-medium text-gray-600">Note</th>
                 </tr>
               </thead>
@@ -854,7 +855,7 @@ export default function Transactions() {
                     <td className="px-2 py-3 text-gray-600">
                       {buildTransactionDetails(transaction)}
                     </td>
-                    <td className="px-2 py-3 font-mono text-xs text-gray-600">
+                    <td className="px-2 py-3 text-gray-600">
                       {transaction.brokerOrderNo || '-'}
                     </td>
                     <td className="px-2 py-3">{transaction.note || '-'}</td>

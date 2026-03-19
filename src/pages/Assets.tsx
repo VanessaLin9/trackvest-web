@@ -243,10 +243,7 @@ export default function Assets() {
             <div className="md:col-span-2 flex items-center justify-between rounded-lg bg-gray-50 px-4 py-3">
               <p className="text-sm text-gray-600">
                 Assets created here become selectable in{' '}
-                <Link
-                  to="/transactions"
-                  className="font-medium text-blue-700 hover:text-blue-800"
-                >
+                <Link to="/transactions" className="font-medium text-blue-700 hover:text-blue-800">
                   Investments
                 </Link>
                 .
@@ -255,9 +252,7 @@ export default function Assets() {
                 type="submit"
                 disabled={submitting}
                 className={`rounded px-4 py-2 text-sm font-medium text-white ${
-                  submitting
-                    ? 'cursor-not-allowed bg-gray-400'
-                    : 'bg-blue-600 hover:bg-blue-700'
+                  submitting ? 'cursor-not-allowed bg-gray-400' : 'bg-blue-600 hover:bg-blue-700'
                 }`}
               >
                 {submitting ? 'Creating...' : 'Create asset'}
@@ -292,10 +287,7 @@ export default function Assets() {
               <p>No asset selected yet.</p>
               <p>
                 Create one manually, then return to{' '}
-                <Link
-                  to="/transactions"
-                  className="font-medium text-blue-700 hover:text-blue-800"
-                >
+                <Link to="/transactions" className="font-medium text-blue-700 hover:text-blue-800">
                   Investments
                 </Link>{' '}
                 to use it in buy, sell, or dividend entry.
@@ -332,9 +324,7 @@ export default function Assets() {
                   <th className="px-3 py-3 font-medium text-gray-600">Symbol</th>
                   <th className="px-3 py-3 font-medium text-gray-600">Name</th>
                   <th className="px-3 py-3 font-medium text-gray-600">Type</th>
-                  <th className="px-3 py-3 font-medium text-gray-600">
-                    Base currency
-                  </th>
+                  <th className="px-3 py-3 font-medium text-gray-600">Base currency</th>
                 </tr>
               </thead>
               <tbody>

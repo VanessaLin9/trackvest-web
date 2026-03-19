@@ -1,15 +1,5 @@
-import { useMemo } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { api } from '../lib/api'
-import {
-  cashbookService,
-  type GlAccount,
-  type GlEntry,
-} from '../lib/cashbook.service'
-import {
-  investmentsService,
-  type TransactionListItem,
-} from '../lib/investments.service'
 import { useCurrentUserId } from '../app/current-user'
 
 type HealthResponse = {
@@ -45,17 +35,20 @@ type ActivityItem = {
   date: string
   title: string
   subtitle: string
-  amount?: string
+  amount: number | null
+  currency: string | null
+  direction: 'in' | 'out' | 'neutral'
 }
 
-function getMonthStart() {
-  const now = new Date()
-  return new Date(now.getFullYear(), now.getMonth(), 1)
-}
-
-function getTodayStart() {
-  const now = new Date()
-  return new Date(now.getFullYear(), now.getMonth(), now.getDate())
+type DashboardActivityResponse = {
+  accountOverview: Array<{
+    id: string
+    name: string
+    type: string
+    currency: string | null
+    balance: number
+  }>
+  recentActivity: ActivityItem[]
 }
 
 function formatCurrency(value: number) {
@@ -75,8 +68,25 @@ function formatPercent(value: number) {
   return `${prefix}${Math.abs(value).toFixed(2)}%`
 }
 
+function formatCurrencyWithCode(value: number, currency: string | null) {
+  const prefix = value < 0 ? '-' : ''
+  const amount = `${prefix}${formatCurrency(Math.abs(value))}`
+  return currency ? `${amount} ${currency}` : amount
+}
+
 function formatDateTime(value: string) {
   return new Date(value).toLocaleString()
+}
+
+function formatActivityAmount(item: ActivityItem) {
+  if (item.amount === null) {
+    return null
+  }
+
+  const prefix =
+    item.direction === 'in' ? '+' : item.direction === 'out' ? '-' : ''
+  const amount = `${prefix}${formatCurrency(item.amount)}`
+  return item.currency ? `${amount} ${item.currency}` : amount
 }
 
 function getErrorMessage(err: unknown, fallback: string) {
@@ -94,73 +104,6 @@ function getErrorMessage(err: unknown, fallback: string) {
   return fallback
 }
 
-function sumCashLineAmounts(
-  entries: GlEntry[],
-  assetAccountIds: Set<string>,
-  source: 'manual:expense' | 'manual:income',
-  periodStart: Date,
-) {
-  return entries.reduce((total, entry) => {
-    if (!entry.source?.startsWith(source) || new Date(entry.date) < periodStart) {
-      return total
-    }
-
-    const line = entry.lines?.find((item) => assetAccountIds.has(item.glAccountId))
-    if (!line) {
-      return total
-    }
-
-    return total + Number(line.amount)
-  }, 0)
-}
-
-function buildCashbookActivities(entries: GlEntry[], accountNameMap: Record<string, string>) {
-  return entries
-    .filter((entry) =>
-      entry.source === 'manual:expense' ||
-      entry.source === 'manual:income' ||
-      entry.source === 'manual:transfer',
-    )
-    .map<ActivityItem>((entry) => {
-      const cashLine = entry.lines?.find((line) => accountNameMap[line.glAccountId])
-      const action =
-        entry.source === 'manual:expense'
-          ? 'Expense'
-          : entry.source === 'manual:income'
-          ? 'Income'
-          : 'Transfer'
-
-      return {
-        id: `cashbook-${entry.id}`,
-        kind: 'cashbook',
-        date: entry.date,
-        title: entry.memo || action,
-        subtitle: cashLine
-          ? `${action} · ${accountNameMap[cashLine.glAccountId]}`
-          : action,
-        amount: cashLine
-          ? `${cashLine.side === 'credit' ? '-' : '+'}${formatCurrency(
-              Number(cashLine.amount),
-            )} ${cashLine.currency}`
-          : undefined,
-      }
-    })
-}
-
-function buildInvestmentActivities(transactions: TransactionListItem[]) {
-  return transactions.map<ActivityItem>((transaction) => ({
-    id: `investment-${transaction.id}`,
-    kind: 'investment',
-    date: transaction.tradeTime,
-    title:
-      transaction.asset?.symbol ||
-      transaction.note ||
-      transaction.type,
-    subtitle: `${transaction.type} · ${transaction.account?.name || transaction.accountId}`,
-    amount: formatCurrency(Number(transaction.amount)),
-  }))
-}
-
 export default function Dashboard() {
   const currentUserId = useCurrentUserId()
   const healthQuery = useQuery({
@@ -175,62 +118,16 @@ export default function Dashboard() {
     enabled: Boolean(currentUserId),
   })
 
-  const accountsQuery = useQuery({
-    queryKey: ['dashboard', 'asset-accounts', currentUserId],
-    queryFn: () => cashbookService.getGlAccounts('asset'),
+  const activityQuery = useQuery({
+    queryKey: ['dashboard', 'activity', currentUserId],
+    queryFn: () =>
+      api
+        .get<DashboardActivityResponse>('/dashboard/activity', {
+          params: { take: 10 },
+        })
+        .then((response) => response.data),
     enabled: Boolean(currentUserId),
   })
-
-  const entriesQuery = useQuery({
-    queryKey: ['dashboard', 'gl-entries', currentUserId],
-    queryFn: () => cashbookService.getGlEntries('All'),
-    enabled: Boolean(currentUserId),
-  })
-
-  const transactionsQuery = useQuery({
-    queryKey: ['dashboard', 'transactions', currentUserId],
-    queryFn: () => investmentsService.getTransactions({ take: 10 }),
-    enabled: Boolean(currentUserId),
-  })
-
-  const accounts = (accountsQuery.data ?? []) as GlAccount[]
-  const entries = (entriesQuery.data ?? []) as GlEntry[]
-  const transactions = (transactionsQuery.data?.items ?? []) as TransactionListItem[]
-
-  const assetAccountIds = useMemo(
-    () => new Set(accounts.map((account) => account.id)),
-    [accounts],
-  )
-
-  const accountNameMap = useMemo(() => {
-    const map: Record<string, string> = {}
-    for (const account of accounts) {
-      map[account.id] = account.name
-    }
-    return map
-  }, [accounts])
-
-  const monthStart = getMonthStart()
-
-  const fallbackMetrics = useMemo(() => {
-    const todayExpense = sumCashLineAmounts(
-      entries,
-      assetAccountIds,
-      'manual:expense',
-      getTodayStart(),
-    )
-    const monthExpense = sumCashLineAmounts(
-      entries,
-      assetAccountIds,
-      'manual:expense',
-      monthStart,
-    )
-
-    return {
-      todayExpense,
-      monthExpense,
-    }
-  }, [assetAccountIds, entries, monthStart])
 
   const dashboardMetrics = summaryQuery.data
     ? {
@@ -246,9 +143,9 @@ export default function Dashboard() {
         totalReturnRate: summaryQuery.data.investment.totalReturn.rate,
       }
     : {
-        todayExpense: fallbackMetrics.todayExpense,
+        todayExpense: 0,
         todayExpenseCurrency: null,
-        monthExpense: fallbackMetrics.monthExpense,
+        monthExpense: 0,
         monthExpenseCurrency: null,
         totalInvestmentAssets: 0,
         totalInvestmentAssetsCurrency: null,
@@ -257,23 +154,10 @@ export default function Dashboard() {
         totalReturnRate: 0,
       }
 
-  const activityFeed = useMemo(() => {
-    const cashbookActivities = buildCashbookActivities(entries, accountNameMap)
-    const investmentActivities = buildInvestmentActivities(transactions)
-
-    return [...cashbookActivities, ...investmentActivities]
-      .sort(
-        (left, right) =>
-          new Date(right.date).getTime() - new Date(left.date).getTime(),
-      )
-      .slice(0, 10)
-  }, [accountNameMap, entries, transactions])
-
-  const dataLoading =
-    accountsQuery.isLoading || entriesQuery.isLoading || transactionsQuery.isLoading
-
-  const dataError =
-    accountsQuery.error || entriesQuery.error || transactionsQuery.error
+  const accountOverview = activityQuery.data?.accountOverview ?? []
+  const activityFeed = activityQuery.data?.recentActivity ?? []
+  const dataLoading = activityQuery.isLoading
+  const dataError = activityQuery.error
 
   if (!currentUserId) {
     return (
@@ -339,9 +223,10 @@ export default function Dashboard() {
             Dashboard first, reporting later
           </h2>
           <p className="mt-3 text-sm text-amber-900/80">
-            This page is intentionally a discussion surface. The layout is real,
-            but some numbers are stitched together from existing APIs so we can
-            decide which dedicated summary endpoints are actually worth building.
+            The dashboard now reads its top summary cards and lower activity
+            section from dedicated APIs. The numbers are still MVP-scoped, but
+            the page is no longer stitching raw cashbook and investment data in
+            the browser.
           </p>
         </div>
       </section>
@@ -355,7 +240,7 @@ export default function Dashboard() {
           <p className="mt-2 text-xs text-gray-500">
             {summaryQuery.data
               ? `Summary API · ${dashboardMetrics.todayExpenseCurrency ?? 'N/A'}`
-              : 'Fallback from manual expense entries.'}
+              : 'Waiting for summary API.'}
           </p>
         </div>
 
@@ -367,7 +252,7 @@ export default function Dashboard() {
           <p className="mt-2 text-xs text-gray-500">
             {summaryQuery.data
               ? `Summary API · ${dashboardMetrics.monthExpenseCurrency ?? 'N/A'}`
-              : 'Fallback from manual expense entries.'}
+              : 'Waiting for summary API.'}
           </p>
         </div>
 
@@ -413,21 +298,21 @@ export default function Dashboard() {
             <div>
               <h2 className="text-xl font-semibold">Account overview</h2>
               <p className="text-sm text-gray-500">
-                Cash and bank accounts available to daily flows.
+                Asset-side balances returned by `GET /dashboard/activity`.
               </p>
             </div>
             <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-medium text-slate-700">
-              {accounts.length} accounts
+              {accountOverview.length} accounts
             </span>
           </div>
 
-          {accountsQuery.isLoading ? (
+          {activityQuery.isLoading ? (
             <p className="text-sm text-gray-500">Loading accounts...</p>
-          ) : accounts.length === 0 ? (
+          ) : accountOverview.length === 0 ? (
             <p className="text-sm text-gray-500">No asset accounts yet.</p>
           ) : (
             <div className="space-y-3">
-              {accounts.map((account) => (
+              {accountOverview.map((account) => (
                 <div
                   key={account.id}
                   className="rounded-2xl border border-gray-200 bg-gray-50 px-4 py-3"
@@ -436,12 +321,17 @@ export default function Dashboard() {
                     <div>
                       <p className="font-medium text-gray-900">{account.name}</p>
                       <p className="text-xs uppercase tracking-[0.18em] text-gray-500">
-                        {account.currency}
+                        {account.currency ?? 'N/A'}
                       </p>
                     </div>
-                    <span className="rounded-full bg-white px-3 py-1 text-xs text-gray-600">
-                      {account.type}
-                    </span>
+                    <div className="text-right">
+                      <p className="font-mono text-sm text-gray-800">
+                        {formatCurrencyWithCode(account.balance, account.currency)}
+                      </p>
+                      <span className="mt-1 inline-flex rounded-full bg-white px-3 py-1 text-xs text-gray-600">
+                        {account.type}
+                      </span>
+                    </div>
                   </div>
                 </div>
               ))}
@@ -453,7 +343,7 @@ export default function Dashboard() {
           <div className="mb-4">
             <h2 className="text-xl font-semibold">Recent activity</h2>
             <p className="text-sm text-gray-500">
-              Mixed feed from cashbook postings and investment transactions.
+              Unified feed returned by `GET /dashboard/activity`.
             </p>
           </div>
 
@@ -491,9 +381,17 @@ export default function Dashboard() {
                       <p className="mt-2 font-medium text-gray-900">{item.title}</p>
                       <p className="text-sm text-gray-500">{item.subtitle}</p>
                     </div>
-                    {item.amount && (
-                      <span className="whitespace-nowrap font-mono text-sm text-gray-700">
-                        {item.amount}
+                    {item.amount !== null && (
+                      <span
+                        className={`whitespace-nowrap font-mono text-sm ${
+                          item.direction === 'in'
+                            ? 'text-green-700'
+                            : item.direction === 'out'
+                            ? 'text-red-600'
+                            : 'text-gray-700'
+                        }`}
+                      >
+                        {formatActivityAmount(item)}
                       </span>
                     )}
                   </div>
@@ -505,27 +403,26 @@ export default function Dashboard() {
       </section>
 
       <section className="rounded-3xl border border-dashed border-gray-300 bg-gray-50 p-5">
-        <h2 className="text-lg font-semibold">Likely next API candidates</h2>
+        <h2 className="text-lg font-semibold">Current API boundaries</h2>
         <div className="mt-3 grid gap-3 md:grid-cols-3">
           <div className="rounded-2xl bg-white p-4 shadow-sm">
             <p className="font-medium">`GET /dashboard/summary`</p>
             <p className="mt-2 text-sm text-gray-600">
-              Today, month-to-date, and account balance cards should probably
-              come from one response instead of stitched client logic.
+              The four KPI cards at the top already read from this endpoint.
             </p>
           </div>
           <div className="rounded-2xl bg-white p-4 shadow-sm">
             <p className="font-medium">`GET /dashboard/activity`</p>
             <p className="mt-2 text-sm text-gray-600">
-              A mixed feed would be easier to sort and filter if the backend
-              intentionally shaped it.
+              Account overview and recent activity now share one
+              dashboard-specific response.
             </p>
           </div>
           <div className="rounded-2xl bg-white p-4 shadow-sm">
             <p className="font-medium">`GET /accounts/balances`</p>
             <p className="mt-2 text-sm text-gray-600">
-              The dashboard wants balances, not just account metadata. That is a
-              clear API boundary if you like this overview section.
+              Still worth splitting later if balances need to be reused outside
+              the dashboard page.
             </p>
           </div>
         </div>
