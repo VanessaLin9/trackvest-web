@@ -1,4 +1,7 @@
 import { api } from './api'
+import type { Asset } from './assets.service'
+
+export type { Asset } from './assets.service'
 
 export type Account = {
   id: string
@@ -7,14 +10,6 @@ export type Account = {
   type: 'broker' | 'bank' | 'cash'
   currency: string
   createdAt: string
-}
-
-export type Asset = {
-  id: string
-  symbol: string
-  name: string
-  type: 'equity' | 'etf' | 'crypto' | 'cash'
-  baseCurrency: string
 }
 
 export type TransactionListItem = {
