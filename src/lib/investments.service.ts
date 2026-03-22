@@ -44,7 +44,7 @@ export type TransactionsResponse = {
 export type CreateTransactionPayload = {
   accountId: string
   assetId?: string
-  type: 'buy' | 'sell' | 'deposit' | 'dividend'
+  type: 'buy' | 'deposit' | 'dividend'
   amount: number
   quantity?: number
   price?: number

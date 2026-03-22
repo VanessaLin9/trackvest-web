@@ -1,73 +1,119 @@
-# React + TypeScript + Vite
+# trackvest-web
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+Vite + React frontend for Trackvest. It currently covers:
 
-Currently, two official plugins are available:
+- dashboard
+- cashbook
+- accounts
+- assets
+- investments
+- ledger
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) (or [oxc](https://oxc.rs) when used in [rolldown-vite](https://vite.dev/guide/rolldown)) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+## Stack
 
-## React Compiler
+- React 19
+- React Router 7
+- TanStack Query
+- Axios
+- TypeScript
+- Vite
 
-The React Compiler is currently not compatible with SWC. See [this issue](https://github.com/vitejs/vite-plugin-react/issues/428) for tracking the progress.
+## Local setup
 
-## Expanding the ESLint configuration
+1. Install dependencies
 
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
-
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
-
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+```bash
+pnpm install
 ```
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+2. Configure environment
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
+Local `.env` currently uses:
 
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+```env
+VITE_API_BASE_URL=http://localhost:3000
+VITE_DEMO_USER_ID=889d1083-5b1d-4262-a162-4d24410da9f5
 ```
+
+`VITE_DEMO_USER_ID` is important because the app injects it into every API request as `X-User-Id`.
+
+3. Start the app
+
+```bash
+pnpm dev
+```
+
+Default local URL:
+
+- `http://localhost:5173`
+
+## Backend dependency
+
+This frontend expects the API server to be running at `VITE_API_BASE_URL`.
+
+For normal local development:
+
+- frontend: `http://localhost:5173`
+- backend: `http://localhost:3000`
+
+The backend repo is responsible for:
+
+- seeded demo user
+- account and asset APIs
+- transaction import
+- GL posting
+
+## Main pages
+
+Routes are defined in [src/app/route-config.tsx](/Users/vanessa/develop/trackvest-web/src/app/route-config.tsx):
+
+- `/` dashboard
+- `/cashbook`
+- `/transactions` investments
+- `/gl` ledger
+- `/accounts`
+- `/assets`
+
+## Current investment flow
+
+The investments page is focused on capture-first workflows:
+
+- manual `deposit`
+- manual `buy`
+- manual `dividend`
+- CSV import for supported broker accounts
+
+Current rules:
+
+- only broker accounts with `broker = cathay` appear in CSV import
+- assets must exist before they can be used in investment entry
+- `sell` is intentionally disabled in UI for now
+  - reason: backend cost basis / realized P&L logic is not ready yet
+
+## Useful commands
+
+```bash
+# dev server
+pnpm dev
+
+# production build
+pnpm build
+
+# lint
+pnpm lint
+
+# preview build
+pnpm preview
+```
+
+## Notes for development
+
+- API requests are created in [src/lib/api.ts](/Users/vanessa/develop/trackvest-web/src/lib/api.ts)
+- current user state is managed in [src/app/current-user.ts](/Users/vanessa/develop/trackvest-web/src/app/current-user.ts)
+- the app assumes a single local demo user unless you explicitly switch it in code or env
+
+## Known gaps
+
+- no frontend test suite yet
+- CSV import is broker-specific, not generic
+- `sell` will stay hidden until cost basis handling is implemented end-to-end
