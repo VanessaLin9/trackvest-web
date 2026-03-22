@@ -135,8 +135,8 @@ export default function Assets() {
         <h1 className="text-3xl font-semibold">Assets</h1>
         <p className="max-w-3xl text-sm text-gray-600">
           Create the minimum tradable asset catalog the investment flow needs.
-          If a stock, ETF, or crypto is missing here, buy, sell, and dividend
-          entry will stall in Investments.
+          If a stock, ETF, or crypto is missing here, buy and dividend entry
+          will stall in Investments.
         </p>
       </header>
 
@@ -290,7 +290,7 @@ export default function Assets() {
                 <Link to="/transactions" className="font-medium text-blue-700 hover:text-blue-800">
                   Investments
                 </Link>{' '}
-                to use it in buy, sell, or dividend entry.
+                to use it in buy or dividend entry.
               </p>
             </div>
           )}
