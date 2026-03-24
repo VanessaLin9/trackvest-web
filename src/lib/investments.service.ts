@@ -49,8 +49,6 @@ export type CreateTransactionPayload = {
   quantity?: number
   price?: number
   fee?: number
-  tax?: number
-  brokerOrderNo?: string
   tradeTime: string
   note?: string
 }

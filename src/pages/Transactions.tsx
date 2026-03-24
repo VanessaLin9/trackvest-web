@@ -316,7 +316,6 @@ export default function Transactions() {
       quantity: requiresTradeFields ? Number(quantity) : undefined,
       price: requiresTradeFields ? Number(price) : undefined,
       fee: requiresTradeFields ? Number(fee || '0') : undefined,
-      tax: requiresTradeFields ? Number(tax || '0') : undefined,
       tradeTime: new Date(tradeTime).toISOString(),
       note: note || undefined,
     } as const
@@ -466,10 +465,14 @@ export default function Transactions() {
 
           <form onSubmit={handleSubmit} className="grid gap-4 md:grid-cols-2">
             <div className="space-y-1">
-              <label className="block text-sm font-medium text-gray-700">
+              <label
+                htmlFor="investment-account"
+                className="block text-sm font-medium text-gray-700"
+              >
                 Account
               </label>
               <select
+                id="investment-account"
                 value={accountId}
                 onChange={(event) => setAccountId(event.target.value)}
                 disabled={loadingMeta || availableAccounts.length === 0}
@@ -487,10 +490,14 @@ export default function Transactions() {
             </div>
 
             <div className="space-y-1">
-              <label className="block text-sm font-medium text-gray-700">
+              <label
+                htmlFor="investment-trade-time"
+                className="block text-sm font-medium text-gray-700"
+              >
                 Trade time
               </label>
               <input
+                id="investment-trade-time"
                 type="datetime-local"
                 value={tradeTime}
                 onChange={(event) => setTradeTime(event.target.value)}
@@ -500,10 +507,14 @@ export default function Transactions() {
 
             {requiresAsset && (
               <div className="space-y-1">
-                <label className="block text-sm font-medium text-gray-700">
+                <label
+                  htmlFor="investment-asset"
+                  className="block text-sm font-medium text-gray-700"
+                >
                   Asset
                 </label>
                 <select
+                  id="investment-asset"
                   value={assetId}
                   onChange={(event) => setAssetId(event.target.value)}
                   disabled={!hasTradableAssets}
@@ -536,10 +547,14 @@ export default function Transactions() {
             {requiresTradeFields && (
               <>
                 <div className="space-y-1">
-                  <label className="block text-sm font-medium text-gray-700">
+                  <label
+                    htmlFor="investment-quantity"
+                    className="block text-sm font-medium text-gray-700"
+                  >
                     Quantity
                   </label>
                   <input
+                    id="investment-quantity"
                     type="number"
                     step="0.0001"
                     min="0"
@@ -550,10 +565,14 @@ export default function Transactions() {
                 </div>
 
                 <div className="space-y-1">
-                  <label className="block text-sm font-medium text-gray-700">
+                  <label
+                    htmlFor="investment-price"
+                    className="block text-sm font-medium text-gray-700"
+                  >
                     Price
                   </label>
                   <input
+                    id="investment-price"
                     type="number"
                     step="0.0001"
                     min="0"
@@ -564,10 +583,14 @@ export default function Transactions() {
                 </div>
 
                 <div className="space-y-1">
-                  <label className="block text-sm font-medium text-gray-700">
+                  <label
+                    htmlFor="investment-fee"
+                    className="block text-sm font-medium text-gray-700"
+                  >
                     Fee
                   </label>
                   <input
+                    id="investment-fee"
                     type="number"
                     step="0.01"
                     min="0"
@@ -578,10 +601,14 @@ export default function Transactions() {
                 </div>
 
                 <div className="space-y-1">
-                  <label className="block text-sm font-medium text-gray-700">
+                  <label
+                    htmlFor="investment-tax"
+                    className="block text-sm font-medium text-gray-700"
+                  >
                     Tax
                   </label>
                   <input
+                    id="investment-tax"
                     type="number"
                     step="0.01"
                     min="0"
@@ -594,10 +621,14 @@ export default function Transactions() {
             )}
 
             <div className="space-y-1">
-              <label className="block text-sm font-medium text-gray-700">
+              <label
+                htmlFor="investment-amount"
+                className="block text-sm font-medium text-gray-700"
+              >
                 {requiresTradeFields ? 'Computed amount' : 'Amount'}
               </label>
               <input
+                id="investment-amount"
                 type="number"
                 step="0.01"
                 min="0"
@@ -613,10 +644,14 @@ export default function Transactions() {
             </div>
 
             <div className="space-y-1 md:col-span-2">
-              <label className="block text-sm font-medium text-gray-700">
+              <label
+                htmlFor="investment-note"
+                className="block text-sm font-medium text-gray-700"
+              >
                 Note
               </label>
               <input
+                id="investment-note"
                 type="text"
                 value={note}
                 onChange={(event) => setNote(event.target.value)}
