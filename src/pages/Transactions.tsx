@@ -9,7 +9,7 @@ import {
 import { useCurrentUserId } from '../app/current-user'
 import { SUPPORTED_BROKER, type Account } from '../lib/accounts.service'
 
-type InvestmentMode = 'deposit' | 'buy' | 'dividend'
+type InvestmentMode = 'deposit' | 'buy' | 'sell' | 'dividend'
 
 function getErrorMessage(err: unknown, fallback: string) {
   if (err && typeof err === 'object' && 'response' in err) {
@@ -125,8 +125,8 @@ export default function Transactions() {
     [assetId, assets],
   )
 
-  const requiresAsset = mode === 'buy' || mode === 'dividend'
-  const requiresTradeFields = mode === 'buy'
+  const requiresAsset = mode === 'buy' || mode === 'sell' || mode === 'dividend'
+  const requiresTradeFields = mode === 'buy' || mode === 'sell'
   const hasTradableAssets = availableAssets.length > 0
 
   const computedAmount = useMemo(() => {
@@ -425,9 +425,9 @@ export default function Transactions() {
         <h1 className="text-3xl font-semibold">Investments</h1>
         <p className="max-w-3xl text-sm text-gray-600">
           Record the investment actions you actually care about day to day:
-          deposit, buy, and dividend. Sell stays disabled until cost basis
-          tracking is in place. This page is intentionally focused on capture
-          first and bookkeeping validation second.
+          deposit, buy, sell, and dividend. Buy and sell amounts are computed
+          from quantity, price, fee, and tax so the payload stays aligned with
+          the FIFO cost-basis logic now running in the API.
         </p>
       </header>
 
@@ -446,7 +446,7 @@ export default function Transactions() {
       <section className="grid gap-6 lg:grid-cols-[1.15fr_0.85fr]">
         <div className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm">
           <div className="mb-4 flex flex-wrap gap-2">
-            {(['deposit', 'buy', 'dividend'] as InvestmentMode[]).map(
+            {(['deposit', 'buy', 'sell', 'dividend'] as InvestmentMode[]).map(
               (item) => (
                 <button
                   key={item}
@@ -625,6 +625,8 @@ export default function Transactions() {
                     ? 'e.g. Monthly funding'
                     : mode === 'dividend'
                     ? 'e.g. Cash dividend'
+                    : mode === 'sell'
+                    ? 'e.g. Trim position'
                     : 'e.g. Build position'
                 }
                 className="w-full rounded border border-gray-300 px-3 py-2"
@@ -781,9 +783,10 @@ export default function Transactions() {
             <h2 className="mb-3 text-lg font-semibold">How this page works</h2>
             <ul className="space-y-2 text-sm text-gray-700">
               <li>Deposit records funding into an investment account.</li>
-              <li>Buy computes total amount from quantity, price, fee, and tax.</li>
+              <li>Buy computes total cost from quantity, price, fee, and tax.</li>
+              <li>Sell computes net proceeds from quantity, price, fee, and tax.</li>
               <li>Dividend records cash income tied to an asset.</li>
-              <li>Sell stays off until cost basis and realized P&amp;L are implemented safely.</li>
+              <li>Sell submissions now rely on the API&apos;s FIFO cost basis and realized P&amp;L handling.</li>
               <li>CSV import stays limited to configured Cathay broker accounts.</li>
               <li>Recent transactions stay visible so you can audit the feed.</li>
             </ul>
