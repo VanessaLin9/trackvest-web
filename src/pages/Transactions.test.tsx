@@ -97,6 +97,16 @@ describe('Transactions page trade flows', () => {
     )
   }
 
+  function buildApiError(message: string) {
+    return {
+      response: {
+        data: {
+          message,
+        },
+      },
+    }
+  }
+
   async function switchToMode(mode: 'buy' | 'sell') {
     renderPage()
 
@@ -340,5 +350,79 @@ describe('Transactions page trade flows', () => {
     await waitFor(() => {
       expect(removeTransaction).toHaveBeenCalledWith('tx-sell-1')
     })
+  })
+
+  it('shows the backend oversell error when a sell submission is rejected', async () => {
+    createTransaction.mockRejectedValueOnce(
+      buildApiError('sell quantity exceeds the remaining open position lots'),
+    )
+
+    await switchToMode('sell')
+
+    fireEvent.change(screen.getByLabelText('Quantity'), {
+      target: { value: '999' },
+    })
+    fireEvent.change(screen.getByLabelText('Price'), {
+      target: { value: '100' },
+    })
+    fireEvent.change(screen.getByLabelText('Fee'), {
+      target: { value: '15' },
+    })
+    fireEvent.change(screen.getByLabelText('Tax'), {
+      target: { value: '5' },
+    })
+
+    fireEvent.click(screen.getByRole('button', { name: 'Save sell' }))
+
+    expect(
+      await screen.findByText('sell quantity exceeds the remaining open position lots'),
+    ).toBeTruthy()
+  })
+
+  it('shows import row errors when a sell CSV row exceeds the remaining open lots', async () => {
+    importTransactions.mockResolvedValueOnce({
+      totalRows: 1,
+      successCount: 0,
+      failureCount: 1,
+      createdTransactionIds: [],
+      errors: [
+        {
+          row: 2,
+          field: '委託書號',
+          message: 'sell quantity exceeds the remaining open position lots',
+        },
+      ],
+    })
+
+    renderPage()
+
+    await waitFor(() => {
+      expect(getAccounts).toHaveBeenCalled()
+      expect(getAssets).toHaveBeenCalled()
+    })
+
+    const file = new File(
+      ['股名,日期,成交股數\n0050,2026-03-31,999'],
+      'sell-import.csv',
+      { type: 'text/csv' },
+    )
+
+    fireEvent.change(screen.getByLabelText('File'), {
+      target: { files: [file] },
+    })
+
+    fireEvent.click(screen.getByRole('button', { name: 'Import CSV' }))
+
+    await waitFor(() => {
+      expect(importTransactions).toHaveBeenCalledWith({
+        accountId: 'broker-1',
+        csvContent: '股名,日期,成交股數\n0050,2026-03-31,999',
+      })
+    })
+
+    expect(
+      await screen.findByText('sell quantity exceeds the remaining open position lots'),
+    ).toBeTruthy()
+    expect(screen.getByText('Row 2 · 委託書號')).toBeTruthy()
   })
 })

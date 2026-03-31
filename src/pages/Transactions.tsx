@@ -893,10 +893,14 @@ export default function Transactions() {
 
             <form onSubmit={handleImport} className="space-y-4">
               <div className="space-y-1">
-                <label className="block text-sm font-medium text-gray-700">
+                <label
+                  htmlFor="import-account-id"
+                  className="block text-sm font-medium text-gray-700"
+                >
                   Import account
                 </label>
                 <select
+                  id="import-account-id"
                   value={importAccountId}
                   onChange={(event) => setImportAccountId(event.target.value)}
                   disabled={importAccounts.length === 0 || importSubmitting}
@@ -914,10 +918,14 @@ export default function Transactions() {
               </div>
 
               <div className="space-y-1">
-                <label className="block text-sm font-medium text-gray-700">
+                <label
+                  htmlFor="import-file"
+                  className="block text-sm font-medium text-gray-700"
+                >
                   File
                 </label>
                 <input
+                  id="import-file"
                   type="file"
                   accept=".csv,.tsv,.txt"
                   onChange={(event) =>
