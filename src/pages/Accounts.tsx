@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useCurrentUserId } from '../app/current-user'
 import DataTable from '../components/DataTable'
+import { useI18n } from '../i18n'
 import {
   accountsService,
   ACCOUNT_TYPE_OPTIONS,
@@ -29,18 +30,42 @@ const DEFAULT_FORM: AccountFormState = {
   broker: '',
 }
 
-function formatBrokerLabel(broker?: string | null) {
+function formatBrokerLabel(
+  broker: string | null | undefined,
+  t: (key: string) => string,
+) {
   if (!broker) {
     return '-'
+  }
+
+  if (broker === 'cathay') {
+    return t('accounts.brokerOptionCathay')
   }
 
   const option = BROKER_OPTIONS.find((item) => item.value === broker)
   return option?.label ?? broker
 }
 
+function formatAccountTypeLabel(
+  type: AccountType,
+  t: (key: string) => string,
+) {
+  switch (type) {
+    case 'broker':
+      return t('accounts.typeBroker')
+    case 'bank':
+      return t('accounts.typeBank')
+    case 'cash':
+      return t('accounts.typeCash')
+    default:
+      return type
+  }
+}
+
 export default function Accounts() {
   const currentUserId = useCurrentUserId()
   const queryClient = useQueryClient()
+  const { t } = useI18n()
   const [selectedAccountId, setSelectedAccountId] = useState<string | null>(null)
   const [form, setForm] = useState<AccountFormState>(DEFAULT_FORM)
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
@@ -116,17 +141,17 @@ export default function Accounts() {
       })
       setErrorMessage(null)
       setSuccessMessage(
-        selectedAccountId ? 'Account updated.' : 'Account created.',
+        selectedAccountId ? t('accounts.accountUpdated') : t('accounts.accountCreated'),
       )
     },
     onError: (error: unknown) => {
       if (error && typeof error === 'object' && 'response' in error) {
         const message = (error.response as { data?: { message?: string } })?.data?.message
-        setErrorMessage(message ?? 'Failed to save account')
+        setErrorMessage(message ?? t('accounts.failedToSave'))
         return
       }
 
-      setErrorMessage(error instanceof Error ? error.message : 'Failed to save account')
+      setErrorMessage(error instanceof Error ? error.message : t('accounts.failedToSave'))
     },
   })
 
@@ -159,7 +184,7 @@ export default function Accounts() {
 
     const trimmedName = form.name.trim()
     if (!trimmedName) {
-      setErrorMessage('Account name is required')
+      setErrorMessage(t('accounts.accountNameRequired'))
       return
     }
 
@@ -177,9 +202,9 @@ export default function Accounts() {
   if (!currentUserId) {
     return (
       <div>
-        <h1>Accounts API</h1>
+        <h1>{t('accounts.titleApiFallback')}</h1>
         <p className="text-red-600">
-          VITE_DEMO_USER_ID is not set. Please set it in your .env file.
+          {t('common.envDemoUserMissing')}
         </p>
       </div>
     )
@@ -188,18 +213,18 @@ export default function Accounts() {
   return (
     <div className="mx-auto max-w-6xl space-y-6">
       <header className="space-y-2">
-        <h1 className="text-3xl font-semibold">Accounts</h1>
+        <h1 className="text-3xl font-semibold">{t('accounts.title')}</h1>
         <p className="max-w-3xl text-sm text-gray-600">
-          Configure cash, bank, and broker accounts. CSV import currently works
-          only with a Cathay broker account. Broker accounts can also stay
-          manual-only.
+          {t('accounts.subtitle')}
         </p>
-        <p className="text-xs text-gray-500">Current user: {currentUserId}</p>
+        <p className="text-xs text-gray-500">
+          {t('accounts.currentUser', { userId: currentUserId })}
+        </p>
       </header>
 
       {errorMessage && (
         <div className="rounded border border-red-200 bg-red-50 px-4 py-3 text-red-800">
-          <strong>Error:</strong> {errorMessage}
+          <strong>{t('common.error')}:</strong> {errorMessage}
         </div>
       )}
 
@@ -214,11 +239,10 @@ export default function Accounts() {
           <div className="mb-4 flex items-start justify-between gap-3">
             <div>
               <h2 className="text-lg font-semibold">
-                {isEditing ? 'Edit account' : 'Create account'}
+                {isEditing ? t('accounts.editTitle') : t('accounts.createTitle')}
               </h2>
               <p className="text-sm text-gray-600">
-                Broker accounts can stay manual-only, or use Cathay to unlock
-                CSV import.
+                {t('accounts.editorDescription')}
               </p>
             </div>
             {isEditing && (
@@ -227,7 +251,7 @@ export default function Accounts() {
                 onClick={handleCreateNew}
                 className="rounded border border-gray-300 px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
               >
-                Create new
+                {t('accounts.createNew')}
               </button>
             )}
           </div>
@@ -235,7 +259,7 @@ export default function Accounts() {
           <form onSubmit={handleSubmit} className="grid gap-4 md:grid-cols-2">
             <div className="space-y-1 md:col-span-2">
               <label className="block text-sm font-medium text-gray-700">
-                Account name
+                {t('accounts.accountName')}
               </label>
               <input
                 type="text"
@@ -243,14 +267,14 @@ export default function Accounts() {
                 onChange={(event) =>
                   setForm((current) => ({ ...current, name: event.target.value }))
                 }
-                placeholder="e.g. Cathay Brokerage TWD"
+                placeholder={t('accounts.accountNamePlaceholder')}
                 className="w-full rounded border border-gray-300 px-3 py-2"
               />
             </div>
 
             <div className="space-y-1">
               <label className="block text-sm font-medium text-gray-700">
-                Type
+                {t('accounts.type')}
               </label>
               <select
                 value={form.type}
@@ -261,7 +285,7 @@ export default function Accounts() {
               >
                 {ACCOUNT_TYPE_OPTIONS.map((type) => (
                   <option key={type} value={type}>
-                    {type}
+                    {formatAccountTypeLabel(type, t)}
                   </option>
                 ))}
               </select>
@@ -269,7 +293,7 @@ export default function Accounts() {
 
             <div className="space-y-1">
               <label className="block text-sm font-medium text-gray-700">
-                Currency
+                {t('accounts.currency')}
               </label>
               <select
                 value={form.currency}
@@ -292,7 +316,7 @@ export default function Accounts() {
             {isBrokerType && (
               <div className="space-y-1 md:col-span-2">
                 <label className="block text-sm font-medium text-gray-700">
-                  Broker
+                  {t('accounts.broker')}
                 </label>
                 <select
                   value={form.broker}
@@ -306,13 +330,14 @@ export default function Accounts() {
                 >
                   {BROKER_OPTIONS.map((option) => (
                     <option key={option.value} value={option.value}>
-                      {option.label}
+                      {option.value
+                        ? t('accounts.brokerOptionCathay')
+                        : t('accounts.brokerOptionNone')}
                     </option>
                   ))}
                 </select>
                 <p className="text-xs text-gray-500">
-                  `None` keeps this as a manual-only broker account. Cathay
-                  unlocks CSV import.
+                  {t('accounts.brokerHint')}
                 </p>
               </div>
             )}
@@ -321,20 +346,21 @@ export default function Accounts() {
               {isBrokerType ? (
                 <span>
                   {form.broker === SUPPORTED_BROKER
-                    ? 'This account will be available in Investments CSV import after saving.'
-                    : 'This broker account will be manual-only until a supported import broker is selected.'}
+                    ? t('accounts.brokerImportReady')
+                    : t('accounts.brokerManualOnly')}
                 </span>
               ) : (
                 <span>
-                  Non-broker accounts will not appear in the CSV import account
-                  selector.
+                  {t('accounts.nonBrokerImportHint')}
                 </span>
               )}
             </div>
 
             <div className="md:col-span-2 flex items-center justify-between">
               <div className="text-sm text-gray-500">
-                {selectedAccount ? `Editing ${selectedAccount.name}` : 'Creating a new account'}
+                {selectedAccount
+                  ? t('accounts.editingAccount', { name: selectedAccount.name })
+                  : t('accounts.creatingNewAccount')}
               </div>
               <button
                 type="submit"
@@ -346,10 +372,10 @@ export default function Accounts() {
                 }`}
               >
                 {saveMutation.isPending
-                  ? 'Saving...'
+                  ? t('common.saving')
                   : isEditing
-                  ? 'Save changes'
-                  : 'Create account'}
+                  ? t('common.saveChanges')
+                  : t('accounts.createAction')}
               </button>
             </div>
           </form>
@@ -359,9 +385,9 @@ export default function Accounts() {
           <section className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm">
             <div className="mb-4 flex items-start justify-between gap-3">
               <div>
-                <h2 className="text-lg font-semibold">Accounts list</h2>
+                <h2 className="text-lg font-semibold">{t('accounts.accountsList')}</h2>
                 <p className="text-sm text-gray-600">
-                  Click a row to edit an existing account.
+                  {t('accounts.accountsListDescription')}
                 </p>
               </div>
               <button
@@ -376,37 +402,41 @@ export default function Accounts() {
                     : 'hover:bg-gray-50'
                 }`}
               >
-                Refresh
+                {t('common.refresh')}
               </button>
             </div>
 
             {accountsQuery.isLoading ? (
               <div className="rounded bg-gray-50 px-4 py-6 text-center text-gray-600">
-                Loading accounts...
+                {t('accounts.loadingAccounts')}
               </div>
             ) : accountsQuery.error ? (
               <div className="rounded border border-red-200 bg-red-50 px-4 py-3 text-red-800">
-                Failed to load accounts.
+                {t('accounts.failedToLoadAccounts')}
               </div>
             ) : (
               <DataTable
                 data={accounts}
                 columns={[
-                  { key: 'name', label: 'Name' },
-                  { key: 'type', label: 'Type' },
-                  { key: 'currency', label: 'Currency' },
+                  { key: 'name', label: t('accounts.name') },
+                  {
+                    key: 'type',
+                    label: t('accounts.type'),
+                    render: (value) => formatAccountTypeLabel(value, t),
+                  },
+                  { key: 'currency', label: t('accounts.currency') },
                   {
                     key: 'broker',
-                    label: 'Broker',
-                    render: (value) => formatBrokerLabel(value),
+                    label: t('accounts.broker'),
+                    render: (value) => formatBrokerLabel(value, t),
                   },
                   {
                     key: 'csvImport',
-                    label: 'CSV import',
+                    label: t('accounts.csvImport'),
                     render: (_value, row) =>
                       row.type === 'broker' && row.broker === SUPPORTED_BROKER
-                        ? 'Ready'
-                        : 'Not ready',
+                        ? t('accounts.ready')
+                        : t('accounts.notReady'),
                   },
                 ]}
                 onRowClick={handleSelectAccount}
@@ -415,13 +445,13 @@ export default function Accounts() {
           </section>
 
           <section className="rounded-xl border border-gray-200 bg-gray-50 p-5 shadow-sm">
-            <h2 className="mb-3 text-lg font-semibold">Import readiness</h2>
+            <h2 className="mb-3 text-lg font-semibold">{t('accounts.importReadiness')}</h2>
             {importReadyAccounts.length > 0 ? (
               <div className="space-y-2 text-sm text-gray-700">
                 <p>
-                  {importReadyAccounts.length} account
-                  {importReadyAccounts.length > 1 ? 's are' : ' is'} ready for
-                  CSV import.
+                  {t('accounts.importReadyCount', {
+                    count: importReadyAccounts.length,
+                  })}
                 </p>
                 <ul className="space-y-2">
                   {importReadyAccounts.map((account) => (
@@ -429,7 +459,7 @@ export default function Accounts() {
                       key={account.id}
                       className="rounded border border-gray-200 bg-white px-3 py-2"
                     >
-                      <strong>{account.name}</strong> · {formatBrokerLabel(account.broker)} ·{' '}
+                      <strong>{account.name}</strong> · {formatBrokerLabel(account.broker, t)} ·{' '}
                       {account.currency}
                     </li>
                   ))}
@@ -437,9 +467,7 @@ export default function Accounts() {
               </div>
             ) : (
               <p className="text-sm text-gray-700">
-                No broker account configured for CSV import yet. Create a broker
-                account with Cathay to unlock brokerage CSV import in
-                Investments.
+                {t('accounts.noImportReadyAccounts')}
               </p>
             )}
           </section>

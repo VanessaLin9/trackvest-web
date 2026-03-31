@@ -1,3 +1,5 @@
+import { useI18n } from '../i18n'
+
 interface DataTableProps<T> {
   data: T[]
   columns: {
@@ -13,10 +15,12 @@ export default function DataTable<T extends Record<string, any>>({
   columns,
   onRowClick,
 }: DataTableProps<T>) {
+  const { t } = useI18n()
+
   if (data.length === 0) {
     return (
       <div className="p-5 text-center text-gray-600 bg-gray-50 rounded">
-        No data available
+        {t('common.noDataAvailable')}
       </div>
     )
   }
@@ -65,4 +69,3 @@ export default function DataTable<T extends Record<string, any>>({
     </div>
   )
 }
-

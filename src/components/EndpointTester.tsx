@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { api } from '../lib/api'
+import { useI18n } from '../i18n'
 
 interface EndpointTesterProps {
   method: 'GET' | 'POST' | 'PATCH' | 'DELETE'
@@ -18,6 +19,7 @@ export default function EndpointTester({
   children,
   defaultHeaders = {},
 }: EndpointTesterProps) {
+  const { t } = useI18n()
   const [body, setBody] = useState(JSON.stringify(defaultBody, null, 2))
   const [params, setParams] = useState<Record<string, string>>(queryParams)
   const [response, setResponse] = useState<any>(null)
@@ -69,7 +71,7 @@ export default function EndpointTester({
       setError(
         err.response?.data?.message ||
           err.message ||
-          'An error occurred',
+          t('endpointTester.requestFailed'),
       )
       if (err.response) {
         setResponse({
@@ -105,7 +107,7 @@ export default function EndpointTester({
       {method !== 'GET' && (
         <div className="mb-4">
           <label className="block mb-1 font-bold">
-            Request Body (JSON):
+            {t('endpointTester.requestBody')}:
           </label>
           <textarea
             value={body}
@@ -118,7 +120,7 @@ export default function EndpointTester({
       {Object.keys(params).length > 0 && (
         <div className="mb-4">
           <label className="block mb-1 font-bold">
-            Query Parameters:
+            {t('endpointTester.queryParameters')}:
           </label>
           {Object.entries(params).map(([key, value]) => (
             <div key={key} className="mb-1">
@@ -145,19 +147,19 @@ export default function EndpointTester({
             : 'cursor-pointer hover:bg-blue-700'
         }`}
       >
-        {loading ? 'Loading...' : 'Send Request'}
+        {loading ? t('common.loading') : t('common.sendRequest')}
       </button>
 
       {error && (
         <div className="mt-4 p-2.5 bg-red-100 text-red-800 rounded">
-          <strong>Error:</strong> {error}
+          <strong>{t('common.error')}:</strong> {error}
         </div>
       )}
 
       {response && (
         <div className="mt-4">
           <div className="p-2.5 bg-gray-50 rounded">
-            <strong>Status:</strong>{' '}
+            <strong>{t('common.status')}:</strong>{' '}
             <span
               className={
                 response.status >= 200 && response.status < 300
@@ -176,4 +178,3 @@ export default function EndpointTester({
     </div>
   )
 }
-

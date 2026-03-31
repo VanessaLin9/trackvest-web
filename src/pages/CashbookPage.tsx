@@ -5,6 +5,7 @@ import {
   type GlEntry,
 } from '../lib/cashbook.service'
 import { useCurrentUserId } from '../app/current-user'
+import { useI18n } from '../i18n'
 
 type FormMode = 'expense' | 'income' | 'transfer'
 
@@ -25,6 +26,7 @@ function getErrorMessage(err: unknown, fallback: string) {
 
 export default function CashbookPage() {
   const currentUserId = useCurrentUserId()
+  const { t, locale } = useI18n()
   const [accounts, setAccounts] = useState<GlAccount[]>([])
   const [entries, setEntries] = useState<GlEntry[]>([])
   const [mode, setMode] = useState<FormMode>('expense')
@@ -98,7 +100,7 @@ export default function CashbookPage() {
       const loadedEntries = await cashbookService.getGlEntries(accountId)
       setEntries(loadedEntries)
     } catch (err: unknown) {
-      setError(getErrorMessage(err, 'Failed to load entries'))
+      setError(getErrorMessage(err, t('cashbook.failedToLoadEntries')))
     } finally {
       setLoadingEntries(false)
     }
@@ -132,7 +134,7 @@ export default function CashbookPage() {
           setCashAccountId((current) => current || loadedAssetAccounts[0].id)
         }
       } catch (err: unknown) {
-        setError(getErrorMessage(err, 'Failed to load accounts'))
+        setError(getErrorMessage(err, t('cashbook.failedToLoadAccounts')))
       } finally {
         setLoadingAccounts(false)
       }
@@ -172,23 +174,30 @@ export default function CashbookPage() {
     event.preventDefault()
 
     if (!currentUserId || !selectedCashAccount) {
-      setError('A cash or bank account is required')
+      setError(t('cashbook.cashAccountRequired'))
       return
     }
 
     const numericAmount = Number(amount)
     if (!Number.isFinite(numericAmount) || numericAmount <= 0) {
-      setError('Amount must be a positive number')
+      setError(t('cashbook.amountMustBePositive'))
       return
     }
 
     if (mode !== 'transfer' && !categoryId) {
-      setError(`Please select a ${mode} category`)
+      setError(
+        t('cashbook.categoryRequired', {
+          mode:
+            mode === 'expense'
+              ? t('cashbook.categoryExpense')
+              : t('cashbook.categoryIncome'),
+        }),
+      )
       return
     }
 
     if (mode === 'transfer' && !transferToAccountId) {
-      setError('Please select the destination account')
+      setError(t('cashbook.destinationAccountRequired'))
       return
     }
 
@@ -210,28 +219,28 @@ export default function CashbookPage() {
           payFromGlAccountId: selectedCashAccount.id,
           expenseGlAccountId: categoryId,
         })
-        setSuccessMessage('Expense saved')
+        setSuccessMessage(t('cashbook.expenseSaved'))
       } else if (mode === 'income') {
         await cashbookService.postIncome({
           ...payloadBase,
           receiveToGlAccountId: selectedCashAccount.id,
           incomeGlAccountId: categoryId,
         })
-        setSuccessMessage('Income saved')
+        setSuccessMessage(t('cashbook.incomeSaved'))
       } else {
         await cashbookService.postTransfer({
           ...payloadBase,
           fromGlAccountId: selectedCashAccount.id,
           toGlAccountId: transferToAccountId,
         })
-        setSuccessMessage('Transfer saved')
+        setSuccessMessage(t('cashbook.transferSaved'))
       }
 
       setAmount('')
       setMemo('')
       await loadEntries(entryFilterAccountId)
     } catch (err: unknown) {
-      setError(getErrorMessage(err, 'Failed to save entry'))
+      setError(getErrorMessage(err, t('cashbook.failedToSaveEntry')))
     } finally {
       setSubmitting(false)
     }
@@ -240,9 +249,9 @@ export default function CashbookPage() {
   if (!currentUserId) {
     return (
       <div className="mx-auto max-w-5xl">
-        <h1 className="mb-4 text-2xl font-semibold">Cashbook</h1>
+        <h1 className="mb-4 text-2xl font-semibold">{t('cashbook.title')}</h1>
         <p className="text-red-600">
-          VITE_DEMO_USER_ID is not set. Please set it in your .env file.
+          {t('common.envDemoUserMissing')}
         </p>
       </div>
     )
@@ -251,17 +260,15 @@ export default function CashbookPage() {
   return (
     <div className="mx-auto max-w-6xl space-y-6">
       <header className="space-y-2">
-        <h1 className="text-3xl font-semibold">Cashbook</h1>
+        <h1 className="text-3xl font-semibold">{t('cashbook.title')}</h1>
         <p className="max-w-2xl text-sm text-gray-600">
-          Record daily expenses, income, and transfers without thinking in
-          debit and credit. The ledger below stays available as a verification
-          layer.
+          {t('cashbook.subtitle')}
         </p>
       </header>
 
       {error && (
         <div className="rounded border border-red-200 bg-red-50 px-4 py-3 text-red-800">
-          <strong>Error:</strong> {error}
+          <strong>{t('common.error')}:</strong> {error}
         </div>
       )}
 
@@ -283,7 +290,7 @@ export default function CashbookPage() {
                   : 'bg-red-50 text-red-700'
               }`}
             >
-              Expense
+              {t('cashbook.modeExpense')}
             </button>
             <button
               type="button"
@@ -294,7 +301,7 @@ export default function CashbookPage() {
                   : 'bg-green-50 text-green-700'
               }`}
             >
-              Income
+              {t('cashbook.modeIncome')}
             </button>
             <button
               type="button"
@@ -305,14 +312,14 @@ export default function CashbookPage() {
                   : 'bg-slate-100 text-slate-700'
               }`}
             >
-              Transfer
+              {t('cashbook.modeTransfer')}
             </button>
           </div>
 
           <form onSubmit={handleSubmit} className="grid gap-4 md:grid-cols-2">
             <div className="space-y-1">
               <label className="block text-sm font-medium text-gray-700">
-                Cash / bank account
+                {t('cashbook.cashAccount')}
               </label>
               <select
                 value={cashAccountId}
@@ -320,7 +327,9 @@ export default function CashbookPage() {
                 disabled={loadingAccounts || assetAccounts.length === 0}
                 className="w-full rounded border border-gray-300 px-3 py-2"
               >
-                {assetAccounts.length === 0 && <option value="">No cash accounts</option>}
+                {assetAccounts.length === 0 && (
+                  <option value="">{t('cashbook.noCashAccounts')}</option>
+                )}
                 {assetAccounts.map((account) => (
                   <option key={account.id} value={account.id}>
                     {account.name} ({account.currency})
@@ -331,7 +340,7 @@ export default function CashbookPage() {
 
             <div className="space-y-1">
               <label className="block text-sm font-medium text-gray-700">
-                Date
+                {t('cashbook.date')}
               </label>
               <input
                 type="date"
@@ -343,7 +352,7 @@ export default function CashbookPage() {
 
             <div className="space-y-1">
               <label className="block text-sm font-medium text-gray-700">
-                Amount
+                {t('cashbook.amount')}
               </label>
               <input
                 type="number"
@@ -351,7 +360,7 @@ export default function CashbookPage() {
                 min="0"
                 value={amount}
                 onChange={(event) => setAmount(event.target.value)}
-                placeholder="0.00"
+                placeholder={t('cashbook.amountPlaceholder')}
                 className="w-full rounded border border-gray-300 px-3 py-2"
               />
             </div>
@@ -359,7 +368,7 @@ export default function CashbookPage() {
             {mode === 'transfer' ? (
               <div className="space-y-1">
                 <label className="block text-sm font-medium text-gray-700">
-                  To account
+                  {t('cashbook.toAccount')}
                 </label>
                 <select
                   value={transferToAccountId}
@@ -368,7 +377,7 @@ export default function CashbookPage() {
                   className="w-full rounded border border-gray-300 px-3 py-2"
                 >
                   {transferTargetOptions.length === 0 && (
-                    <option value="">No same-currency account available</option>
+                    <option value="">{t('cashbook.noSameCurrencyAccount')}</option>
                   )}
                   {transferTargetOptions.map((account) => (
                     <option key={account.id} value={account.id}>
@@ -380,7 +389,9 @@ export default function CashbookPage() {
             ) : (
               <div className="space-y-1">
                 <label className="block text-sm font-medium text-gray-700">
-                  {mode === 'expense' ? 'Expense category' : 'Income category'}
+                  {mode === 'expense'
+                    ? t('cashbook.expenseCategory')
+                    : t('cashbook.incomeCategory')}
                 </label>
                 <select
                   value={categoryId}
@@ -388,7 +399,9 @@ export default function CashbookPage() {
                   disabled={categoryOptions.length === 0}
                   className="w-full rounded border border-gray-300 px-3 py-2"
                 >
-                  {categoryOptions.length === 0 && <option value="">No category available</option>}
+                  {categoryOptions.length === 0 && (
+                    <option value="">{t('cashbook.noCategoryAvailable')}</option>
+                  )}
                   {categoryOptions.map((account) => (
                     <option key={account.id} value={account.id}>
                       {account.name}
@@ -400,7 +413,7 @@ export default function CashbookPage() {
 
             <div className="space-y-1 md:col-span-2">
               <label className="block text-sm font-medium text-gray-700">
-                Memo
+                {t('cashbook.memo')}
               </label>
               <input
                 type="text"
@@ -408,10 +421,10 @@ export default function CashbookPage() {
                 onChange={(event) => setMemo(event.target.value)}
                 placeholder={
                   mode === 'expense'
-                    ? 'e.g. Lunch, groceries'
+                    ? t('cashbook.memoExpensePlaceholder')
                     : mode === 'income'
-                    ? 'e.g. Salary, reimbursement'
-                    : 'e.g. Move funds to brokerage'
+                    ? t('cashbook.memoIncomePlaceholder')
+                    : t('cashbook.memoTransferPlaceholder')
                 }
                 className="w-full rounded border border-gray-300 px-3 py-2"
               />
@@ -421,10 +434,12 @@ export default function CashbookPage() {
               <div className="text-sm text-gray-600">
                 {selectedCashAccount ? (
                   <span>
-                    Posting in <strong>{selectedCashAccount.currency}</strong>
+                    {t('cashbook.postingInBefore')}{' '}
+                    <strong>{selectedCashAccount.currency}</strong>{' '}
+                    {t('cashbook.postingInAfter')}
                   </span>
                 ) : (
-                  'Select a cash or bank account to continue'
+                  t('cashbook.selectCashAccountToContinue')
                 )}
               </div>
               <button
@@ -441,24 +456,24 @@ export default function CashbookPage() {
                 }`}
               >
                 {submitting
-                  ? 'Saving...'
+                  ? t('common.saving')
                   : mode === 'expense'
-                  ? 'Save expense'
+                  ? t('cashbook.saveExpense')
                   : mode === 'income'
-                  ? 'Save income'
-                  : 'Save transfer'}
+                  ? t('cashbook.saveIncome')
+                  : t('cashbook.saveTransfer')}
               </button>
             </div>
           </form>
         </div>
 
         <aside className="rounded-xl border border-gray-200 bg-gray-50 p-5 shadow-sm">
-          <h2 className="mb-3 text-lg font-semibold">What this page does</h2>
+          <h2 className="mb-3 text-lg font-semibold">{t('cashbook.pageDoesTitle')}</h2>
           <ul className="space-y-2 text-sm text-gray-700">
-            <li>Uses asset-type GL accounts as cash and bank accounts.</li>
-            <li>Uses expense and income GL accounts as categories.</li>
-            <li>Limits transfers to same-currency accounts to avoid bad entries.</li>
-            <li>Keeps the ledger view visible so you can audit what was posted.</li>
+            <li>{t('cashbook.pageDoesOne')}</li>
+            <li>{t('cashbook.pageDoesTwo')}</li>
+            <li>{t('cashbook.pageDoesThree')}</li>
+            <li>{t('cashbook.pageDoesFour')}</li>
           </ul>
         </aside>
       </section>
@@ -466,23 +481,22 @@ export default function CashbookPage() {
       <section className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm">
         <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
           <div>
-            <h2 className="text-lg font-semibold">Recent ledger entries</h2>
+            <h2 className="text-lg font-semibold">{t('cashbook.recentEntriesTitle')}</h2>
             <p className="text-sm text-gray-600">
-              Use this as a validation view while the product flow is still
-              maturing.
+              {t('cashbook.recentEntriesDescription')}
             </p>
           </div>
 
           <div className="flex items-center gap-2">
             <label className="text-sm font-medium text-gray-700">
-              View account
+              {t('cashbook.viewAccount')}
             </label>
             <select
               value={entryFilterAccountId}
               onChange={(event) => setEntryFilterAccountId(event.target.value)}
               className="rounded border border-gray-300 px-3 py-2 text-sm"
             >
-              <option value="All">All cash accounts</option>
+              <option value="All">{t('cashbook.allCashAccounts')}</option>
               {assetAccounts.map((account) => (
                 <option key={account.id} value={account.id}>
                   {account.name}
@@ -493,25 +507,25 @@ export default function CashbookPage() {
         </div>
 
         {loadingEntries ? (
-          <p className="text-sm text-gray-600">Loading entries...</p>
+          <p className="text-sm text-gray-600">{t('cashbook.loadingEntries')}</p>
         ) : entries.length === 0 ? (
-          <p className="text-sm text-gray-600">No entries yet.</p>
+          <p className="text-sm text-gray-600">{t('cashbook.noEntries')}</p>
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full border-collapse text-sm">
               <thead>
                 <tr className="border-b border-gray-200 text-left">
-                  <th className="px-2 py-3 font-medium text-gray-600">Date</th>
-                  <th className="px-2 py-3 font-medium text-gray-600">Memo</th>
-                  <th className="px-2 py-3 font-medium text-gray-600">Source</th>
-                  <th className="px-2 py-3 font-medium text-gray-600">Lines</th>
+                  <th className="px-2 py-3 font-medium text-gray-600">{t('cashbook.date')}</th>
+                  <th className="px-2 py-3 font-medium text-gray-600">{t('cashbook.memoColumn')}</th>
+                  <th className="px-2 py-3 font-medium text-gray-600">{t('cashbook.source')}</th>
+                  <th className="px-2 py-3 font-medium text-gray-600">{t('cashbook.lines')}</th>
                 </tr>
               </thead>
               <tbody>
                 {entries.map((entry) => (
                   <tr key={entry.id} className="border-b border-gray-100 align-top">
                     <td className="whitespace-nowrap px-2 py-3">
-                      {new Date(entry.date).toLocaleDateString()}
+                      {new Date(entry.date).toLocaleDateString(locale)}
                     </td>
                     <td className="px-2 py-3">{entry.memo || '-'}</td>
                     <td className="px-2 py-3 text-xs text-gray-500">
@@ -523,7 +537,9 @@ export default function CashbookPage() {
                           {entry.lines.map((line) => (
                             <li key={line.id} className="flex flex-wrap gap-2">
                               <span className="rounded bg-gray-100 px-1.5 py-0.5 font-mono text-xs">
-                                {line.side === 'debit' ? 'D' : 'C'}
+                                {line.side === 'debit'
+                                  ? t('cashbook.sideDebit')
+                                  : t('cashbook.sideCredit')}
                               </span>
                               <span>
                                 {accountNameMap[line.glAccountId] ||
@@ -531,7 +547,7 @@ export default function CashbookPage() {
                                   line.glAccountId}
                               </span>
                               <span className="font-mono text-gray-600">
-                                {line.amount.toLocaleString(undefined, {
+                                {line.amount.toLocaleString(locale, {
                                   minimumFractionDigits: 2,
                                   maximumFractionDigits: 2,
                                 })}{' '}
@@ -541,7 +557,7 @@ export default function CashbookPage() {
                           ))}
                         </ul>
                       ) : (
-                        <span className="text-gray-400">No lines</span>
+                        <span className="text-gray-400">{t('cashbook.noLines')}</span>
                       )}
                     </td>
                   </tr>

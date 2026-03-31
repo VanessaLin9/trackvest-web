@@ -1,16 +1,17 @@
 import EndpointTester from '../components/EndpointTester'
 import { useCurrentUserId } from '../app/current-user'
-
+import { useI18n } from '../i18n'
 
 export default function GL() {
   const currentUserId = useCurrentUserId()
+  const { t } = useI18n()
 
   if (!currentUserId) {
     return (
       <div>
-        <h1>GL Ledger API</h1>
+        <h1>{t('gl.title')}</h1>
         <p className="text-red-600">
-          VITE_DEMO_USER_ID is not set. Please set it in your .env file.
+          {t('common.envDemoUserMissing')}
         </p>
       </div>
     )
@@ -18,8 +19,8 @@ export default function GL() {
 
   return (
     <div>
-      <h1>GL Ledger API</h1>
-      <p>Test general ledger posting endpoints</p>
+      <h1>{t('gl.title')}</h1>
+      <p>{t('gl.subtitle')}</p>
 
       <EndpointTester
         method="POST"
@@ -31,7 +32,7 @@ export default function GL() {
           amount: 1000,
           currency: 'TWD',
           date: '2025-01-01',
-          memo: 'Transfer from account to account',
+          memo: t('gl.transferMemo'),
         }}
       />
 
@@ -45,7 +46,7 @@ export default function GL() {
           amount: 320,
           currency: 'TWD',
           date: '2025-11-04T12:00:00.000Z',
-          memo: 'Lunch',
+          memo: t('gl.expenseMemo'),
         }}
       />
 
@@ -59,7 +60,7 @@ export default function GL() {
           amount: 1500,
           currency: 'TWD',
           date: '2025-11-04T09:30:00.000Z',
-          memo: 'Salary (partial)',
+          memo: t('gl.incomeMemo'),
         }}
       />
     </div>
