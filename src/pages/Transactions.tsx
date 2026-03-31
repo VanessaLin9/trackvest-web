@@ -107,6 +107,7 @@ export default function Transactions() {
   const [price, setPrice] = useState('')
   const [fee, setFee] = useState('')
   const [tax, setTax] = useState('')
+  const [brokerOrderNo, setBrokerOrderNo] = useState('')
   const [tradeTime, setTradeTime] = useState(getDefaultTradeTimeValue)
   const [note, setNote] = useState('')
   const [loadingMeta, setLoadingMeta] = useState(false)
@@ -290,6 +291,7 @@ export default function Transactions() {
     setPrice('')
     setFee('')
     setTax('')
+    setBrokerOrderNo('')
     setTradeTime(getDefaultTradeTimeValue())
     setNote('')
   }
@@ -326,6 +328,7 @@ export default function Transactions() {
         ? ''
         : String(transaction.tax),
     )
+    setBrokerOrderNo(transaction.brokerOrderNo ?? '')
     setTradeTime(toDateTimeLocalValue(transaction.tradeTime))
     setNote(transaction.note ?? '')
     setError(null)
@@ -393,6 +396,7 @@ export default function Transactions() {
       price: requiresTradeFields ? Number(price) : undefined,
       fee: requiresTradeFields ? Number(fee || '0') : undefined,
       tax: requiresTradeFields ? Number(tax || '0') : undefined,
+      brokerOrderNo: requiresAsset ? brokerOrderNo.trim() || undefined : undefined,
       tradeTime: new Date(tradeTime).toISOString(),
       note: note || undefined,
     } as const
@@ -784,6 +788,29 @@ export default function Transactions() {
                 className="w-full rounded border border-gray-300 px-3 py-2"
               />
             </div>
+
+            {requiresAsset && (
+              <div className="space-y-1 md:col-span-2">
+                <label
+                  htmlFor="investment-broker-order-no"
+                  className="block text-sm font-medium text-gray-700"
+                >
+                  Broker order no
+                </label>
+                <input
+                  id="investment-broker-order-no"
+                  type="text"
+                  value={brokerOrderNo}
+                  onChange={(event) => setBrokerOrderNo(event.target.value)}
+                  placeholder="e.g. BRK-20260331-001"
+                  className="w-full rounded border border-gray-300 px-3 py-2"
+                />
+                <p className="text-xs text-gray-500">
+                  Helpful when you manually mirror broker executions or reconcile
+                  against imported trades later.
+                </p>
+              </div>
+            )}
 
             <div className="space-y-1 md:col-span-2">
               <label

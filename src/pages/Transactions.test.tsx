@@ -169,6 +169,9 @@ describe('Transactions page trade flows', () => {
     fireEvent.change(screen.getByLabelText('Tax'), {
       target: { value: '5' },
     })
+    fireEvent.change(screen.getByLabelText('Broker order no'), {
+      target: { value: 'BRK-BUY-001' },
+    })
     fireEvent.change(screen.getByLabelText('Note'), {
       target: { value: 'Build position' },
     })
@@ -186,6 +189,7 @@ describe('Transactions page trade flows', () => {
           price: 100,
           fee: 15,
           tax: 5,
+          brokerOrderNo: 'BRK-BUY-001',
           note: 'Build position',
         }),
       )
@@ -211,6 +215,9 @@ describe('Transactions page trade flows', () => {
     fireEvent.change(screen.getByLabelText('Tax'), {
       target: { value: '5' },
     })
+    fireEvent.change(screen.getByLabelText('Broker order no'), {
+      target: { value: 'BRK-SELL-001' },
+    })
     fireEvent.change(screen.getByLabelText('Note'), {
       target: { value: 'Trim position' },
     })
@@ -228,6 +235,7 @@ describe('Transactions page trade flows', () => {
           price: 100,
           fee: 15,
           tax: 5,
+          brokerOrderNo: 'BRK-SELL-001',
           note: 'Trim position',
         }),
       )
@@ -298,6 +306,9 @@ describe('Transactions page trade flows', () => {
     fireEvent.change(screen.getByLabelText('Tax'), {
       target: { value: '8' },
     })
+    fireEvent.change(screen.getByLabelText('Broker order no'), {
+      target: { value: 'BRK-001-UPDATED' },
+    })
 
     fireEvent.click(screen.getByRole('button', { name: 'Save changes' }))
 
@@ -310,6 +321,7 @@ describe('Transactions page trade flows', () => {
           price: 100,
           fee: 15,
           tax: 8,
+          brokerOrderNo: 'BRK-001-UPDATED',
           amount: 777,
         }),
       )
