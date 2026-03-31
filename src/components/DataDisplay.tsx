@@ -24,7 +24,7 @@ export default function DataDisplay({
   title,
   onRowClick,
 }: DataDisplayProps) {
-  const { t } = useI18n()
+  const { t, locale } = useI18n()
   const queryString = Object.entries(queryParams)
     .filter(([_, v]) => v && v.trim())
     .map(([k, v]) => `${k}=${encodeURIComponent(v)}`)
@@ -42,7 +42,7 @@ export default function DataDisplay({
   const formatDate = (date: string | Date | null) => {
     if (!date) return '-'
     const d = typeof date === 'string' ? new Date(date) : date
-    return d.toLocaleString()
+    return d.toLocaleString(locale)
   }
 
   return (

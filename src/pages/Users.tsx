@@ -4,7 +4,7 @@ import DataDisplay from '../components/DataDisplay'
 import { useI18n } from '../i18n'
 
 export default function Users() {
-  const { t } = useI18n()
+  const { t, locale } = useI18n()
   const [refreshKey, setRefreshKey] = useState(0)
 
   return (
@@ -24,7 +24,7 @@ export default function Users() {
             key: 'createdAt',
             label: t('users.createdAt'),
             render: (value) =>
-              value ? new Date(value).toLocaleString() : '-',
+              value ? new Date(value).toLocaleString(locale) : '-',
           },
         ]}
         title={t('users.usersList')}
