@@ -18,7 +18,7 @@ export interface RouteConfig {
 export const routeConfig: RouteConfig[] = [
   { path: '/', label: 'Dashboard', element: <Dashboard />, showInNav: true },
   { path: '/cashbook', label: 'Cashbook', element: <CashbookPage />, showInNav: true },
-  { path: '/transactions', label: 'Investments', element: <Transactions />, showInNav: true },
+  { path: '/investments', label: 'Investments', element: <Transactions />, showInNav: true },
   // TODO(trackvest-web): Remove the legacy Ledger route/page after Cashbook fully replaces this debug flow.
   { path: '/gl', label: 'Ledger', element: <GL />, showInNav: false },
   { path: '/health', label: 'Health', element: <Health />, showInNav: false },
