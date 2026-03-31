@@ -11,29 +11,54 @@ export default function Layout() {
   return (
     <div className="flex min-h-screen">
       <nav className="w-[200px] bg-gray-100 p-5 border-r border-gray-300">
-        <div className="mb-5 space-y-3">
-          <div>
-            <p className="mt-0 mb-1 text-xs uppercase tracking-[0.2em] text-gray-500">
+        <div className="mb-6">
+          <div className="mb-4 pb-4 border-b border-gray-200/80">
+            <p className="mt-0 mb-1 text-[11px] uppercase tracking-[0.24em] text-gray-500">
               {t('app.name')}
             </p>
-            <h2 className="m-0">{t('app.navigationTitle')}</h2>
+            <h2 className="m-0 text-xl font-semibold tracking-tight text-slate-900">
+              {t('app.navigationTitle')}
+            </h2>
           </div>
 
-          <label className="block text-sm text-gray-700">
-            <span className="mb-1 block font-medium">
-              {t('app.languageLabel')}
-            </span>
-            <select
-              value={locale}
-              onChange={(event) =>
-                setLocale(event.target.value as typeof locale)
-              }
-              className="w-full rounded border border-gray-300 bg-white px-3 py-2 text-sm"
-            >
-              <option value="en">{t('locales.en')}</option>
-              <option value="zh-TW">{t('locales.zhTw')}</option>
-            </select>
-          </label>
+          <div
+            role="group"
+            aria-label={t('app.languageLabel')}
+            className="inline-flex rounded-full border border-gray-200 bg-white p-0.5"
+          >
+            {[
+              {
+                value: 'en',
+                shortLabel: 'EN',
+                fullLabel: t('locales.en'),
+              },
+              {
+                value: 'zh-TW',
+                shortLabel: '中',
+                fullLabel: t('locales.zhTw'),
+              },
+            ].map((option) => {
+              const isActive = locale === option.value
+
+              return (
+                <button
+                  key={option.value}
+                  type="button"
+                  onClick={() => setLocale(option.value as typeof locale)}
+                  aria-pressed={isActive}
+                  aria-label={option.fullLabel}
+                  title={option.fullLabel}
+                  className={`rounded-full px-2.5 py-1 text-xs font-medium transition ${
+                    isActive
+                      ? 'bg-slate-900 text-white'
+                      : 'text-gray-500 hover:text-gray-800'
+                  }`}
+                >
+                  {option.shortLabel}
+                </button>
+              )
+            })}
+          </div>
         </div>
 
         <ul className="list-none p-0 m-0">
