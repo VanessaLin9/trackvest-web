@@ -598,15 +598,6 @@ export default function Transactions() {
               )}
             </div>
 
-            {isEditing && (
-              <button
-                type="button"
-                onClick={resetForm}
-                className="rounded border border-gray-300 px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
-              >
-                Create new
-              </button>
-            )}
           </div>
 
           <form onSubmit={handleSubmit} className="grid gap-4 md:grid-cols-2">
@@ -848,23 +839,34 @@ export default function Transactions() {
                   'Select an account to continue'
                 )}
               </div>
-              <button
-                type="submit"
-                disabled={
-                  submitting || !accountId || (requiresAsset && !hasTradableAssets)
-                }
-                className={`rounded bg-blue-600 px-4 py-2 text-sm font-medium text-white ${
-                  submitting || !accountId || (requiresAsset && !hasTradableAssets)
-                    ? 'cursor-not-allowed bg-gray-400'
-                    : 'hover:bg-blue-700'
-                }`}
-              >
-                {submitting
-                  ? 'Saving...'
-                  : isEditing
-                  ? 'Save changes'
-                  : `Save ${mode}`}
-              </button>
+              <div className="flex items-center gap-2">
+                {isEditing && (
+                  <button
+                    type="button"
+                    onClick={resetForm}
+                    className="rounded border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100"
+                  >
+                    Cancel
+                  </button>
+                )}
+                <button
+                  type="submit"
+                  disabled={
+                    submitting || !accountId || (requiresAsset && !hasTradableAssets)
+                  }
+                  className={`rounded bg-blue-600 px-4 py-2 text-sm font-medium text-white ${
+                    submitting || !accountId || (requiresAsset && !hasTradableAssets)
+                      ? 'cursor-not-allowed bg-gray-400'
+                      : 'hover:bg-blue-700'
+                  }`}
+                >
+                  {submitting
+                    ? 'Saving...'
+                    : isEditing
+                    ? 'Save changes'
+                    : `Save ${mode}`}
+                </button>
+              </div>
             </div>
           </form>
         </div>
