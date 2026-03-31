@@ -117,13 +117,6 @@ export const investmentsService = {
     return response.data
   },
 
-  async hardDeleteTransaction(id: string) {
-    getRequiredCurrentUserId()
-
-    const response = await api.delete<TransactionListItem>(`/transactions/${id}/hard`)
-    return response.data
-  },
-
   async importTransactions(
     payload: ImportTransactionsPayload,
   ): Promise<ImportTransactionsResponse> {

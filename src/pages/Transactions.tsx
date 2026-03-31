@@ -38,6 +38,10 @@ function formatMoney(value: number | string | null | undefined) {
   })
 }
 
+function formatDateOnly(value: string) {
+  return new Date(value).toLocaleDateString()
+}
+
 function toDateTimeLocalValue(value: string | Date) {
   const date = value instanceof Date ? value : new Date(value)
   if (Number.isNaN(date.getTime())) {
@@ -111,9 +115,6 @@ export default function Transactions() {
   const [deletingTransactionId, setDeletingTransactionId] = useState<string | null>(
     null,
   )
-  const [hardDeletingTransactionId, setHardDeletingTransactionId] = useState<
-    string | null
-  >(null)
   const [importAccountId, setImportAccountId] = useState('')
   const [importFile, setImportFile] = useState<File | null>(null)
   const [importSubmitting, setImportSubmitting] = useState(false)
@@ -445,32 +446,6 @@ export default function Transactions() {
       setError(getErrorMessage(err, 'Failed to delete transaction'))
     } finally {
       setDeletingTransactionId(null)
-    }
-  }
-
-  const handleHardDelete = async (transaction: TransactionListItem) => {
-    if (
-      !window.confirm(
-        `Hard delete this ${transaction.type} transaction? This cannot be undone.`,
-      )
-    ) {
-      return
-    }
-
-    try {
-      setHardDeletingTransactionId(transaction.id)
-      setError(null)
-      setSuccessMessage(null)
-      await investmentsService.hardDeleteTransaction(transaction.id)
-      if (selectedTransactionId === transaction.id) {
-        resetForm()
-      }
-      setSuccessMessage(`${transaction.type} hard deleted`)
-      await loadTransactions(listAccountId)
-    } catch (err: unknown) {
-      setError(getErrorMessage(err, 'Failed to hard delete transaction'))
-    } finally {
-      setHardDeletingTransactionId(null)
     }
   }
 
@@ -1037,7 +1012,7 @@ export default function Transactions() {
             <table className="w-full border-collapse text-sm">
               <thead>
                 <tr className="border-b border-gray-200 text-left">
-                  <th className="px-2 py-3 font-medium text-gray-600">Time</th>
+                  <th className="px-2 py-3 font-medium text-gray-600">Date</th>
                   <th className="px-2 py-3 font-medium text-gray-600">Type</th>
                   <th className="px-2 py-3 font-medium text-gray-600">Account</th>
                   <th className="px-2 py-3 font-medium text-gray-600">Asset</th>
@@ -1062,7 +1037,7 @@ export default function Transactions() {
                     }`}
                   >
                     <td className="whitespace-nowrap px-2 py-3">
-                      {new Date(transaction.tradeTime).toLocaleString()}
+                      {formatDateOnly(transaction.tradeTime)}
                     </td>
                     <td className="px-2 py-3 capitalize">{transaction.type}</td>
                     <td className="px-2 py-3">
@@ -1090,9 +1065,24 @@ export default function Transactions() {
                               event.stopPropagation()
                               startEditingTransaction(transaction)
                             }}
-                            className="rounded border border-gray-300 px-2 py-1 text-xs font-medium text-gray-700 hover:bg-gray-50"
+                            aria-label={`Edit ${transaction.type} transaction`}
+                            title="Edit"
+                            className="rounded border border-gray-300 p-1.5 text-gray-700 hover:bg-gray-50"
                           >
-                            Edit
+                            <svg
+                              aria-hidden="true"
+                              viewBox="0 0 16 16"
+                              className="h-4 w-4"
+                              fill="none"
+                              stroke="currentColor"
+                              strokeWidth="1.5"
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                            >
+                              <path d="M2 11.5V14h2.5L12 6.5 9.5 4 2 11.5Z" />
+                              <path d="M8.5 5 11 7.5" />
+                              <path d="M9.5 4 11 2.5 13.5 5 12 6.5" />
+                            </svg>
                           </button>
                           <button
                             type="button"
@@ -1100,41 +1090,32 @@ export default function Transactions() {
                               event.stopPropagation()
                               handleSoftDelete(transaction).catch(console.error)
                             }}
-                            disabled={
-                              deletingTransactionId === transaction.id ||
-                              hardDeletingTransactionId === transaction.id
-                            }
-                            className={`rounded border border-amber-300 px-2 py-1 text-xs font-medium text-amber-700 ${
-                              deletingTransactionId === transaction.id ||
-                              hardDeletingTransactionId === transaction.id
+                            aria-label={`Delete ${transaction.type} transaction`}
+                            title="Delete"
+                            disabled={deletingTransactionId === transaction.id}
+                            className={`rounded border border-amber-300 p-1.5 text-amber-700 ${
+                              deletingTransactionId === transaction.id
                                 ? 'cursor-not-allowed opacity-60'
                                 : 'hover:bg-amber-50'
                             }`}
                           >
-                            {deletingTransactionId === transaction.id
-                              ? 'Deleting...'
-                              : 'Delete'}
-                          </button>
-                          <button
-                            type="button"
-                            onClick={(event) => {
-                              event.stopPropagation()
-                              handleHardDelete(transaction).catch(console.error)
-                            }}
-                            disabled={
-                              hardDeletingTransactionId === transaction.id ||
-                              deletingTransactionId === transaction.id
-                            }
-                            className={`rounded border border-red-300 px-2 py-1 text-xs font-medium text-red-700 ${
-                              hardDeletingTransactionId === transaction.id ||
-                              deletingTransactionId === transaction.id
-                                ? 'cursor-not-allowed opacity-60'
-                                : 'hover:bg-red-50'
-                            }`}
-                          >
-                            {hardDeletingTransactionId === transaction.id
-                              ? 'Deleting...'
-                              : 'Hard delete'}
+                            <svg
+                              aria-hidden="true"
+                              viewBox="0 0 16 16"
+                              className="h-4 w-4"
+                              fill="none"
+                              stroke="currentColor"
+                              strokeWidth="1.5"
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                            >
+                              <path d="M3 4.5h10" />
+                              <path d="M6 4.5V3h4v1.5" />
+                              <path d="M5 6.5V12.5" />
+                              <path d="M8 6.5V12.5" />
+                              <path d="M11 6.5V12.5" />
+                              <path d="M4 4.5 4.5 14h7L12 4.5" />
+                            </svg>
                           </button>
                         </div>
                       ) : (

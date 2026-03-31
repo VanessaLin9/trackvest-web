@@ -18,7 +18,6 @@ const {
   createTransaction,
   updateTransaction,
   removeTransaction,
-  hardDeleteTransaction,
   importTransactions,
 } = vi.hoisted(() => ({
   getAccounts: vi.fn(),
@@ -27,7 +26,6 @@ const {
   createTransaction: vi.fn(),
   updateTransaction: vi.fn(),
   removeTransaction: vi.fn(),
-  hardDeleteTransaction: vi.fn(),
   importTransactions: vi.fn(),
 }))
 
@@ -39,7 +37,6 @@ vi.mock('../lib/investments.service', () => ({
     createTransaction,
     updateTransaction,
     removeTransaction,
-    hardDeleteTransaction,
     importTransactions,
   },
 }))
@@ -77,7 +74,6 @@ describe('Transactions page trade flows', () => {
     createTransaction.mockResolvedValue({ id: 'tx-1' })
     updateTransaction.mockResolvedValue({ id: 'tx-1' })
     removeTransaction.mockResolvedValue({ id: 'tx-1' })
-    hardDeleteTransaction.mockResolvedValue({ id: 'tx-1' })
     importTransactions.mockResolvedValue({
       totalRows: 0,
       successCount: 0,
@@ -292,7 +288,9 @@ describe('Transactions page trade flows', () => {
   it('loads a listed sell transaction into edit mode and updates it', async () => {
     await renderPageWithTransactions()
 
-    fireEvent.click(screen.getByRole('button', { name: 'Edit' }))
+    fireEvent.click(
+      screen.getByRole('button', { name: 'Edit sell transaction' }),
+    )
 
     fireEvent.change(screen.getByLabelText('Quantity'), {
       target: { value: '8' },
@@ -323,22 +321,12 @@ describe('Transactions page trade flows', () => {
 
     await renderPageWithTransactions()
 
-    fireEvent.click(screen.getByRole('button', { name: 'Delete' }))
+    fireEvent.click(
+      screen.getByRole('button', { name: 'Delete sell transaction' }),
+    )
 
     await waitFor(() => {
       expect(removeTransaction).toHaveBeenCalledWith('tx-sell-1')
-    })
-  })
-
-  it('hard deletes a listed transaction', async () => {
-    vi.spyOn(window, 'confirm').mockReturnValue(true)
-
-    await renderPageWithTransactions()
-
-    fireEvent.click(screen.getByRole('button', { name: 'Hard delete' }))
-
-    await waitFor(() => {
-      expect(hardDeleteTransaction).toHaveBeenCalledWith('tx-sell-1')
     })
   })
 })
