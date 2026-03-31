@@ -243,7 +243,7 @@ export default function Assets() {
             <div className="md:col-span-2 flex items-center justify-between rounded-lg bg-gray-50 px-4 py-3">
               <p className="text-sm text-gray-600">
                 Assets created here become selectable in{' '}
-                <Link to="/transactions" className="font-medium text-blue-700 hover:text-blue-800">
+                <Link to="/investments" className="font-medium text-blue-700 hover:text-blue-800">
                   Investments
                 </Link>
                 .
@@ -287,7 +287,7 @@ export default function Assets() {
               <p>No asset selected yet.</p>
               <p>
                 Create one manually, then return to{' '}
-                <Link to="/transactions" className="font-medium text-blue-700 hover:text-blue-800">
+                <Link to="/investments" className="font-medium text-blue-700 hover:text-blue-800">
                   Investments
                 </Link>{' '}
                 to use it in buy or dividend entry.

@@ -44,7 +44,7 @@ export type TransactionsResponse = {
 export type CreateTransactionPayload = {
   accountId: string
   assetId?: string
-  type: 'buy' | 'deposit' | 'dividend'
+  type: 'buy' | 'sell' | 'deposit' | 'dividend'
   amount: number
   quantity?: number
   price?: number
@@ -54,6 +54,8 @@ export type CreateTransactionPayload = {
   tradeTime: string
   note?: string
 }
+
+export type UpdateTransactionPayload = Partial<CreateTransactionPayload>
 
 export type ImportTransactionsPayload = {
   accountId: string
@@ -97,7 +99,21 @@ export const investmentsService = {
   async createTransaction(payload: CreateTransactionPayload) {
     getRequiredCurrentUserId()
 
-    const response = await api.post('/transactions', payload)
+    const response = await api.post<TransactionListItem>('/transactions', payload)
+    return response.data
+  },
+
+  async updateTransaction(id: string, payload: UpdateTransactionPayload) {
+    getRequiredCurrentUserId()
+
+    const response = await api.patch<TransactionListItem>(`/transactions/${id}`, payload)
+    return response.data
+  },
+
+  async removeTransaction(id: string) {
+    getRequiredCurrentUserId()
+
+    const response = await api.delete<TransactionListItem>(`/transactions/${id}`)
     return response.data
   },
 
