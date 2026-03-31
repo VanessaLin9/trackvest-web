@@ -269,6 +269,9 @@ export const messages = {
     gl: {
       title: 'GL Ledger API',
       subtitle: 'Test general ledger posting endpoints',
+      transferMemo: 'Transfer from account to account',
+      expenseMemo: 'Lunch',
+      incomeMemo: 'Salary (partial)',
     },
     transactions: {
       title: 'Investments',
@@ -656,6 +659,9 @@ export const messages = {
     gl: {
       title: '總帳 API',
       subtitle: '測試總帳過帳相關端點',
+      transferMemo: '帳戶間轉帳',
+      expenseMemo: '午餐',
+      incomeMemo: '薪資（部分）',
     },
     transactions: {
       title: '投資',

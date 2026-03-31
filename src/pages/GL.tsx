@@ -32,7 +32,7 @@ export default function GL() {
           amount: 1000,
           currency: 'TWD',
           date: '2025-01-01',
-          memo: 'Transfer from account to account',
+          memo: t('gl.transferMemo'),
         }}
       />
 
@@ -46,7 +46,7 @@ export default function GL() {
           amount: 320,
           currency: 'TWD',
           date: '2025-11-04T12:00:00.000Z',
-          memo: 'Lunch',
+          memo: t('gl.expenseMemo'),
         }}
       />
 
@@ -60,7 +60,7 @@ export default function GL() {
           amount: 1500,
           currency: 'TWD',
           date: '2025-11-04T09:30:00.000Z',
-          memo: 'Salary (partial)',
+          memo: t('gl.incomeMemo'),
         }}
       />
     </div>
