@@ -10,21 +10,21 @@ import CashbookPage from '../pages/CashbookPage'
 
 export interface RouteConfig {
   path: string
-  label: string
+  labelKey: string
   element: React.ReactNode
   showInNav?: boolean
 }
 
 export const routeConfig: RouteConfig[] = [
-  { path: '/', label: 'Dashboard', element: <Dashboard />, showInNav: true },
-  { path: '/cashbook', label: 'Cashbook', element: <CashbookPage />, showInNav: true },
-  { path: '/investments', label: 'Investments', element: <Transactions />, showInNav: true },
+  { path: '/', labelKey: 'routes.dashboard', element: <Dashboard />, showInNav: true },
+  { path: '/cashbook', labelKey: 'routes.cashbook', element: <CashbookPage />, showInNav: true },
+  { path: '/investments', labelKey: 'routes.investments', element: <Transactions />, showInNav: true },
   // TODO(trackvest-web): Remove the legacy Ledger route/page after Cashbook fully replaces this debug flow.
-  { path: '/gl', label: 'Ledger', element: <GL />, showInNav: false },
-  { path: '/health', label: 'Health', element: <Health />, showInNav: false },
-  { path: '/users', label: 'Users', element: <Users />, showInNav: false },
-  { path: '/accounts', label: 'Accounts', element: <Accounts />, showInNav: true },
-  { path: '/assets', label: 'Assets', element: <Assets />, showInNav: true },
+  { path: '/gl', labelKey: 'routes.ledger', element: <GL />, showInNav: false },
+  { path: '/health', labelKey: 'routes.health', element: <Health />, showInNav: false },
+  { path: '/users', labelKey: 'routes.users', element: <Users />, showInNav: false },
+  { path: '/accounts', labelKey: 'routes.accounts', element: <Accounts />, showInNav: true },
+  { path: '/assets', labelKey: 'routes.assets', element: <Assets />, showInNav: true },
 ]
 
 export const getNavItems = () => {

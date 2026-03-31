@@ -1,5 +1,6 @@
 import { useQuery } from '@tanstack/react-query'
 import { api } from '../lib/api'
+import { useI18n } from '../i18n'
 import DataTable from './DataTable'
 
 interface DataDisplayProps {
@@ -23,6 +24,7 @@ export default function DataDisplay({
   title,
   onRowClick,
 }: DataDisplayProps) {
+  const { t } = useI18n()
   const queryString = Object.entries(queryParams)
     .filter(([_, v]) => v && v.trim())
     .map(([k, v]) => `${k}=${encodeURIComponent(v)}`)
@@ -54,17 +56,17 @@ export default function DataDisplay({
             isLoading ? 'opacity-60 cursor-not-allowed' : 'hover:bg-blue-700'
           }`}
         >
-          {isLoading ? 'Loading...' : '🔄 Refresh'}
+          {isLoading ? t('common.loading') : `🔄 ${t('common.refresh')}`}
         </button>
       </div>
 
       {isLoading && (
-        <div className="p-5 text-center">Loading...</div>
+        <div className="p-5 text-center">{t('common.loading')}</div>
       )}
 
       {error && (
         <div className="p-4 bg-red-100 text-red-800 rounded">
-          <strong>Error:</strong>{' '}
+          <strong>{t('common.error')}:</strong>{' '}
           {(error as any)?.response?.data?.message || String(error)}
         </div>
       )}
@@ -72,7 +74,7 @@ export default function DataDisplay({
       {!isLoading && !error && data && (
         <>
           <div className="mb-2.5 text-gray-600 text-sm">
-            Found {data.length} {data.length === 1 ? 'item' : 'items'}
+            {t('common.itemCount', { count: data.length })}
           </div>
           <DataTable
             data={data}
@@ -94,4 +96,3 @@ export default function DataDisplay({
     </div>
   )
 }
-
