@@ -9,6 +9,7 @@ import {
   vi,
 } from 'vitest'
 import { setCurrentUserId } from '../app/current-user'
+import { I18nProvider } from '../i18n'
 import Transactions from './Transactions'
 
 const {
@@ -91,9 +92,11 @@ describe('Transactions page trade flows', () => {
 
   function renderPage() {
     return render(
-      <MemoryRouter>
-        <Transactions />
-      </MemoryRouter>,
+      <I18nProvider>
+        <MemoryRouter>
+          <Transactions />
+        </MemoryRouter>
+      </I18nProvider>,
     )
   }
 
@@ -116,7 +119,8 @@ describe('Transactions page trade flows', () => {
       expect(getTransactions).toHaveBeenCalled()
     })
 
-    fireEvent.click(screen.getByRole('button', { name: mode }))
+    const label = mode === 'buy' ? 'Buy' : 'Sell'
+    fireEvent.click(screen.getByRole('button', { name: label }))
   }
 
   async function renderPageWithTransactions() {
@@ -186,7 +190,7 @@ describe('Transactions page trade flows', () => {
       target: { value: 'Build position' },
     })
 
-    fireEvent.click(screen.getByRole('button', { name: 'Save buy' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Save Buy' }))
 
     await waitFor(() => {
       expect(createTransaction).toHaveBeenCalledWith(
@@ -207,7 +211,7 @@ describe('Transactions page trade flows', () => {
 
     const payload = createTransaction.mock.calls[0][0]
     expect(payload.tradeTime).toEqual(expect.any(String))
-    expect(screen.getByText('buy saved')).toBeTruthy()
+    expect(screen.getByText('Buy saved')).toBeTruthy()
   })
 
   it('submits a sell payload with net proceeds and tax included', async () => {
@@ -232,7 +236,7 @@ describe('Transactions page trade flows', () => {
       target: { value: 'Trim position' },
     })
 
-    fireEvent.click(screen.getByRole('button', { name: 'Save sell' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Save Sell' }))
 
     await waitFor(() => {
       expect(createTransaction).toHaveBeenCalledWith(
@@ -253,7 +257,7 @@ describe('Transactions page trade flows', () => {
 
     const payload = createTransaction.mock.calls[0][0]
     expect(payload.tradeTime).toEqual(expect.any(String))
-    expect(screen.getByText('sell saved')).toBeTruthy()
+    expect(screen.getByText('Sell saved')).toBeTruthy()
   })
 
   it('blocks buy submission when no tradable asset is available', async () => {
@@ -266,7 +270,7 @@ describe('Transactions page trade flows', () => {
       expect(getAssets).toHaveBeenCalled()
     })
 
-    fireEvent.click(screen.getByRole('button', { name: 'buy' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Buy' }))
 
     fireEvent.change(screen.getByLabelText('Quantity'), {
       target: { value: '10' },
@@ -275,7 +279,7 @@ describe('Transactions page trade flows', () => {
       target: { value: '100' },
     })
 
-    const saveButton = screen.getByRole('button', { name: 'Save buy' })
+    const saveButton = screen.getByRole('button', { name: 'Save Buy' })
     expect((saveButton as HTMLButtonElement).disabled).toBe(true)
 
     const warning = screen.getByText(
@@ -293,7 +297,7 @@ describe('Transactions page trade flows', () => {
       target: { value: '100' },
     })
 
-    fireEvent.click(screen.getByRole('button', { name: 'Save buy' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Save Buy' }))
 
     expect(
       await screen.findByText(
@@ -307,7 +311,7 @@ describe('Transactions page trade flows', () => {
     await renderPageWithTransactions()
 
     fireEvent.click(
-      screen.getByRole('button', { name: 'Edit sell transaction' }),
+      screen.getByRole('button', { name: 'Edit Sell transaction' }),
     )
 
     fireEvent.change(screen.getByLabelText('Quantity'), {
@@ -344,7 +348,7 @@ describe('Transactions page trade flows', () => {
     await renderPageWithTransactions()
 
     fireEvent.click(
-      screen.getByRole('button', { name: 'Delete sell transaction' }),
+      screen.getByRole('button', { name: 'Delete Sell transaction' }),
     )
 
     await waitFor(() => {
@@ -372,7 +376,7 @@ describe('Transactions page trade flows', () => {
       target: { value: '5' },
     })
 
-    fireEvent.click(screen.getByRole('button', { name: 'Save sell' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Save Sell' }))
 
     expect(
       await screen.findByText('sell quantity exceeds the remaining open position lots'),

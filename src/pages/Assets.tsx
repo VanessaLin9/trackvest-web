@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
+import { useI18n } from '../i18n'
 import {
   assetsService,
   ASSET_TYPE_OPTIONS,
@@ -37,15 +38,30 @@ function getErrorMessage(err: unknown, fallback: string) {
   return fallback
 }
 
-function formatTypeLabel(type?: string | null) {
+function formatTypeLabel(
+  type: string | null | undefined,
+  t: (key: string) => string,
+) {
   if (!type) {
-    return 'UNKNOWN'
+    return t('assets.unknownType')
   }
 
-  return type.toUpperCase()
+  switch (type) {
+    case 'equity':
+      return t('assets.typeEquity')
+    case 'etf':
+      return t('assets.typeEtf')
+    case 'crypto':
+      return t('assets.typeCrypto')
+    case 'cash':
+      return t('assets.typeCash')
+    default:
+      return type.toUpperCase()
+  }
 }
 
 export default function Assets() {
+  const { t } = useI18n()
   const [assets, setAssets] = useState<Asset[]>([])
   const [selectedAssetId, setSelectedAssetId] = useState<string | null>(null)
   const [form, setForm] = useState<AssetFormState>(DEFAULT_FORM)
@@ -71,7 +87,7 @@ export default function Assets() {
           : loadedAssets[0]?.id ?? null,
       )
     } catch (err: unknown) {
-      setErrorMessage(getErrorMessage(err, 'Failed to load assets'))
+      setErrorMessage(getErrorMessage(err, t('assets.failedToLoad')))
     } finally {
       setLoadingAssets(false)
     }
@@ -89,17 +105,17 @@ export default function Assets() {
     const baseCurrency = form.baseCurrency.trim().toUpperCase()
 
     if (!symbol) {
-      setErrorMessage('Symbol is required')
+      setErrorMessage(t('assets.symbolRequired'))
       return
     }
 
     if (!name) {
-      setErrorMessage('Name is required')
+      setErrorMessage(t('assets.nameRequired'))
       return
     }
 
     if (!baseCurrency) {
-      setErrorMessage('Base currency is required')
+      setErrorMessage(t('assets.baseCurrencyRequired'))
       return
     }
 
@@ -115,7 +131,7 @@ export default function Assets() {
         baseCurrency,
       })
 
-      setSuccessMessage(`Asset ${createdAsset.symbol} created.`)
+      setSuccessMessage(t('assets.assetCreated', { symbol: createdAsset.symbol }))
       setForm({
         ...DEFAULT_FORM,
         baseCurrency,
@@ -123,7 +139,7 @@ export default function Assets() {
       await loadAssets()
       setSelectedAssetId(createdAsset.id)
     } catch (err: unknown) {
-      setErrorMessage(getErrorMessage(err, 'Failed to create asset'))
+      setErrorMessage(getErrorMessage(err, t('assets.failedToCreate')))
     } finally {
       setSubmitting(false)
     }
@@ -132,17 +148,15 @@ export default function Assets() {
   return (
     <div className="mx-auto max-w-6xl space-y-6">
       <header className="space-y-2">
-        <h1 className="text-3xl font-semibold">Assets</h1>
+        <h1 className="text-3xl font-semibold">{t('assets.title')}</h1>
         <p className="max-w-3xl text-sm text-gray-600">
-          Create the minimum tradable asset catalog the investment flow needs.
-          If a stock, ETF, or crypto is missing here, buy and dividend entry
-          will stall in Investments.
+          {t('assets.subtitle')}
         </p>
       </header>
 
       {errorMessage && (
         <div className="rounded border border-red-200 bg-red-50 px-4 py-3 text-red-800">
-          <strong>Error:</strong> {errorMessage}
+          <strong>{t('common.error')}:</strong> {errorMessage}
         </div>
       )}
 
@@ -155,17 +169,16 @@ export default function Assets() {
       <section className="grid gap-6 lg:grid-cols-[1.05fr_0.95fr]">
         <div className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm">
           <div className="mb-4 space-y-1">
-            <h2 className="text-lg font-semibold">Create asset</h2>
+            <h2 className="text-lg font-semibold">{t('assets.createTitle')}</h2>
             <p className="text-sm text-gray-600">
-              First version stays manual on purpose. External lookup and import
-              can come later.
+              {t('assets.createDescription')}
             </p>
           </div>
 
           <form onSubmit={handleSubmit} className="grid gap-4 md:grid-cols-2">
             <div className="space-y-1">
               <label className="block text-sm font-medium text-gray-700">
-                Symbol
+                {t('assets.symbol')}
               </label>
               <input
                 type="text"
@@ -176,14 +189,14 @@ export default function Assets() {
                     symbol: event.target.value.toUpperCase(),
                   }))
                 }
-                placeholder="e.g. AAPL or 0050"
+                placeholder={t('assets.symbolPlaceholder')}
                 className="w-full rounded border border-gray-300 px-3 py-2"
               />
             </div>
 
             <div className="space-y-1">
               <label className="block text-sm font-medium text-gray-700">
-                Base currency
+                {t('assets.baseCurrency')}
               </label>
               <select
                 value={form.baseCurrency}
@@ -205,7 +218,7 @@ export default function Assets() {
 
             <div className="space-y-1 md:col-span-2">
               <label className="block text-sm font-medium text-gray-700">
-                Name
+                {t('assets.name')}
               </label>
               <input
                 type="text"
@@ -213,14 +226,14 @@ export default function Assets() {
                 onChange={(event) =>
                   setForm((current) => ({ ...current, name: event.target.value }))
                 }
-                placeholder="e.g. Apple Inc."
+                placeholder={t('assets.namePlaceholder')}
                 className="w-full rounded border border-gray-300 px-3 py-2"
               />
             </div>
 
             <div className="space-y-1 md:col-span-2">
               <label className="block text-sm font-medium text-gray-700">
-                Type
+                {t('assets.type')}
               </label>
               <select
                 value={form.type}
@@ -234,7 +247,7 @@ export default function Assets() {
               >
                 {ASSET_TYPE_OPTIONS.map((type) => (
                   <option key={type} value={type}>
-                    {type}
+                    {formatTypeLabel(type, t)}
                   </option>
                 ))}
               </select>
@@ -242,9 +255,9 @@ export default function Assets() {
 
             <div className="md:col-span-2 flex items-center justify-between rounded-lg bg-gray-50 px-4 py-3">
               <p className="text-sm text-gray-600">
-                Assets created here become selectable in{' '}
+                {t('assets.investmentHintPrefix')}{' '}
                 <Link to="/investments" className="font-medium text-blue-700 hover:text-blue-800">
-                  Investments
+                  {t('routes.investments')}
                 </Link>
                 .
               </p>
@@ -255,42 +268,42 @@ export default function Assets() {
                   submitting ? 'cursor-not-allowed bg-gray-400' : 'bg-blue-600 hover:bg-blue-700'
                 }`}
               >
-                {submitting ? 'Creating...' : 'Create asset'}
+                {submitting ? t('assets.creatingAction') : t('assets.createAction')}
               </button>
             </div>
           </form>
         </div>
 
         <aside className="rounded-xl border border-gray-200 bg-gray-50 p-5 shadow-sm">
-          <h2 className="mb-3 text-lg font-semibold">Selected asset</h2>
+          <h2 className="mb-3 text-lg font-semibold">{t('assets.selectedTitle')}</h2>
           {selectedAsset ? (
             <div className="space-y-3 text-sm text-gray-700">
               <div className="rounded-lg border border-gray-200 bg-white p-4">
                 <div className="text-xs uppercase tracking-[0.2em] text-gray-500">
-                  {formatTypeLabel(selectedAsset.type)}
+                  {formatTypeLabel(selectedAsset.type, t)}
                 </div>
                 <div className="mt-2 text-2xl font-semibold text-gray-900">
                   {selectedAsset.symbol}
                 </div>
                 <div className="text-gray-600">{selectedAsset.name}</div>
                 <div className="mt-3 text-sm text-gray-500">
-                  Base currency: {selectedAsset.baseCurrency}
+                  {t('assets.baseCurrency')}: {selectedAsset.baseCurrency}
                 </div>
               </div>
               <p>
-                Row selection is already in place so this page can grow into
-                edit mode next, without changing the basic browsing flow.
+                {t('assets.selectedDescription')}
               </p>
             </div>
           ) : (
             <div className="space-y-3 text-sm text-gray-700">
-              <p>No asset selected yet.</p>
+              <p>{t('assets.noSelectedAsset')}</p>
               <p>
-                Create one manually, then return to{' '}
+                {t('assets.selectedCallToActionBefore')}{' '}
                 <Link to="/investments" className="font-medium text-blue-700 hover:text-blue-800">
-                  Investments
-                </Link>{' '}
-                to use it in buy or dividend entry.
+                  {t('routes.investments')}
+                </Link>
+                {' '}
+                {t('assets.selectedCallToActionAfter')}
               </p>
             </div>
           )}
@@ -300,31 +313,31 @@ export default function Assets() {
       <section className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm">
         <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
           <div>
-            <h2 className="text-lg font-semibold">Asset catalog</h2>
+            <h2 className="text-lg font-semibold">{t('assets.catalogTitle')}</h2>
             <p className="text-sm text-gray-600">
-              Click any row to review what already exists.
+              {t('assets.catalogDescription')}
             </p>
           </div>
           <div className="rounded-full bg-gray-100 px-3 py-1 text-sm text-gray-600">
-            {assets.length} asset{assets.length === 1 ? '' : 's'}
+            {t('assets.assetCount', { count: assets.length })}
           </div>
         </div>
 
         {loadingAssets ? (
-          <p className="text-sm text-gray-600">Loading assets...</p>
+          <p className="text-sm text-gray-600">{t('assets.loadingAssets')}</p>
         ) : assets.length === 0 ? (
           <div className="rounded-lg border border-dashed border-gray-300 bg-gray-50 px-4 py-6 text-sm text-gray-600">
-            No assets yet. Create your first tradable asset above.
+            {t('assets.noAssets')}
           </div>
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full border-collapse text-sm">
               <thead>
                 <tr className="border-b border-gray-200 text-left">
-                  <th className="px-3 py-3 font-medium text-gray-600">Symbol</th>
-                  <th className="px-3 py-3 font-medium text-gray-600">Name</th>
-                  <th className="px-3 py-3 font-medium text-gray-600">Type</th>
-                  <th className="px-3 py-3 font-medium text-gray-600">Base currency</th>
+                  <th className="px-3 py-3 font-medium text-gray-600">{t('assets.symbol')}</th>
+                  <th className="px-3 py-3 font-medium text-gray-600">{t('assets.name')}</th>
+                  <th className="px-3 py-3 font-medium text-gray-600">{t('assets.type')}</th>
+                  <th className="px-3 py-3 font-medium text-gray-600">{t('assets.baseCurrency')}</th>
                 </tr>
               </thead>
               <tbody>
@@ -344,7 +357,7 @@ export default function Assets() {
                       </td>
                       <td className="px-3 py-3 text-gray-700">{asset.name}</td>
                       <td className="px-3 py-3 capitalize text-gray-600">
-                        {asset.type}
+                        {formatTypeLabel(asset.type, t)}
                       </td>
                       <td className="px-3 py-3 text-gray-600">
                         {asset.baseCurrency}

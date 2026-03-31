@@ -8,6 +8,7 @@ import {
 } from '../lib/investments.service'
 import { useCurrentUserId } from '../app/current-user'
 import { SUPPORTED_BROKER, type Account } from '../lib/accounts.service'
+import { useI18n } from '../i18n'
 
 const INVESTMENT_MODE_OPTIONS = ['deposit', 'buy', 'sell', 'dividend'] as const
 type InvestmentMode = (typeof INVESTMENT_MODE_OPTIONS)[number]
@@ -27,19 +28,22 @@ function getErrorMessage(err: unknown, fallback: string) {
   return fallback
 }
 
-function formatMoney(value: number | string | null | undefined) {
+function formatMoney(
+  value: number | string | null | undefined,
+  locale: string,
+) {
   if (value === null || value === undefined || value === '') {
     return '-'
   }
 
-  return Number(value).toLocaleString(undefined, {
+  return Number(value).toLocaleString(locale, {
     minimumFractionDigits: 2,
     maximumFractionDigits: 2,
   })
 }
 
-function formatDateOnly(value: string) {
-  return new Date(value).toLocaleDateString()
+function formatDateOnly(value: string, locale: string) {
+  return new Date(value).toLocaleDateString(locale)
 }
 
 function toDateTimeLocalValue(value: string | Date) {
@@ -66,21 +70,36 @@ function isZeroOrPositiveNumber(value: string) {
   return Number.isFinite(numeric) && numeric >= 0
 }
 
-function buildTransactionDetails(transaction: TransactionListItem) {
+function buildTransactionDetails(
+  transaction: TransactionListItem,
+  locale: string,
+  t: (key: string, values?: Record<string, string | number>) => string,
+) {
   const segments: string[] = []
 
   if (transaction.quantity) {
     segments.push(
-      `${formatMoney(transaction.quantity)} @ ${formatMoney(transaction.price)}`,
+      t('transactions.detailQuantityPrice', {
+        quantity: formatMoney(transaction.quantity, locale),
+        price: formatMoney(transaction.price, locale),
+      }),
     )
   }
 
   if (transaction.fee && Number(transaction.fee) > 0) {
-    segments.push(`fee ${formatMoney(transaction.fee)}`)
+    segments.push(
+      t('transactions.detailFee', {
+        value: formatMoney(transaction.fee, locale),
+      }),
+    )
   }
 
   if (transaction.tax && Number(transaction.tax) > 0) {
-    segments.push(`tax ${formatMoney(transaction.tax)}`)
+    segments.push(
+      t('transactions.detailTax', {
+        value: formatMoney(transaction.tax, locale),
+      }),
+    )
   }
 
   return segments.length > 0 ? segments.join(' · ') : '-'
@@ -92,8 +111,27 @@ function isEditableTransactionType(
   return INVESTMENT_MODE_OPTIONS.includes(type as InvestmentMode)
 }
 
+function formatModeLabel(
+  mode: TransactionListItem['type'] | InvestmentMode | string,
+  t: (key: string) => string,
+) {
+  switch (mode) {
+    case 'deposit':
+      return t('transactions.modeDeposit')
+    case 'buy':
+      return t('transactions.modeBuy')
+    case 'sell':
+      return t('transactions.modeSell')
+    case 'dividend':
+      return t('transactions.modeDividend')
+    default:
+      return mode
+  }
+}
+
 export default function Transactions() {
   const currentUserId = useCurrentUserId()
+  const { t, locale } = useI18n()
   const [accounts, setAccounts] = useState<Account[]>([])
   const [assets, setAssets] = useState<Asset[]>([])
   const [transactions, setTransactions] = useState<TransactionListItem[]>([])
@@ -190,7 +228,7 @@ export default function Transactions() {
       })
       setTransactions(response.items)
     } catch (err: unknown) {
-      setError(getErrorMessage(err, 'Failed to load transactions'))
+      setError(getErrorMessage(err, t('transactions.failedToLoadTransactions')))
     } finally {
       setLoadingTransactions(false)
     }
@@ -225,7 +263,7 @@ export default function Transactions() {
           setAssetId((current) => current || firstTradableAsset?.id || '')
         }
       } catch (err: unknown) {
-        setError(getErrorMessage(err, 'Failed to load investment data'))
+        setError(getErrorMessage(err, t('transactions.failedToLoadData')))
       } finally {
         setLoadingMeta(false)
       }
@@ -298,7 +336,11 @@ export default function Transactions() {
 
   const startEditingTransaction = (transaction: TransactionListItem) => {
     if (!isEditableTransactionType(transaction.type)) {
-      setError(`Editing ${transaction.type} transactions is not supported in this page yet`)
+      setError(
+        t('transactions.editUnsupported', {
+          type: transaction.type,
+        }),
+      )
       setSuccessMessage(null)
       return
     }
@@ -337,42 +379,46 @@ export default function Transactions() {
 
   const validateForm = () => {
     if (!currentUserId || !accountId) {
-      return 'Please select an investment account'
+      return t('transactions.accountRequired')
     }
 
     if (requiresAsset && !hasTradableAssets) {
-      return 'No asset available. Create one in Assets first.'
+      return t('transactions.noAssetAvailable')
     }
 
     if (!tradeTime || Number.isNaN(new Date(tradeTime).getTime())) {
-      return 'Please provide a valid trade time'
+      return t('transactions.validTradeTime')
     }
 
     if (requiresAsset && !assetId) {
-      return 'Please select an asset'
+      return t('transactions.assetRequired')
     }
 
     if (requiresTradeFields) {
       if (!isPositiveNumber(quantity)) {
-        return `Quantity must be a positive number for ${mode} transactions`
+        return t('transactions.quantityPositive', {
+          mode,
+        })
       }
 
       if (!isPositiveNumber(price)) {
-        return `Price must be a positive number for ${mode} transactions`
+        return t('transactions.pricePositive', {
+          mode,
+        })
       }
     }
 
     if (!isZeroOrPositiveNumber(fee)) {
-      return 'Fee must be zero or a positive number'
+      return t('transactions.feeValid')
     }
 
     if (!isZeroOrPositiveNumber(tax)) {
-      return 'Tax must be zero or a positive number'
+      return t('transactions.taxValid')
     }
 
     const numericAmount = requiresTradeFields ? computedAmount : Number(amount)
     if (!Number.isFinite(numericAmount) || numericAmount <= 0) {
-      return 'Amount must be a positive number'
+      return t('transactions.amountPositive')
     }
 
     return null
@@ -408,7 +454,7 @@ export default function Transactions() {
       let savedTransaction: TransactionListItem
       if (isEditing) {
         if (!selectedTransactionId) {
-          throw new Error('No transaction selected for editing')
+          throw new Error(t('transactions.noTransactionSelected'))
         }
         savedTransaction = await investmentsService.updateTransaction(
           selectedTransactionId,
@@ -417,7 +463,11 @@ export default function Transactions() {
       } else {
         savedTransaction = await investmentsService.createTransaction(payload)
       }
-      setSuccessMessage(isEditing ? `${mode} updated` : `${mode} saved`)
+      setSuccessMessage(
+        isEditing
+          ? t('transactions.updated', { mode: formatModeLabel(mode, t) })
+          : t('transactions.saved', { mode: formatModeLabel(mode, t) }),
+      )
       if (isEditing) {
         startEditingTransaction(savedTransaction)
       } else {
@@ -425,14 +475,20 @@ export default function Transactions() {
       }
       await loadTransactions(listAccountId)
     } catch (err: unknown) {
-      setError(getErrorMessage(err, 'Failed to save transaction'))
+      setError(getErrorMessage(err, t('transactions.failedToSave')))
     } finally {
       setSubmitting(false)
     }
   }
 
   const handleSoftDelete = async (transaction: TransactionListItem) => {
-    if (!window.confirm(`Soft delete this ${transaction.type} transaction?`)) {
+    if (
+      !window.confirm(
+        t('transactions.softDeleteConfirm', {
+          type: formatModeLabel(transaction.type, t),
+        }),
+      )
+    ) {
       return
     }
 
@@ -444,10 +500,14 @@ export default function Transactions() {
       if (selectedTransactionId === transaction.id) {
         resetForm()
       }
-      setSuccessMessage(`${transaction.type} deleted`)
+      setSuccessMessage(
+        t('transactions.deleted', {
+          type: formatModeLabel(transaction.type, t),
+        }),
+      )
       await loadTransactions(listAccountId)
     } catch (err: unknown) {
-      setError(getErrorMessage(err, 'Failed to delete transaction'))
+      setError(getErrorMessage(err, t('transactions.failedToDelete')))
     } finally {
       setDeletingTransactionId(null)
     }
@@ -455,15 +515,15 @@ export default function Transactions() {
 
   const validateImport = () => {
     if (!currentUserId) {
-      return 'VITE_DEMO_USER_ID is not set'
+      return t('common.envDemoUserMissing')
     }
 
     if (!importAccountId) {
-      return 'Please select an account for CSV import'
+      return t('transactions.importAccountRequired')
     }
 
     if (!importFile) {
-      return 'Please choose a CSV file to import'
+      return t('transactions.importFileRequired')
     }
 
     const loweredName = importFile.name.toLowerCase()
@@ -472,11 +532,11 @@ export default function Transactions() {
       !loweredName.endsWith('.tsv') &&
       !loweredName.endsWith('.txt')
     ) {
-      return 'Import file must be a .csv, .tsv, or .txt file'
+      return t('transactions.importFileType')
     }
 
     if (importFile.size === 0) {
-      return 'Import file is empty'
+      return t('transactions.importFileEmpty')
     }
 
     return null
@@ -497,7 +557,7 @@ export default function Transactions() {
       setSuccessMessage(null)
       const csvContent = await importFile!.text()
       if (!csvContent.trim()) {
-        setError('Import file is empty')
+        setError(t('transactions.importFileEmpty'))
         return
       }
 
@@ -508,13 +568,17 @@ export default function Transactions() {
 
       setImportResult(result)
       if (result.successCount > 0) {
-        setSuccessMessage(`Imported ${result.successCount} transaction(s)`)
+        setSuccessMessage(
+          t('transactions.importedCount', {
+            count: result.successCount,
+          }),
+        )
         await loadTransactions(listAccountId)
       } else {
         setSuccessMessage(null)
       }
     } catch (err: unknown) {
-      setError(getErrorMessage(err, 'Failed to import transactions'))
+      setError(getErrorMessage(err, t('transactions.failedToImport')))
     } finally {
       setImportSubmitting(false)
     }
@@ -523,9 +587,9 @@ export default function Transactions() {
   if (!currentUserId) {
     return (
       <div className="mx-auto max-w-5xl">
-        <h1 className="mb-4 text-2xl font-semibold">Investments</h1>
+        <h1 className="mb-4 text-2xl font-semibold">{t('transactions.title')}</h1>
         <p className="text-red-600">
-          VITE_DEMO_USER_ID is not set. Please set it in your .env file.
+          {t('common.envDemoUserMissing')}
         </p>
       </div>
     )
@@ -534,18 +598,15 @@ export default function Transactions() {
   return (
     <div className="mx-auto max-w-6xl space-y-6">
       <header className="space-y-2">
-        <h1 className="text-3xl font-semibold">Investments</h1>
+        <h1 className="text-3xl font-semibold">{t('transactions.title')}</h1>
         <p className="max-w-3xl text-sm text-gray-600">
-          Record the investment actions you actually care about day to day:
-          deposit, buy, sell, and dividend. Buy and sell amounts are computed
-          from quantity, price, fee, and tax so the payload stays aligned with
-          the FIFO cost-basis logic now running in the API.
+          {t('transactions.subtitle')}
         </p>
       </header>
 
       {error && (
         <div className="rounded border border-red-200 bg-red-50 px-4 py-3 text-red-800">
-          <strong>Error:</strong> {error}
+          <strong>{t('common.error')}:</strong> {error}
         </div>
       )}
 
@@ -561,12 +622,14 @@ export default function Transactions() {
             <div className="space-y-3">
               <div>
                 <h2 className="text-lg font-semibold">
-                  {isEditing ? 'Edit transaction' : 'Create transaction'}
+                  {isEditing
+                    ? t('transactions.editTitle')
+                    : t('transactions.createTitle')}
                 </h2>
                 <p className="text-sm text-gray-600">
                   {isEditing
-                    ? 'Update the selected transaction, or create a new one after you finish reviewing it.'
-                    : 'Record investment activity and keep the transaction feed in sync with the API.'}
+                    ? t('transactions.editDescription')
+                    : t('transactions.createDescription')}
                 </p>
               </div>
 
@@ -585,15 +648,14 @@ export default function Transactions() {
                       isEditing ? 'cursor-not-allowed opacity-60' : ''
                     }`}
                   >
-                    {item}
+                    {formatModeLabel(item, t)}
                   </button>
                 ))}
               </div>
 
               {isEditing && (
                 <p className="text-xs text-gray-500">
-                  Type stays locked while editing. Click `Create new` to start a
-                  fresh transaction in another mode.
+                  {t('transactions.typeLocked')}
                 </p>
               )}
             </div>
@@ -606,7 +668,7 @@ export default function Transactions() {
                 htmlFor="investment-account"
                 className="block text-sm font-medium text-gray-700"
               >
-                Account
+                {t('transactions.account')}
               </label>
               <select
                 id="investment-account"
@@ -616,7 +678,7 @@ export default function Transactions() {
                 className="w-full rounded border border-gray-300 px-3 py-2"
               >
                 {availableAccounts.length === 0 && (
-                  <option value="">No account available</option>
+                  <option value="">{t('transactions.noAccountAvailable')}</option>
                 )}
                 {availableAccounts.map((account) => (
                   <option key={account.id} value={account.id}>
@@ -631,7 +693,7 @@ export default function Transactions() {
                 htmlFor="investment-trade-time"
                 className="block text-sm font-medium text-gray-700"
               >
-                Trade time
+                {t('transactions.tradeTime')}
               </label>
               <input
                 id="investment-trade-time"
@@ -648,7 +710,7 @@ export default function Transactions() {
                   htmlFor="investment-asset"
                   className="block text-sm font-medium text-gray-700"
                 >
-                  Asset
+                  {t('transactions.asset')}
                 </label>
                 <select
                   id="investment-asset"
@@ -658,7 +720,7 @@ export default function Transactions() {
                   className="w-full rounded border border-gray-300 px-3 py-2"
                 >
                   {!hasTradableAssets && (
-                    <option value="">No asset available</option>
+                    <option value="">{t('transactions.noAssetOption')}</option>
                   )}
                   {availableAssets.map((asset) => (
                     <option key={asset.id} value={asset.id}>
@@ -668,14 +730,14 @@ export default function Transactions() {
                 </select>
                 {!hasTradableAssets && (
                   <div className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-3 text-sm text-amber-900">
-                    No asset available. Create one in{' '}
+                    {t('transactions.assetMissingHintPrefix')}{' '}
                     <Link
                       to="/assets"
                       className="font-medium underline underline-offset-2"
                     >
-                      Assets
+                      {t('routes.assets')}
                     </Link>{' '}
-                    first.
+                    {t('transactions.assetMissingHintAfter')}
                   </div>
                 )}
               </div>
@@ -688,7 +750,7 @@ export default function Transactions() {
                     htmlFor="investment-quantity"
                     className="block text-sm font-medium text-gray-700"
                   >
-                    Quantity
+                    {t('transactions.quantity')}
                   </label>
                   <input
                     id="investment-quantity"
@@ -706,7 +768,7 @@ export default function Transactions() {
                     htmlFor="investment-price"
                     className="block text-sm font-medium text-gray-700"
                   >
-                    Price
+                    {t('transactions.price')}
                   </label>
                   <input
                     id="investment-price"
@@ -724,7 +786,7 @@ export default function Transactions() {
                     htmlFor="investment-fee"
                     className="block text-sm font-medium text-gray-700"
                   >
-                    Fee
+                    {t('transactions.fee')}
                   </label>
                   <input
                     id="investment-fee"
@@ -742,7 +804,7 @@ export default function Transactions() {
                     htmlFor="investment-tax"
                     className="block text-sm font-medium text-gray-700"
                   >
-                    Tax
+                    {t('transactions.tax')}
                   </label>
                   <input
                     id="investment-tax"
@@ -762,7 +824,9 @@ export default function Transactions() {
                 htmlFor="investment-amount"
                 className="block text-sm font-medium text-gray-700"
               >
-                {requiresTradeFields ? 'Computed amount' : 'Amount'}
+                {requiresTradeFields
+                  ? t('transactions.computedAmount')
+                  : t('transactions.amount')}
               </label>
               <input
                 id="investment-amount"
@@ -786,19 +850,18 @@ export default function Transactions() {
                   htmlFor="investment-broker-order-no"
                   className="block text-sm font-medium text-gray-700"
                 >
-                  Broker order no
+                  {t('transactions.brokerOrderNo')}
                 </label>
                 <input
                   id="investment-broker-order-no"
                   type="text"
                   value={brokerOrderNo}
                   onChange={(event) => setBrokerOrderNo(event.target.value)}
-                  placeholder="e.g. BRK-20260331-001"
+                  placeholder={t('transactions.brokerOrderNoPlaceholder')}
                   className="w-full rounded border border-gray-300 px-3 py-2"
                 />
                 <p className="text-xs text-gray-500">
-                  Helpful when you manually mirror broker executions or reconcile
-                  against imported trades later.
+                  {t('transactions.brokerOrderNoHint')}
                 </p>
               </div>
             )}
@@ -808,7 +871,7 @@ export default function Transactions() {
                 htmlFor="investment-note"
                 className="block text-sm font-medium text-gray-700"
               >
-                Note
+                {t('transactions.note')}
               </label>
               <input
                 id="investment-note"
@@ -817,12 +880,12 @@ export default function Transactions() {
                 onChange={(event) => setNote(event.target.value)}
                 placeholder={
                   mode === 'deposit'
-                    ? 'e.g. Monthly funding'
+                    ? t('transactions.noteDepositPlaceholder')
                     : mode === 'dividend'
-                    ? 'e.g. Cash dividend'
+                    ? t('transactions.noteDividendPlaceholder')
                     : mode === 'sell'
-                    ? 'e.g. Trim position'
-                    : 'e.g. Build position'
+                    ? t('transactions.noteSellPlaceholder')
+                    : t('transactions.noteBuyPlaceholder')
                 }
                 className="w-full rounded border border-gray-300 px-3 py-2"
               />
@@ -832,11 +895,12 @@ export default function Transactions() {
               <div className="text-sm text-gray-600">
                 {selectedAccount ? (
                   <span>
-                    Posting to <strong>{selectedAccount.name}</strong>
+                    {t('transactions.postingTo')}{' '}
+                    <strong>{selectedAccount.name}</strong>
                     {selectedAsset ? ` · ${selectedAsset.symbol}` : ''}
                   </span>
                 ) : (
-                  'Select an account to continue'
+                  t('transactions.selectAccountToContinue')
                 )}
               </div>
               <div className="flex items-center gap-2">
@@ -846,7 +910,7 @@ export default function Transactions() {
                     onClick={resetForm}
                     className="rounded border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100"
                   >
-                    Cancel
+                    {t('common.cancel')}
                   </button>
                 )}
                 <button
@@ -861,10 +925,12 @@ export default function Transactions() {
                   }`}
                 >
                   {submitting
-                    ? 'Saving...'
+                    ? t('common.saving')
                     : isEditing
-                    ? 'Save changes'
-                    : `Save ${mode}`}
+                    ? t('common.saveChanges')
+                    : t('transactions.saveMode', {
+                        mode: formatModeLabel(mode, t),
+                      })}
                 </button>
               </div>
             </div>
@@ -873,21 +939,19 @@ export default function Transactions() {
 
         <aside className="space-y-4">
           <section className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm">
-            <h2 className="mb-3 text-lg font-semibold">Import CSV</h2>
+            <h2 className="mb-3 text-lg font-semibold">{t('transactions.importCsv')}</h2>
             <p className="mb-4 text-sm text-gray-600">
-              Upload a Cathay brokerage export and import it into a configured
-              broker account. Broker accounts without a parser configuration stay
-              manual-only. Set up the account first in{' '}
+              {t('transactions.importCsvDescriptionBefore')}{' '}
               <Link to="/accounts" className="font-medium text-blue-700 underline">
-                Accounts
+                {t('routes.accounts')}
               </Link>
-              .
+              {' '}
+              {t('transactions.importCsvDescriptionAfter')}
             </p>
 
             {importAccounts.length === 0 && (
               <div className="mb-4 rounded border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
-                No broker account configured for CSV import. Go to Accounts and
-                create a Cathay broker account first.
+                {t('transactions.noImportAccounts')}
               </div>
             )}
 
@@ -897,7 +961,7 @@ export default function Transactions() {
                   htmlFor="import-account-id"
                   className="block text-sm font-medium text-gray-700"
                 >
-                  Import account
+                  {t('transactions.importAccount')}
                 </label>
                 <select
                   id="import-account-id"
@@ -907,7 +971,7 @@ export default function Transactions() {
                   className="w-full rounded border border-gray-300 px-3 py-2"
                 >
                   {importAccounts.length === 0 && (
-                    <option value="">No broker account configured for CSV import</option>
+                    <option value="">{t('transactions.noImportAccountOption')}</option>
                   )}
                   {importAccounts.map((account) => (
                     <option key={account.id} value={account.id}>
@@ -922,7 +986,7 @@ export default function Transactions() {
                   htmlFor="import-file"
                   className="block text-sm font-medium text-gray-700"
                 >
-                  File
+                  {t('transactions.file')}
                 </label>
                 <input
                   id="import-file"
@@ -935,8 +999,7 @@ export default function Transactions() {
                   className="block w-full rounded border border-gray-300 px-3 py-2 text-sm"
                 />
                 <p className="text-xs text-gray-500">
-                  Required columns: 股名, 日期, 成交股數, 淨收付, 成交單價, 手續費,
-                  交易稅, 稅款, 委託書號, 幣別.
+                  {t('transactions.requiredColumns')}
                 </p>
               </div>
 
@@ -949,27 +1012,29 @@ export default function Transactions() {
                     : 'hover:bg-slate-700'
                 }`}
               >
-                {importSubmitting ? 'Importing...' : 'Import CSV'}
+                {importSubmitting
+                  ? t('transactions.importing')
+                  : t('transactions.importCsv')}
               </button>
             </form>
           </section>
 
           {importResult && (
             <section className="rounded-xl border border-gray-200 bg-gray-50 p-5 shadow-sm">
-              <h2 className="mb-3 text-lg font-semibold">Import result</h2>
+              <h2 className="mb-3 text-lg font-semibold">{t('transactions.importResult')}</h2>
               <div className="grid grid-cols-3 gap-3 text-sm">
                 <div className="rounded border border-gray-200 bg-white px-3 py-2">
-                  <div className="text-gray-500">Rows</div>
+                  <div className="text-gray-500">{t('transactions.rows')}</div>
                   <div className="font-semibold">{importResult.totalRows}</div>
                 </div>
                 <div className="rounded border border-green-200 bg-white px-3 py-2">
-                  <div className="text-gray-500">Success</div>
+                  <div className="text-gray-500">{t('transactions.success')}</div>
                   <div className="font-semibold text-green-700">
                     {importResult.successCount}
                   </div>
                 </div>
                 <div className="rounded border border-red-200 bg-white px-3 py-2">
-                  <div className="text-gray-500">Failed</div>
+                  <div className="text-gray-500">{t('transactions.failed')}</div>
                   <div className="font-semibold text-red-700">
                     {importResult.failureCount}
                   </div>
@@ -978,7 +1043,7 @@ export default function Transactions() {
 
               {importResult.errors.length > 0 && (
                 <div className="mt-4 space-y-2">
-                  <h3 className="text-sm font-medium text-gray-800">Errors</h3>
+                  <h3 className="text-sm font-medium text-gray-800">{t('transactions.errors')}</h3>
                   <div className="space-y-2">
                     {importResult.errors.map((item, index) => (
                       <div
@@ -986,7 +1051,10 @@ export default function Transactions() {
                         className="rounded border border-red-200 bg-white px-3 py-2 text-sm"
                       >
                         <div className="font-medium text-red-700">
-                          Row {item.row} · {item.field}
+                          {t('transactions.rowError', {
+                            row: item.row,
+                            field: item.field,
+                          })}
                         </div>
                         <div className="text-gray-700">{item.message}</div>
                       </div>
@@ -998,15 +1066,15 @@ export default function Transactions() {
           )}
 
           <section className="rounded-xl border border-gray-200 bg-gray-50 p-5 shadow-sm">
-            <h2 className="mb-3 text-lg font-semibold">How this page works</h2>
+            <h2 className="mb-3 text-lg font-semibold">{t('transactions.howItWorks')}</h2>
             <ul className="space-y-2 text-sm text-gray-700">
-              <li>Deposit records funding into an investment account.</li>
-              <li>Buy computes total cost from quantity, price, fee, and tax.</li>
-              <li>Sell computes net proceeds from quantity, price, fee, and tax.</li>
-              <li>Dividend records cash income tied to an asset.</li>
-              <li>Sell submissions now rely on the API&apos;s FIFO cost basis and realized P&amp;L handling.</li>
-              <li>CSV import stays limited to configured Cathay broker accounts.</li>
-              <li>Recent transactions stay visible so you can audit the feed.</li>
+              <li>{t('transactions.helpDeposit')}</li>
+              <li>{t('transactions.helpBuy')}</li>
+              <li>{t('transactions.helpSell')}</li>
+              <li>{t('transactions.helpDividend')}</li>
+              <li>{t('transactions.helpFifo')}</li>
+              <li>{t('transactions.helpImport')}</li>
+              <li>{t('transactions.helpFeed')}</li>
             </ul>
           </section>
         </aside>
@@ -1015,22 +1083,22 @@ export default function Transactions() {
       <section className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm">
         <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
           <div>
-            <h2 className="text-lg font-semibold">Recent transactions</h2>
+            <h2 className="text-lg font-semibold">{t('transactions.recentTransactions')}</h2>
             <p className="text-sm text-gray-600">
-              Last 20 items from the investment feed.
+              {t('transactions.recentTransactionsDescription')}
             </p>
           </div>
 
           <div className="flex items-center gap-2">
             <label className="text-sm font-medium text-gray-700">
-              View account
+              {t('transactions.viewAccount')}
             </label>
             <select
               value={listAccountId}
               onChange={(event) => setListAccountId(event.target.value)}
               className="rounded border border-gray-300 px-3 py-2 text-sm"
             >
-              <option value="All">All accounts</option>
+              <option value="All">{t('transactions.allAccounts')}</option>
               {accounts.map((account) => (
                 <option key={account.id} value={account.id}>
                   {account.name}
@@ -1041,23 +1109,23 @@ export default function Transactions() {
         </div>
 
         {loadingTransactions ? (
-          <p className="text-sm text-gray-600">Loading transactions...</p>
+          <p className="text-sm text-gray-600">{t('transactions.loadingTransactions')}</p>
         ) : transactions.length === 0 ? (
-          <p className="text-sm text-gray-600">No investment transactions yet.</p>
+          <p className="text-sm text-gray-600">{t('transactions.noTransactions')}</p>
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full border-collapse text-sm">
               <thead>
                 <tr className="border-b border-gray-200 text-left">
-                  <th className="px-2 py-3 font-medium text-gray-600">Date</th>
-                  <th className="px-2 py-3 font-medium text-gray-600">Type</th>
-                  <th className="px-2 py-3 font-medium text-gray-600">Account</th>
-                  <th className="px-2 py-3 font-medium text-gray-600">Asset</th>
-                  <th className="px-2 py-3 font-medium text-gray-600">Amount</th>
-                  <th className="px-2 py-3 font-medium text-gray-600">Details</th>
-                  <th className="px-2 py-3 font-medium text-gray-600">Order no</th>
-                  <th className="px-2 py-3 font-medium text-gray-600">Note</th>
-                  <th className="px-2 py-3 font-medium text-gray-600">Actions</th>
+                  <th className="px-2 py-3 font-medium text-gray-600">{t('transactions.date')}</th>
+                  <th className="px-2 py-3 font-medium text-gray-600">{t('transactions.type')}</th>
+                  <th className="px-2 py-3 font-medium text-gray-600">{t('transactions.account')}</th>
+                  <th className="px-2 py-3 font-medium text-gray-600">{t('transactions.asset')}</th>
+                  <th className="px-2 py-3 font-medium text-gray-600">{t('transactions.amountColumn')}</th>
+                  <th className="px-2 py-3 font-medium text-gray-600">{t('transactions.details')}</th>
+                  <th className="px-2 py-3 font-medium text-gray-600">{t('transactions.orderNo')}</th>
+                  <th className="px-2 py-3 font-medium text-gray-600">{t('transactions.note')}</th>
+                  <th className="px-2 py-3 font-medium text-gray-600">{t('transactions.actions')}</th>
                 </tr>
               </thead>
               <tbody>
@@ -1074,9 +1142,11 @@ export default function Transactions() {
                     }`}
                   >
                     <td className="whitespace-nowrap px-2 py-3">
-                      {formatDateOnly(transaction.tradeTime)}
+                      {formatDateOnly(transaction.tradeTime, locale)}
                     </td>
-                    <td className="px-2 py-3 capitalize">{transaction.type}</td>
+                    <td className="px-2 py-3">
+                      {formatModeLabel(transaction.type, t)}
+                    </td>
                     <td className="px-2 py-3">
                       {transaction.account?.name || transaction.accountId}
                     </td>
@@ -1084,10 +1154,10 @@ export default function Transactions() {
                       {transaction.asset?.symbol || '-'}
                     </td>
                     <td className="px-2 py-3 font-mono">
-                      {formatMoney(transaction.amount)}
+                      {formatMoney(transaction.amount, locale)}
                     </td>
                     <td className="px-2 py-3 text-gray-600">
-                      {buildTransactionDetails(transaction)}
+                      {buildTransactionDetails(transaction, locale, t)}
                     </td>
                     <td className="px-2 py-3 text-gray-600">
                       {transaction.brokerOrderNo || '-'}
@@ -1102,8 +1172,10 @@ export default function Transactions() {
                               event.stopPropagation()
                               startEditingTransaction(transaction)
                             }}
-                            aria-label={`Edit ${transaction.type} transaction`}
-                            title="Edit"
+                            aria-label={t('transactions.editAria', {
+                              type: formatModeLabel(transaction.type, t),
+                            })}
+                            title={t('transactions.editAction')}
                             className="rounded border border-gray-300 p-1.5 text-gray-700 hover:bg-gray-50"
                           >
                             <svg
@@ -1127,8 +1199,10 @@ export default function Transactions() {
                               event.stopPropagation()
                               handleSoftDelete(transaction).catch(console.error)
                             }}
-                            aria-label={`Delete ${transaction.type} transaction`}
-                            title="Delete"
+                            aria-label={t('transactions.deleteAria', {
+                              type: formatModeLabel(transaction.type, t),
+                            })}
+                            title={t('transactions.deleteAction')}
                             disabled={deletingTransactionId === transaction.id}
                             className={`rounded border border-amber-300 p-1.5 text-amber-700 ${
                               deletingTransactionId === transaction.id
@@ -1157,7 +1231,7 @@ export default function Transactions() {
                         </div>
                       ) : (
                         <span className="text-xs text-gray-400">
-                          Read only here
+                          {t('transactions.readOnlyHere')}
                         </span>
                       )}
                     </td>
