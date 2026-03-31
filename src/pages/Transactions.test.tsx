@@ -16,12 +16,18 @@ const {
   getAssets,
   getTransactions,
   createTransaction,
+  updateTransaction,
+  removeTransaction,
+  hardDeleteTransaction,
   importTransactions,
 } = vi.hoisted(() => ({
   getAccounts: vi.fn(),
   getAssets: vi.fn(),
   getTransactions: vi.fn(),
   createTransaction: vi.fn(),
+  updateTransaction: vi.fn(),
+  removeTransaction: vi.fn(),
+  hardDeleteTransaction: vi.fn(),
   importTransactions: vi.fn(),
 }))
 
@@ -31,6 +37,9 @@ vi.mock('../lib/investments.service', () => ({
     getAssets,
     getTransactions,
     createTransaction,
+    updateTransaction,
+    removeTransaction,
+    hardDeleteTransaction,
     importTransactions,
   },
 }))
@@ -66,6 +75,9 @@ describe('Transactions page trade flows', () => {
       items: [],
     })
     createTransaction.mockResolvedValue({ id: 'tx-1' })
+    updateTransaction.mockResolvedValue({ id: 'tx-1' })
+    removeTransaction.mockResolvedValue({ id: 'tx-1' })
+    hardDeleteTransaction.mockResolvedValue({ id: 'tx-1' })
     importTransactions.mockResolvedValue({
       totalRows: 0,
       successCount: 0,
@@ -99,6 +111,51 @@ describe('Transactions page trade flows', () => {
     })
 
     fireEvent.click(screen.getByRole('button', { name: mode }))
+  }
+
+  async function renderPageWithTransactions() {
+    getTransactions.mockResolvedValue({
+      total: 1,
+      skip: 0,
+      take: 20,
+      items: [
+        {
+          id: 'tx-sell-1',
+          accountId: 'broker-1',
+          assetId: 'asset-2330',
+          type: 'sell',
+          amount: 980,
+          quantity: 10,
+          price: 100,
+          fee: 15,
+          tax: 5,
+          tradeTime: '2026-03-31T09:30:00.000Z',
+          note: 'Trim position',
+          brokerOrderNo: 'BRK-001',
+          isDeleted: false,
+          deletedAt: null,
+          account: {
+            id: 'broker-1',
+            name: 'Broker TWD',
+            currency: 'TWD',
+            userId: 'user-1',
+          },
+          asset: {
+            id: 'asset-2330',
+            symbol: '2330',
+            name: 'TSMC',
+            baseCurrency: 'TWD',
+          },
+        },
+      ],
+    })
+
+    renderPage()
+
+    await waitFor(() => {
+      expect(getTransactions).toHaveBeenCalled()
+      expect(screen.getByText('Trim position')).toBeTruthy()
+    })
   }
 
   it('submits a buy payload with tax included', async () => {
@@ -230,5 +287,58 @@ describe('Transactions page trade flows', () => {
       ),
     ).toBeTruthy()
     expect(createTransaction).not.toHaveBeenCalled()
+  })
+
+  it('loads a listed sell transaction into edit mode and updates it', async () => {
+    await renderPageWithTransactions()
+
+    fireEvent.click(screen.getByRole('button', { name: 'Edit' }))
+
+    fireEvent.change(screen.getByLabelText('Quantity'), {
+      target: { value: '8' },
+    })
+    fireEvent.change(screen.getByLabelText('Tax'), {
+      target: { value: '8' },
+    })
+
+    fireEvent.click(screen.getByRole('button', { name: 'Save changes' }))
+
+    await waitFor(() => {
+      expect(updateTransaction).toHaveBeenCalledWith(
+        'tx-sell-1',
+        expect.objectContaining({
+          type: 'sell',
+          quantity: 8,
+          price: 100,
+          fee: 15,
+          tax: 8,
+          amount: 777,
+        }),
+      )
+    })
+  })
+
+  it('soft deletes a listed transaction', async () => {
+    vi.spyOn(window, 'confirm').mockReturnValue(true)
+
+    await renderPageWithTransactions()
+
+    fireEvent.click(screen.getByRole('button', { name: 'Delete' }))
+
+    await waitFor(() => {
+      expect(removeTransaction).toHaveBeenCalledWith('tx-sell-1')
+    })
+  })
+
+  it('hard deletes a listed transaction', async () => {
+    vi.spyOn(window, 'confirm').mockReturnValue(true)
+
+    await renderPageWithTransactions()
+
+    fireEvent.click(screen.getByRole('button', { name: 'Hard delete' }))
+
+    await waitFor(() => {
+      expect(hardDeleteTransaction).toHaveBeenCalledWith('tx-sell-1')
+    })
   })
 })

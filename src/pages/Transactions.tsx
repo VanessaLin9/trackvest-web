@@ -9,7 +9,8 @@ import {
 import { useCurrentUserId } from '../app/current-user'
 import { SUPPORTED_BROKER, type Account } from '../lib/accounts.service'
 
-type InvestmentMode = 'deposit' | 'buy' | 'sell' | 'dividend'
+const INVESTMENT_MODE_OPTIONS = ['deposit', 'buy', 'sell', 'dividend'] as const
+type InvestmentMode = (typeof INVESTMENT_MODE_OPTIONS)[number]
 
 function getErrorMessage(err: unknown, fallback: string) {
   if (err && typeof err === 'object' && 'response' in err) {
@@ -35,6 +36,20 @@ function formatMoney(value: number | string | null | undefined) {
     minimumFractionDigits: 2,
     maximumFractionDigits: 2,
   })
+}
+
+function toDateTimeLocalValue(value: string | Date) {
+  const date = value instanceof Date ? value : new Date(value)
+  if (Number.isNaN(date.getTime())) {
+    return ''
+  }
+
+  const offset = date.getTimezoneOffset()
+  return new Date(date.getTime() - offset * 60_000).toISOString().slice(0, 16)
+}
+
+function getDefaultTradeTimeValue() {
+  return toDateTimeLocalValue(new Date())
 }
 
 function isPositiveNumber(value: string) {
@@ -67,12 +82,19 @@ function buildTransactionDetails(transaction: TransactionListItem) {
   return segments.length > 0 ? segments.join(' · ') : '-'
 }
 
+function isEditableTransactionType(
+  type: TransactionListItem['type'],
+): type is InvestmentMode {
+  return INVESTMENT_MODE_OPTIONS.includes(type as InvestmentMode)
+}
+
 export default function Transactions() {
   const currentUserId = useCurrentUserId()
   const [accounts, setAccounts] = useState<Account[]>([])
   const [assets, setAssets] = useState<Asset[]>([])
   const [transactions, setTransactions] = useState<TransactionListItem[]>([])
   const [mode, setMode] = useState<InvestmentMode>('deposit')
+  const [selectedTransactionId, setSelectedTransactionId] = useState<string | null>(null)
   const [accountId, setAccountId] = useState('')
   const [assetId, setAssetId] = useState('')
   const [listAccountId, setListAccountId] = useState('All')
@@ -81,13 +103,17 @@ export default function Transactions() {
   const [price, setPrice] = useState('')
   const [fee, setFee] = useState('')
   const [tax, setTax] = useState('')
-  const [tradeTime, setTradeTime] = useState(() =>
-    new Date().toISOString().slice(0, 16),
-  )
+  const [tradeTime, setTradeTime] = useState(getDefaultTradeTimeValue)
   const [note, setNote] = useState('')
   const [loadingMeta, setLoadingMeta] = useState(false)
   const [loadingTransactions, setLoadingTransactions] = useState(false)
   const [submitting, setSubmitting] = useState(false)
+  const [deletingTransactionId, setDeletingTransactionId] = useState<string | null>(
+    null,
+  )
+  const [hardDeletingTransactionId, setHardDeletingTransactionId] = useState<
+    string | null
+  >(null)
   const [importAccountId, setImportAccountId] = useState('')
   const [importFile, setImportFile] = useState<File | null>(null)
   const [importSubmitting, setImportSubmitting] = useState(false)
@@ -124,10 +150,10 @@ export default function Transactions() {
     () => assets.find((asset) => asset.id === assetId),
     [assetId, assets],
   )
-
   const requiresAsset = mode === 'buy' || mode === 'sell' || mode === 'dividend'
   const requiresTradeFields = mode === 'buy' || mode === 'sell'
   const hasTradableAssets = availableAssets.length > 0
+  const isEditing = Boolean(selectedTransactionId)
 
   const computedAmount = useMemo(() => {
     const numericQuantity = Number(quantity)
@@ -256,6 +282,55 @@ export default function Transactions() {
     }
   }, [mode])
 
+  const resetForm = () => {
+    setSelectedTransactionId(null)
+    setAmount('')
+    setQuantity('')
+    setPrice('')
+    setFee('')
+    setTax('')
+    setTradeTime(getDefaultTradeTimeValue())
+    setNote('')
+  }
+
+  const startEditingTransaction = (transaction: TransactionListItem) => {
+    if (!isEditableTransactionType(transaction.type)) {
+      setError(`Editing ${transaction.type} transactions is not supported in this page yet`)
+      setSuccessMessage(null)
+      return
+    }
+
+    setSelectedTransactionId(transaction.id)
+    setMode(transaction.type)
+    setAccountId(transaction.accountId)
+    setAssetId(transaction.assetId ?? '')
+    setAmount(String(Number(transaction.amount)))
+    setQuantity(
+      transaction.quantity === null || transaction.quantity === undefined
+        ? ''
+        : String(transaction.quantity),
+    )
+    setPrice(
+      transaction.price === null || transaction.price === undefined
+        ? ''
+        : String(transaction.price),
+    )
+    setFee(
+      transaction.fee === null || transaction.fee === undefined
+        ? ''
+        : String(transaction.fee),
+    )
+    setTax(
+      transaction.tax === null || transaction.tax === undefined
+        ? ''
+        : String(transaction.tax),
+    )
+    setTradeTime(toDateTimeLocalValue(transaction.tradeTime))
+    setNote(transaction.note ?? '')
+    setError(null)
+    setSuccessMessage(null)
+  }
+
   const validateForm = () => {
     if (!currentUserId || !accountId) {
       return 'Please select an investment account'
@@ -325,19 +400,77 @@ export default function Transactions() {
       setSubmitting(true)
       setError(null)
       setSuccessMessage(null)
-      await investmentsService.createTransaction(payload)
-      setSuccessMessage(`${mode} saved`)
-      setAmount('')
-      setQuantity('')
-      setPrice('')
-      setFee('')
-      setTax('')
-      setNote('')
+      let savedTransaction: TransactionListItem
+      if (isEditing) {
+        if (!selectedTransactionId) {
+          throw new Error('No transaction selected for editing')
+        }
+        savedTransaction = await investmentsService.updateTransaction(
+          selectedTransactionId,
+          payload,
+        )
+      } else {
+        savedTransaction = await investmentsService.createTransaction(payload)
+      }
+      setSuccessMessage(isEditing ? `${mode} updated` : `${mode} saved`)
+      if (isEditing) {
+        startEditingTransaction(savedTransaction)
+      } else {
+        resetForm()
+      }
       await loadTransactions(listAccountId)
     } catch (err: unknown) {
       setError(getErrorMessage(err, 'Failed to save transaction'))
     } finally {
       setSubmitting(false)
+    }
+  }
+
+  const handleSoftDelete = async (transaction: TransactionListItem) => {
+    if (!window.confirm(`Soft delete this ${transaction.type} transaction?`)) {
+      return
+    }
+
+    try {
+      setDeletingTransactionId(transaction.id)
+      setError(null)
+      setSuccessMessage(null)
+      await investmentsService.removeTransaction(transaction.id)
+      if (selectedTransactionId === transaction.id) {
+        resetForm()
+      }
+      setSuccessMessage(`${transaction.type} deleted`)
+      await loadTransactions(listAccountId)
+    } catch (err: unknown) {
+      setError(getErrorMessage(err, 'Failed to delete transaction'))
+    } finally {
+      setDeletingTransactionId(null)
+    }
+  }
+
+  const handleHardDelete = async (transaction: TransactionListItem) => {
+    if (
+      !window.confirm(
+        `Hard delete this ${transaction.type} transaction? This cannot be undone.`,
+      )
+    ) {
+      return
+    }
+
+    try {
+      setHardDeletingTransactionId(transaction.id)
+      setError(null)
+      setSuccessMessage(null)
+      await investmentsService.hardDeleteTransaction(transaction.id)
+      if (selectedTransactionId === transaction.id) {
+        resetForm()
+      }
+      setSuccessMessage(`${transaction.type} hard deleted`)
+      await loadTransactions(listAccountId)
+    } catch (err: unknown) {
+      setError(getErrorMessage(err, 'Failed to hard delete transaction'))
+    } finally {
+      setHardDeletingTransactionId(null)
     }
   }
 
@@ -445,31 +578,68 @@ export default function Transactions() {
 
       <section className="grid gap-6 lg:grid-cols-[1.15fr_0.85fr]">
         <div className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm">
-          <div className="mb-4 flex flex-wrap gap-2">
-            {(['deposit', 'buy', 'sell', 'dividend'] as InvestmentMode[]).map(
-              (item) => (
-                <button
-                  key={item}
-                  type="button"
-                  onClick={() => setMode(item)}
-                  className={`rounded-full px-4 py-2 text-sm font-medium capitalize ${
-                    mode === item
-                      ? 'bg-blue-600 text-white'
-                      : 'bg-blue-50 text-blue-700'
-                  }`}
-                >
-                  {item}
-                </button>
-              ),
+          <div className="mb-4 flex items-start justify-between gap-3">
+            <div className="space-y-3">
+              <div>
+                <h2 className="text-lg font-semibold">
+                  {isEditing ? 'Edit transaction' : 'Create transaction'}
+                </h2>
+                <p className="text-sm text-gray-600">
+                  {isEditing
+                    ? 'Update the selected transaction, or create a new one after you finish reviewing it.'
+                    : 'Record investment activity and keep the transaction feed in sync with the API.'}
+                </p>
+              </div>
+
+              <div className="flex flex-wrap gap-2">
+                {INVESTMENT_MODE_OPTIONS.map((item) => (
+                  <button
+                    key={item}
+                    type="button"
+                    onClick={() => setMode(item)}
+                    disabled={isEditing}
+                    className={`rounded-full px-4 py-2 text-sm font-medium capitalize ${
+                      mode === item
+                        ? 'bg-blue-600 text-white'
+                        : 'bg-blue-50 text-blue-700'
+                    } ${
+                      isEditing ? 'cursor-not-allowed opacity-60' : ''
+                    }`}
+                  >
+                    {item}
+                  </button>
+                ))}
+              </div>
+
+              {isEditing && (
+                <p className="text-xs text-gray-500">
+                  Type stays locked while editing. Click `Create new` to start a
+                  fresh transaction in another mode.
+                </p>
+              )}
+            </div>
+
+            {isEditing && (
+              <button
+                type="button"
+                onClick={resetForm}
+                className="rounded border border-gray-300 px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
+              >
+                Create new
+              </button>
             )}
           </div>
 
           <form onSubmit={handleSubmit} className="grid gap-4 md:grid-cols-2">
             <div className="space-y-1">
-              <label className="block text-sm font-medium text-gray-700">
+              <label
+                htmlFor="investment-account"
+                className="block text-sm font-medium text-gray-700"
+              >
                 Account
               </label>
               <select
+                id="investment-account"
                 value={accountId}
                 onChange={(event) => setAccountId(event.target.value)}
                 disabled={loadingMeta || availableAccounts.length === 0}
@@ -487,10 +657,14 @@ export default function Transactions() {
             </div>
 
             <div className="space-y-1">
-              <label className="block text-sm font-medium text-gray-700">
+              <label
+                htmlFor="investment-trade-time"
+                className="block text-sm font-medium text-gray-700"
+              >
                 Trade time
               </label>
               <input
+                id="investment-trade-time"
                 type="datetime-local"
                 value={tradeTime}
                 onChange={(event) => setTradeTime(event.target.value)}
@@ -500,10 +674,14 @@ export default function Transactions() {
 
             {requiresAsset && (
               <div className="space-y-1">
-                <label className="block text-sm font-medium text-gray-700">
+                <label
+                  htmlFor="investment-asset"
+                  className="block text-sm font-medium text-gray-700"
+                >
                   Asset
                 </label>
                 <select
+                  id="investment-asset"
                   value={assetId}
                   onChange={(event) => setAssetId(event.target.value)}
                   disabled={!hasTradableAssets}
@@ -536,10 +714,14 @@ export default function Transactions() {
             {requiresTradeFields && (
               <>
                 <div className="space-y-1">
-                  <label className="block text-sm font-medium text-gray-700">
+                  <label
+                    htmlFor="investment-quantity"
+                    className="block text-sm font-medium text-gray-700"
+                  >
                     Quantity
                   </label>
                   <input
+                    id="investment-quantity"
                     type="number"
                     step="0.0001"
                     min="0"
@@ -550,10 +732,14 @@ export default function Transactions() {
                 </div>
 
                 <div className="space-y-1">
-                  <label className="block text-sm font-medium text-gray-700">
+                  <label
+                    htmlFor="investment-price"
+                    className="block text-sm font-medium text-gray-700"
+                  >
                     Price
                   </label>
                   <input
+                    id="investment-price"
                     type="number"
                     step="0.0001"
                     min="0"
@@ -564,10 +750,14 @@ export default function Transactions() {
                 </div>
 
                 <div className="space-y-1">
-                  <label className="block text-sm font-medium text-gray-700">
+                  <label
+                    htmlFor="investment-fee"
+                    className="block text-sm font-medium text-gray-700"
+                  >
                     Fee
                   </label>
                   <input
+                    id="investment-fee"
                     type="number"
                     step="0.01"
                     min="0"
@@ -578,10 +768,14 @@ export default function Transactions() {
                 </div>
 
                 <div className="space-y-1">
-                  <label className="block text-sm font-medium text-gray-700">
+                  <label
+                    htmlFor="investment-tax"
+                    className="block text-sm font-medium text-gray-700"
+                  >
                     Tax
                   </label>
                   <input
+                    id="investment-tax"
                     type="number"
                     step="0.01"
                     min="0"
@@ -594,10 +788,14 @@ export default function Transactions() {
             )}
 
             <div className="space-y-1">
-              <label className="block text-sm font-medium text-gray-700">
+              <label
+                htmlFor="investment-amount"
+                className="block text-sm font-medium text-gray-700"
+              >
                 {requiresTradeFields ? 'Computed amount' : 'Amount'}
               </label>
               <input
+                id="investment-amount"
                 type="number"
                 step="0.01"
                 min="0"
@@ -613,10 +811,14 @@ export default function Transactions() {
             </div>
 
             <div className="space-y-1 md:col-span-2">
-              <label className="block text-sm font-medium text-gray-700">
+              <label
+                htmlFor="investment-note"
+                className="block text-sm font-medium text-gray-700"
+              >
                 Note
               </label>
               <input
+                id="investment-note"
                 type="text"
                 value={note}
                 onChange={(event) => setNote(event.target.value)}
@@ -655,7 +857,11 @@ export default function Transactions() {
                     : 'hover:bg-blue-700'
                 }`}
               >
-                {submitting ? 'Saving...' : `Save ${mode}`}
+                {submitting
+                  ? 'Saving...'
+                  : isEditing
+                  ? 'Save changes'
+                  : `Save ${mode}`}
               </button>
             </div>
           </form>
@@ -839,11 +1045,22 @@ export default function Transactions() {
                   <th className="px-2 py-3 font-medium text-gray-600">Details</th>
                   <th className="px-2 py-3 font-medium text-gray-600">Order no</th>
                   <th className="px-2 py-3 font-medium text-gray-600">Note</th>
+                  <th className="px-2 py-3 font-medium text-gray-600">Actions</th>
                 </tr>
               </thead>
               <tbody>
                 {transactions.map((transaction) => (
-                  <tr key={transaction.id} className="border-b border-gray-100 align-top">
+                  <tr
+                    key={transaction.id}
+                    onClick={() => startEditingTransaction(transaction)}
+                    className={`border-b border-gray-100 align-top ${
+                      isEditableTransactionType(transaction.type)
+                        ? 'cursor-pointer hover:bg-gray-50'
+                        : ''
+                    } ${
+                      selectedTransactionId === transaction.id ? 'bg-blue-50' : ''
+                    }`}
+                  >
                     <td className="whitespace-nowrap px-2 py-3">
                       {new Date(transaction.tradeTime).toLocaleString()}
                     </td>
@@ -864,6 +1081,68 @@ export default function Transactions() {
                       {transaction.brokerOrderNo || '-'}
                     </td>
                     <td className="px-2 py-3">{transaction.note || '-'}</td>
+                    <td className="px-2 py-3">
+                      {isEditableTransactionType(transaction.type) ? (
+                        <div className="flex flex-wrap gap-2">
+                          <button
+                            type="button"
+                            onClick={(event) => {
+                              event.stopPropagation()
+                              startEditingTransaction(transaction)
+                            }}
+                            className="rounded border border-gray-300 px-2 py-1 text-xs font-medium text-gray-700 hover:bg-gray-50"
+                          >
+                            Edit
+                          </button>
+                          <button
+                            type="button"
+                            onClick={(event) => {
+                              event.stopPropagation()
+                              handleSoftDelete(transaction).catch(console.error)
+                            }}
+                            disabled={
+                              deletingTransactionId === transaction.id ||
+                              hardDeletingTransactionId === transaction.id
+                            }
+                            className={`rounded border border-amber-300 px-2 py-1 text-xs font-medium text-amber-700 ${
+                              deletingTransactionId === transaction.id ||
+                              hardDeletingTransactionId === transaction.id
+                                ? 'cursor-not-allowed opacity-60'
+                                : 'hover:bg-amber-50'
+                            }`}
+                          >
+                            {deletingTransactionId === transaction.id
+                              ? 'Deleting...'
+                              : 'Delete'}
+                          </button>
+                          <button
+                            type="button"
+                            onClick={(event) => {
+                              event.stopPropagation()
+                              handleHardDelete(transaction).catch(console.error)
+                            }}
+                            disabled={
+                              hardDeletingTransactionId === transaction.id ||
+                              deletingTransactionId === transaction.id
+                            }
+                            className={`rounded border border-red-300 px-2 py-1 text-xs font-medium text-red-700 ${
+                              hardDeletingTransactionId === transaction.id ||
+                              deletingTransactionId === transaction.id
+                                ? 'cursor-not-allowed opacity-60'
+                                : 'hover:bg-red-50'
+                            }`}
+                          >
+                            {hardDeletingTransactionId === transaction.id
+                              ? 'Deleting...'
+                              : 'Hard delete'}
+                          </button>
+                        </div>
+                      ) : (
+                        <span className="text-xs text-gray-400">
+                          Read only here
+                        </span>
+                      )}
+                    </td>
                   </tr>
                 ))}
               </tbody>
