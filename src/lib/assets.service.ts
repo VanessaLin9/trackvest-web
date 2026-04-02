@@ -30,4 +30,9 @@ export const assetsService = {
     const response = await api.post<Asset>('/assets', payload)
     return response.data
   },
+
+  async updateAsset(id: string, payload: SaveAssetPayload): Promise<Asset> {
+    const response = await api.patch<Asset>(`/assets/${id}`, payload)
+    return response.data
+  },
 }
