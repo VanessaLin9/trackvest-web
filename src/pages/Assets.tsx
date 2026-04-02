@@ -16,6 +16,9 @@ type AssetFormState = {
   baseCurrency: string
 }
 
+const PAGE_SIZE = 10
+const ALL_FILTER_VALUE = 'all'
+
 const DEFAULT_FORM: AssetFormState = {
   symbol: '',
   name: '',
@@ -74,11 +77,42 @@ export default function Assets() {
   const [assets, setAssets] = useState<Asset[]>([])
   const [selectedAssetId, setSelectedAssetId] = useState<string | null>(null)
   const [form, setForm] = useState<AssetFormState>(DEFAULT_FORM)
+  const [searchQuery, setSearchQuery] = useState('')
+  const [typeFilter, setTypeFilter] = useState<string>(ALL_FILTER_VALUE)
+  const [currencyFilter, setCurrencyFilter] = useState<string>(ALL_FILTER_VALUE)
+  const [currentPage, setCurrentPage] = useState(1)
   const [isEditing, setIsEditing] = useState(false)
   const [loadingAssets, setLoadingAssets] = useState(false)
   const [submitting, setSubmitting] = useState(false)
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
   const [successMessage, setSuccessMessage] = useState<string | null>(null)
+
+  const filteredAssets = useMemo(() => {
+    const normalizedQuery = searchQuery.trim().toLowerCase()
+
+    return assets.filter((asset) => {
+      const matchesQuery =
+        !normalizedQuery ||
+        asset.symbol.toLowerCase().includes(normalizedQuery) ||
+        asset.name.toLowerCase().includes(normalizedQuery)
+      const matchesType =
+        typeFilter === ALL_FILTER_VALUE || asset.type === typeFilter
+      const matchesCurrency =
+        currencyFilter === ALL_FILTER_VALUE || asset.baseCurrency === currencyFilter
+
+      return matchesQuery && matchesType && matchesCurrency
+    })
+  }, [assets, currencyFilter, searchQuery, typeFilter])
+
+  const totalPages = useMemo(
+    () => Math.max(1, Math.ceil(filteredAssets.length / PAGE_SIZE)),
+    [filteredAssets.length],
+  )
+
+  const paginatedAssets = useMemo(() => {
+    const start = (currentPage - 1) * PAGE_SIZE
+    return filteredAssets.slice(start, start + PAGE_SIZE)
+  }, [currentPage, filteredAssets])
 
   const selectedAsset = useMemo(
     () => assets.find((asset) => asset.id === selectedAssetId) ?? null,
@@ -111,6 +145,28 @@ export default function Assets() {
   }, [])
 
   useEffect(() => {
+    setCurrentPage(1)
+  }, [searchQuery, typeFilter, currencyFilter])
+
+  useEffect(() => {
+    if (currentPage > totalPages) {
+      setCurrentPage(totalPages)
+    }
+  }, [currentPage, totalPages])
+
+  useEffect(() => {
+    if (isEditing) {
+      return
+    }
+
+    setSelectedAssetId((current) =>
+      current && paginatedAssets.some((asset) => asset.id === current)
+        ? current
+        : paginatedAssets[0]?.id ?? null,
+    )
+  }, [isEditing, paginatedAssets])
+
+  useEffect(() => {
     if (!isEditing || !selectedAsset) {
       return
     }
@@ -141,6 +197,8 @@ export default function Assets() {
 
     setSelectedAssetId(assetId)
   }
+
+  const isCatalogLocked = isEditing
 
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault()
@@ -412,7 +470,12 @@ export default function Assets() {
             </p>
           </div>
           <div className="rounded-full bg-gray-100 px-3 py-1 text-sm text-gray-600">
-            {t('assets.assetCount', { count: assets.length })}
+            {filteredAssets.length === assets.length
+              ? t('assets.assetCount', { count: assets.length })
+              : t('assets.visibleCount', {
+                  visible: filteredAssets.length,
+                  total: assets.length,
+                })}
           </div>
         </div>
 
@@ -423,49 +486,186 @@ export default function Assets() {
             {t('assets.noAssets')}
           </div>
         ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full border-collapse text-sm">
-              <thead>
-                <tr className="border-b border-gray-200 text-left">
-                  <th className="px-3 py-3 font-medium text-gray-600">{t('assets.symbol')}</th>
-                  <th className="px-3 py-3 font-medium text-gray-600">{t('assets.name')}</th>
-                  <th className="px-3 py-3 font-medium text-gray-600">{t('assets.type')}</th>
-                  <th className="px-3 py-3 font-medium text-gray-600">{t('assets.baseCurrency')}</th>
-                </tr>
-              </thead>
-              <tbody>
-                {assets.map((asset) => {
-                  const isSelected = asset.id === selectedAssetId
+          <div className="space-y-4">
+            <div className="grid gap-3 rounded-lg border border-gray-200 bg-gray-50 p-4 md:grid-cols-[minmax(0,1.4fr)_minmax(0,0.8fr)_minmax(0,0.8fr)_auto]">
+              <div className="space-y-1">
+                <label htmlFor="asset-search" className="block text-sm font-medium text-gray-700">
+                  {t('assets.searchLabel')}
+                </label>
+                <input
+                  id="asset-search"
+                  type="search"
+                  value={searchQuery}
+                  onChange={(event) => setSearchQuery(event.target.value)}
+                  placeholder={t('assets.searchPlaceholder')}
+                  disabled={isCatalogLocked}
+                  className={`w-full rounded border px-3 py-2 ${
+                    isCatalogLocked
+                      ? 'cursor-not-allowed border-gray-200 bg-gray-100 text-gray-500'
+                      : 'border-gray-300'
+                  }`}
+                />
+              </div>
 
-                  return (
-                    <tr
-                      key={asset.id}
-                      onClick={() => handleSelectAsset(asset.id)}
-                      className={`border-b border-gray-100 ${
-                        isEditing
-                          ? isSelected
-                            ? 'cursor-not-allowed bg-blue-50'
-                            : 'cursor-not-allowed bg-white'
-                          : isSelected
-                            ? 'cursor-pointer bg-blue-50'
-                            : 'cursor-pointer hover:bg-gray-50'
-                      }`}
+              <div className="space-y-1">
+                <p className="block text-sm font-medium text-gray-700">
+                  {t('assets.typeFilterLabel')}
+                </p>
+                <div className="flex flex-wrap gap-2">
+                  {[ALL_FILTER_VALUE, ...ASSET_TYPE_OPTIONS].map((type) => {
+                    const value = String(type)
+                    const isActive = typeFilter === value
+                    const label =
+                      value === ALL_FILTER_VALUE
+                        ? t('assets.allTypes')
+                        : formatTypeLabel(value, t)
+
+                    return (
+                      <button
+                        key={value}
+                        type="button"
+                        onClick={() => setTypeFilter(value)}
+                        disabled={isCatalogLocked}
+                        aria-pressed={isActive}
+                        className={`rounded-full border px-3 py-1.5 text-sm transition ${
+                          isCatalogLocked
+                            ? 'cursor-not-allowed border-gray-200 bg-gray-100 text-gray-400'
+                            : isActive
+                              ? 'border-blue-200 bg-blue-50 text-blue-700'
+                              : 'border-gray-300 bg-white text-gray-700 hover:bg-gray-100'
+                        }`}
+                      >
+                        {label}
+                      </button>
+                    )
+                  })}
+                </div>
+              </div>
+
+              <div className="space-y-1">
+                <p className="block text-sm font-medium text-gray-700">
+                  {t('assets.currencyFilterLabel')}
+                </p>
+                <div className="flex flex-wrap gap-2">
+                  {[ALL_FILTER_VALUE, ...BASE_CURRENCY_OPTIONS].map((currency) => {
+                    const value = String(currency)
+                    const isActive = currencyFilter === value
+                    const label =
+                      value === ALL_FILTER_VALUE
+                        ? t('assets.allCurrencies')
+                        : value
+
+                    return (
+                      <button
+                        key={value}
+                        type="button"
+                        onClick={() => setCurrencyFilter(value)}
+                        disabled={isCatalogLocked}
+                        aria-pressed={isActive}
+                        className={`rounded-full border px-3 py-1.5 text-sm transition ${
+                          isCatalogLocked
+                            ? 'cursor-not-allowed border-gray-200 bg-gray-100 text-gray-400'
+                            : isActive
+                              ? 'border-blue-200 bg-blue-50 text-blue-700'
+                              : 'border-gray-300 bg-white text-gray-700 hover:bg-gray-100'
+                        }`}
+                      >
+                        {label}
+                      </button>
+                    )
+                  })}
+                </div>
+              </div>
+
+              <div className="flex items-end justify-end">
+                <div className="rounded-full bg-white px-3 py-2 text-sm text-gray-600">
+                  {t('assets.pageSizeFixed', { count: PAGE_SIZE })}
+                </div>
+              </div>
+            </div>
+
+            {isCatalogLocked && (
+              <p className="text-sm text-gray-500">{t('assets.catalogLockedWhileEditing')}</p>
+            )}
+
+            {filteredAssets.length === 0 ? (
+              <div className="rounded-lg border border-dashed border-gray-300 bg-gray-50 px-4 py-6 text-sm text-gray-600">
+                {t('assets.noFilteredAssets')}
+              </div>
+            ) : (
+              <>
+                <div className="overflow-x-auto">
+                  <table className="w-full border-collapse text-sm">
+                    <thead>
+                      <tr className="border-b border-gray-200 text-left">
+                        <th className="px-3 py-3 font-medium text-gray-600">{t('assets.symbol')}</th>
+                        <th className="px-3 py-3 font-medium text-gray-600">{t('assets.name')}</th>
+                        <th className="px-3 py-3 font-medium text-gray-600">{t('assets.type')}</th>
+                        <th className="px-3 py-3 font-medium text-gray-600">{t('assets.baseCurrency')}</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {paginatedAssets.map((asset) => {
+                        const isSelected = asset.id === selectedAssetId
+
+                        return (
+                          <tr
+                            key={asset.id}
+                            onClick={() => handleSelectAsset(asset.id)}
+                            className={`border-b border-gray-100 ${
+                              isCatalogLocked
+                                ? isSelected
+                                  ? 'cursor-not-allowed bg-blue-50'
+                                  : 'cursor-not-allowed bg-white'
+                                : isSelected
+                                  ? 'cursor-pointer bg-blue-50'
+                                  : 'cursor-pointer hover:bg-gray-50'
+                            }`}
+                          >
+                            <td className="px-3 py-3 font-medium text-gray-900">
+                              {asset.symbol}
+                            </td>
+                            <td className="px-3 py-3 text-gray-700">{asset.name}</td>
+                            <td className="px-3 py-3 capitalize text-gray-600">
+                              {formatTypeLabel(asset.type, t)}
+                            </td>
+                            <td className="px-3 py-3 text-gray-600">
+                              {asset.baseCurrency}
+                            </td>
+                          </tr>
+                        )
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+
+                <div className="flex flex-wrap items-center justify-between gap-3 border-t border-gray-200 pt-4">
+                  <p className="text-sm text-gray-600">
+                    {t('assets.pageStatus', { current: currentPage, total: totalPages })}
+                  </p>
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setCurrentPage((page) => Math.max(1, page - 1))}
+                      disabled={isCatalogLocked || currentPage === 1}
+                      className="rounded border border-gray-300 px-3 py-2 text-sm font-medium text-gray-700 disabled:cursor-not-allowed disabled:border-gray-200 disabled:bg-gray-100 disabled:text-gray-400"
                     >
-                      <td className="px-3 py-3 font-medium text-gray-900">
-                        {asset.symbol}
-                      </td>
-                      <td className="px-3 py-3 text-gray-700">{asset.name}</td>
-                      <td className="px-3 py-3 capitalize text-gray-600">
-                        {formatTypeLabel(asset.type, t)}
-                      </td>
-                      <td className="px-3 py-3 text-gray-600">
-                        {asset.baseCurrency}
-                      </td>
-                    </tr>
-                  )
-                })}
-              </tbody>
-            </table>
+                      {t('assets.previousPage')}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setCurrentPage((page) => Math.min(totalPages, page + 1))
+                      }
+                      disabled={isCatalogLocked || currentPage === totalPages}
+                      className="rounded border border-gray-300 px-3 py-2 text-sm font-medium text-gray-700 disabled:cursor-not-allowed disabled:border-gray-200 disabled:bg-gray-100 disabled:text-gray-400"
+                    >
+                      {t('assets.nextPage')}
+                    </button>
+                  </div>
+                </div>
+              </>
+            )}
           </div>
         )}
       </section>

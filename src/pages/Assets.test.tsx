@@ -156,4 +156,80 @@ describe('Assets page edit mode', () => {
     expect((screen.getByLabelText('Symbol') as HTMLInputElement).value).toBe('AAPL')
     expect(screen.getAllByText('Apple Inc.').length).toBeGreaterThan(0)
   })
+
+  it('filters assets by search text and selected filters', async () => {
+    getAssets.mockResolvedValueOnce([
+      ...initialAssets,
+      {
+        id: 'asset-btc',
+        symbol: 'BTC',
+        name: 'Bitcoin',
+        type: 'crypto',
+        baseCurrency: 'USD',
+      },
+    ])
+
+    renderPage()
+
+    await waitFor(() => {
+      expect(getAssets).toHaveBeenCalledTimes(1)
+      expect(screen.getByLabelText('Search assets')).toBeTruthy()
+    })
+
+    fireEvent.change(screen.getByLabelText('Search assets'), {
+      target: { value: 'bit' },
+    })
+
+    await waitFor(() => {
+      expect(screen.getAllByText('Bitcoin').length).toBeGreaterThan(0)
+      expect(screen.queryByText('Apple Inc.')).toBeNull()
+      expect(screen.getByText('1 of 3 assets')).toBeTruthy()
+    })
+
+    fireEvent.click(screen.getByRole('button', { name: 'Equity' }))
+
+    await waitFor(() => {
+      expect(screen.getByText('No assets match the current search or filters.')).toBeTruthy()
+    })
+  })
+
+  it('paginates the catalog locally and disables catalog controls while editing', async () => {
+    const manyAssets = Array.from({ length: 16 }, (_, index) => ({
+      id: `asset-${index + 1}`,
+      symbol: `SYM${index + 1}`,
+      name: `Asset ${index + 1}`,
+      type: index % 2 === 0 ? 'equity' : 'etf',
+      baseCurrency: index % 3 === 0 ? 'USD' : 'TWD',
+    }))
+
+    getAssets.mockResolvedValueOnce(manyAssets)
+
+    renderPage()
+
+    await waitFor(() => {
+      expect(screen.getByText('Page 1 / 2')).toBeTruthy()
+      expect(screen.getAllByText('Asset 10').length).toBeGreaterThan(0)
+      expect(screen.queryByText('Asset 11')).toBeNull()
+    })
+
+    fireEvent.click(screen.getByRole('button', { name: 'Next' }))
+
+    await waitFor(() => {
+      expect(screen.getByText('Page 2 / 2')).toBeTruthy()
+      expect(screen.getAllByText('Asset 16').length).toBeGreaterThan(0)
+      expect(screen.queryByText('Asset 10')).toBeNull()
+    })
+
+    const asset16Cell = screen
+      .getAllByText('Asset 16')
+      .find((element) => element.tagName === 'TD')
+    expect(asset16Cell).toBeTruthy()
+    fireEvent.click(asset16Cell!)
+    fireEvent.click(screen.getByRole('button', { name: 'Edit' }))
+
+    expect((screen.getByLabelText('Search assets') as HTMLInputElement).disabled).toBe(true)
+    expect((screen.getByRole('button', { name: 'All types' }) as HTMLButtonElement).disabled).toBe(true)
+    expect((screen.getByRole('button', { name: 'All currencies' }) as HTMLButtonElement).disabled).toBe(true)
+    expect((screen.getByRole('button', { name: 'Next' }) as HTMLButtonElement).disabled).toBe(true)
+  })
 })
