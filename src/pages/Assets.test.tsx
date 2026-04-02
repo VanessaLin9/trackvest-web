@@ -193,6 +193,46 @@ describe('Assets page edit mode', () => {
     })
   })
 
+  it('sanitizes lightweight search input before filtering', async () => {
+    getAssets.mockResolvedValueOnce([
+      ...initialAssets,
+      {
+        id: 'asset-btc',
+        symbol: 'BTC',
+        name: 'Bitcoin',
+        type: 'crypto',
+        baseCurrency: 'USD',
+      },
+    ])
+
+    renderPage()
+
+    await waitFor(() => {
+      expect(screen.getByLabelText('Search assets')).toBeTruthy()
+    })
+
+    const searchInput = screen.getByLabelText('Search assets') as HTMLInputElement
+
+    fireEvent.change(searchInput, {
+      target: {
+        value: `  bit\u0000${'x'.repeat(80)}`,
+      },
+    })
+
+    expect(searchInput.value.startsWith(' bit')).toBe(true)
+    expect(searchInput.value.includes('\u0000')).toBe(false)
+    expect(searchInput.value.length).toBe(60)
+
+    fireEvent.change(searchInput, {
+      target: { value: '  bit\u0000   ' },
+    })
+
+    await waitFor(() => {
+      expect(screen.getAllByText('Bitcoin').length).toBeGreaterThan(0)
+      expect(screen.queryByText('Apple Inc.')).toBeNull()
+    })
+  })
+
   it('paginates the catalog locally and disables catalog controls while editing', async () => {
     const manyAssets = Array.from({ length: 16 }, (_, index) => ({
       id: `asset-${index + 1}`,
