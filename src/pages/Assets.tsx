@@ -487,7 +487,7 @@ export default function Assets() {
           </div>
         ) : (
           <div className="space-y-4">
-            <div className="grid gap-3 rounded-lg border border-gray-200 bg-gray-50 p-4 md:grid-cols-[minmax(0,1.4fr)_minmax(0,0.8fr)_minmax(0,0.8fr)_auto]">
+            <div className="grid gap-3 rounded-lg border border-gray-200 bg-gray-50 p-4 lg:grid-cols-[minmax(14rem,1.2fr)_minmax(0,1fr)_minmax(0,1fr)] lg:items-start">
               <div className="space-y-1">
                 <label htmlFor="asset-search" className="block text-sm font-medium text-gray-700">
                   {t('assets.searchLabel')}
@@ -511,34 +511,36 @@ export default function Assets() {
                 <p className="block text-sm font-medium text-gray-700">
                   {t('assets.typeFilterLabel')}
                 </p>
-                <div className="flex flex-wrap gap-2">
-                  {[ALL_FILTER_VALUE, ...ASSET_TYPE_OPTIONS].map((type) => {
-                    const value = String(type)
-                    const isActive = typeFilter === value
-                    const label =
-                      value === ALL_FILTER_VALUE
-                        ? t('assets.allTypes')
-                        : formatTypeLabel(value, t)
+                <div className="-mx-1 overflow-x-auto px-1 pb-1">
+                  <div className="flex min-w-max flex-nowrap gap-2">
+                    {[ALL_FILTER_VALUE, ...ASSET_TYPE_OPTIONS].map((type) => {
+                      const value = String(type)
+                      const isActive = typeFilter === value
+                      const label =
+                        value === ALL_FILTER_VALUE
+                          ? t('assets.allTypes')
+                          : formatTypeLabel(value, t)
 
-                    return (
-                      <button
-                        key={value}
-                        type="button"
-                        onClick={() => setTypeFilter(value)}
-                        disabled={isCatalogLocked}
-                        aria-pressed={isActive}
-                        className={`rounded-full border px-3 py-1.5 text-sm transition ${
-                          isCatalogLocked
-                            ? 'cursor-not-allowed border-gray-200 bg-gray-100 text-gray-400'
-                            : isActive
-                              ? 'border-blue-200 bg-blue-50 text-blue-700'
-                              : 'border-gray-300 bg-white text-gray-700 hover:bg-gray-100'
-                        }`}
-                      >
-                        {label}
-                      </button>
-                    )
-                  })}
+                      return (
+                        <button
+                          key={value}
+                          type="button"
+                          onClick={() => setTypeFilter(value)}
+                          disabled={isCatalogLocked}
+                          aria-pressed={isActive}
+                          className={`rounded-full border px-3 py-1.5 text-sm transition ${
+                            isCatalogLocked
+                              ? 'cursor-not-allowed border-gray-200 bg-gray-100 text-gray-400'
+                              : isActive
+                                ? 'border-blue-200 bg-blue-50 text-blue-700'
+                                : 'border-gray-300 bg-white text-gray-700 hover:bg-gray-100'
+                          }`}
+                        >
+                          {label}
+                        </button>
+                      )
+                    })}
+                  </div>
                 </div>
               </div>
 
@@ -546,40 +548,36 @@ export default function Assets() {
                 <p className="block text-sm font-medium text-gray-700">
                   {t('assets.currencyFilterLabel')}
                 </p>
-                <div className="flex flex-wrap gap-2">
-                  {[ALL_FILTER_VALUE, ...BASE_CURRENCY_OPTIONS].map((currency) => {
-                    const value = String(currency)
-                    const isActive = currencyFilter === value
-                    const label =
-                      value === ALL_FILTER_VALUE
-                        ? t('assets.allCurrencies')
-                        : value
+                <div className="-mx-1 overflow-x-auto px-1 pb-1">
+                  <div className="flex min-w-max flex-nowrap gap-2">
+                    {[ALL_FILTER_VALUE, ...BASE_CURRENCY_OPTIONS].map((currency) => {
+                      const value = String(currency)
+                      const isActive = currencyFilter === value
+                      const label =
+                        value === ALL_FILTER_VALUE
+                          ? t('assets.allCurrencies')
+                          : value
 
-                    return (
-                      <button
-                        key={value}
-                        type="button"
-                        onClick={() => setCurrencyFilter(value)}
-                        disabled={isCatalogLocked}
-                        aria-pressed={isActive}
-                        className={`rounded-full border px-3 py-1.5 text-sm transition ${
-                          isCatalogLocked
-                            ? 'cursor-not-allowed border-gray-200 bg-gray-100 text-gray-400'
-                            : isActive
-                              ? 'border-blue-200 bg-blue-50 text-blue-700'
-                              : 'border-gray-300 bg-white text-gray-700 hover:bg-gray-100'
-                        }`}
-                      >
-                        {label}
-                      </button>
-                    )
-                  })}
-                </div>
-              </div>
-
-              <div className="flex items-end justify-end">
-                <div className="rounded-full bg-white px-3 py-2 text-sm text-gray-600">
-                  {t('assets.pageSizeFixed', { count: PAGE_SIZE })}
+                      return (
+                        <button
+                          key={value}
+                          type="button"
+                          onClick={() => setCurrencyFilter(value)}
+                          disabled={isCatalogLocked}
+                          aria-pressed={isActive}
+                          className={`rounded-full border px-3 py-1.5 text-sm transition ${
+                            isCatalogLocked
+                              ? 'cursor-not-allowed border-gray-200 bg-gray-100 text-gray-400'
+                              : isActive
+                                ? 'border-blue-200 bg-blue-50 text-blue-700'
+                                : 'border-gray-300 bg-white text-gray-700 hover:bg-gray-100'
+                          }`}
+                        >
+                          {label}
+                        </button>
+                      )
+                    })}
+                  </div>
                 </div>
               </div>
             </div>
@@ -640,9 +638,11 @@ export default function Assets() {
                 </div>
 
                 <div className="flex flex-wrap items-center justify-between gap-3 border-t border-gray-200 pt-4">
-                  <p className="text-sm text-gray-600">
-                    {t('assets.pageStatus', { current: currentPage, total: totalPages })}
-                  </p>
+                  <div className="flex items-center gap-2 text-sm text-gray-600">
+                    <span>{t('assets.pageStatus', { current: currentPage, total: totalPages })}</span>
+                    <span className="text-gray-400">·</span>
+                    <span>{t('assets.pageSizeFixed', { count: PAGE_SIZE })}</span>
+                  </div>
                   <div className="flex items-center gap-2">
                     <button
                       type="button"

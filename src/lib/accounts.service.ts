@@ -2,7 +2,7 @@ import { api } from './api'
 import { getRequiredCurrentUserId } from '../app/current-user'
 
 export const ACCOUNT_TYPE_OPTIONS = ['broker', 'bank', 'cash'] as const
-export const CURRENCY_OPTIONS = ['TWD', 'USD', 'JPY', 'EUR'] as const
+export const CURRENCY_OPTIONS = ['TWD', 'USD'] as const
 export const BROKER_OPTIONS = [
   { value: '', label: 'None (manual only)' },
   { value: 'cathay', label: 'Cathay' },

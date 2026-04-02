@@ -12,7 +12,7 @@ const { getAssets, createAsset, updateAsset } = vi.hoisted(() => ({
 
 vi.mock('../lib/assets.service', () => ({
   ASSET_TYPE_OPTIONS: ['equity', 'etf', 'crypto', 'cash'],
-  BASE_CURRENCY_OPTIONS: ['USD', 'TWD', 'JPY', 'EUR'],
+  BASE_CURRENCY_OPTIONS: ['USD', 'TWD'],
   assetsService: {
     getAssets,
     createAsset,
