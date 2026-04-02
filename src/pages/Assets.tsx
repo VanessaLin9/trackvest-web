@@ -23,6 +23,15 @@ const DEFAULT_FORM: AssetFormState = {
   baseCurrency: 'USD',
 }
 
+function toAssetFormState(asset: Asset): AssetFormState {
+  return {
+    symbol: asset.symbol,
+    name: asset.name,
+    type: asset.type,
+    baseCurrency: asset.baseCurrency,
+  }
+}
+
 function getErrorMessage(err: unknown, fallback: string) {
   if (err && typeof err === 'object' && 'response' in err) {
     return (
@@ -65,6 +74,7 @@ export default function Assets() {
   const [assets, setAssets] = useState<Asset[]>([])
   const [selectedAssetId, setSelectedAssetId] = useState<string | null>(null)
   const [form, setForm] = useState<AssetFormState>(DEFAULT_FORM)
+  const [isEditing, setIsEditing] = useState(false)
   const [loadingAssets, setLoadingAssets] = useState(false)
   const [submitting, setSubmitting] = useState(false)
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
@@ -75,15 +85,18 @@ export default function Assets() {
     [assets, selectedAssetId],
   )
 
-  async function loadAssets() {
+  async function loadAssets(preferredSelectedAssetId?: string) {
     try {
       setLoadingAssets(true)
       setErrorMessage(null)
       const loadedAssets = await assetsService.getAssets()
       setAssets(loadedAssets)
       setSelectedAssetId((current) =>
-        current && loadedAssets.some((asset) => asset.id === current)
-          ? current
+        preferredSelectedAssetId &&
+        loadedAssets.some((asset) => asset.id === preferredSelectedAssetId)
+          ? preferredSelectedAssetId
+          : current && loadedAssets.some((asset) => asset.id === current)
+            ? current
           : loadedAssets[0]?.id ?? null,
       )
     } catch (err: unknown) {
@@ -96,6 +109,38 @@ export default function Assets() {
   useEffect(() => {
     loadAssets().catch(console.error)
   }, [])
+
+  useEffect(() => {
+    if (!isEditing || !selectedAsset) {
+      return
+    }
+
+    setForm(toAssetFormState(selectedAsset))
+  }, [isEditing, selectedAsset])
+
+  const resetToCreateMode = () => {
+    setIsEditing(false)
+    setForm(DEFAULT_FORM)
+  }
+
+  const startEditingSelectedAsset = () => {
+    if (!selectedAsset) {
+      return
+    }
+
+    setIsEditing(true)
+    setForm(toAssetFormState(selectedAsset))
+    setErrorMessage(null)
+    setSuccessMessage(null)
+  }
+
+  const handleSelectAsset = (assetId: string) => {
+    if (isEditing) {
+      return
+    }
+
+    setSelectedAssetId(assetId)
+  }
 
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault()
@@ -124,22 +169,34 @@ export default function Assets() {
       setErrorMessage(null)
       setSuccessMessage(null)
 
-      const createdAsset = await assetsService.createAsset({
+      const payload = {
         symbol,
         name,
         type: form.type,
         baseCurrency,
-      })
+      }
 
-      setSuccessMessage(t('assets.assetCreated', { symbol: createdAsset.symbol }))
-      setForm({
-        ...DEFAULT_FORM,
-        baseCurrency,
-      })
-      await loadAssets()
-      setSelectedAssetId(createdAsset.id)
+      if (isEditing && selectedAsset) {
+        const updatedAsset = await assetsService.updateAsset(selectedAsset.id, payload)
+        setSuccessMessage(t('assets.assetUpdated', { symbol: updatedAsset.symbol }))
+        await loadAssets(updatedAsset.id)
+        resetToCreateMode()
+      } else {
+        const createdAsset = await assetsService.createAsset(payload)
+        setSuccessMessage(t('assets.assetCreated', { symbol: createdAsset.symbol }))
+        setForm({
+          ...DEFAULT_FORM,
+          baseCurrency,
+        })
+        await loadAssets(createdAsset.id)
+      }
     } catch (err: unknown) {
-      setErrorMessage(getErrorMessage(err, t('assets.failedToCreate')))
+      setErrorMessage(
+        getErrorMessage(
+          err,
+          isEditing ? t('assets.failedToUpdate') : t('assets.failedToCreate'),
+        ),
+      )
     } finally {
       setSubmitting(false)
     }
@@ -169,18 +226,21 @@ export default function Assets() {
       <section className="grid gap-6 lg:grid-cols-[1.05fr_0.95fr]">
         <div className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm">
           <div className="mb-4 space-y-1">
-            <h2 className="text-lg font-semibold">{t('assets.createTitle')}</h2>
+            <h2 className="text-lg font-semibold">
+              {isEditing ? t('assets.editTitle') : t('assets.createTitle')}
+            </h2>
             <p className="text-sm text-gray-600">
-              {t('assets.createDescription')}
+              {isEditing ? t('assets.editDescription') : t('assets.createDescription')}
             </p>
           </div>
 
           <form onSubmit={handleSubmit} className="grid gap-4 md:grid-cols-2">
             <div className="space-y-1">
-              <label className="block text-sm font-medium text-gray-700">
+              <label htmlFor="asset-symbol" className="block text-sm font-medium text-gray-700">
                 {t('assets.symbol')}
               </label>
               <input
+                id="asset-symbol"
                 type="text"
                 value={form.symbol}
                 onChange={(event) =>
@@ -190,15 +250,24 @@ export default function Assets() {
                   }))
                 }
                 placeholder={t('assets.symbolPlaceholder')}
-                className="w-full rounded border border-gray-300 px-3 py-2"
+                disabled={isEditing}
+                className={`w-full rounded border px-3 py-2 ${
+                  isEditing
+                    ? 'cursor-not-allowed border-gray-200 bg-gray-100 text-gray-500'
+                    : 'border-gray-300'
+                }`}
               />
+              {isEditing && (
+                <p className="text-xs text-gray-500">{t('assets.symbolLocked')}</p>
+              )}
             </div>
 
             <div className="space-y-1">
-              <label className="block text-sm font-medium text-gray-700">
+              <label htmlFor="asset-base-currency" className="block text-sm font-medium text-gray-700">
                 {t('assets.baseCurrency')}
               </label>
               <select
+                id="asset-base-currency"
                 value={form.baseCurrency}
                 onChange={(event) =>
                   setForm((current) => ({
@@ -217,10 +286,11 @@ export default function Assets() {
             </div>
 
             <div className="space-y-1 md:col-span-2">
-              <label className="block text-sm font-medium text-gray-700">
+              <label htmlFor="asset-name" className="block text-sm font-medium text-gray-700">
                 {t('assets.name')}
               </label>
               <input
+                id="asset-name"
                 type="text"
                 value={form.name}
                 onChange={(event) =>
@@ -232,10 +302,11 @@ export default function Assets() {
             </div>
 
             <div className="space-y-1 md:col-span-2">
-              <label className="block text-sm font-medium text-gray-700">
+              <label htmlFor="asset-type" className="block text-sm font-medium text-gray-700">
                 {t('assets.type')}
               </label>
               <select
+                id="asset-type"
                 value={form.type}
                 onChange={(event) =>
                   setForm((current) => ({
@@ -261,15 +332,30 @@ export default function Assets() {
                 </Link>
                 .
               </p>
-              <button
-                type="submit"
-                disabled={submitting}
-                className={`rounded px-4 py-2 text-sm font-medium text-white ${
-                  submitting ? 'cursor-not-allowed bg-gray-400' : 'bg-blue-600 hover:bg-blue-700'
-                }`}
-              >
-                {submitting ? t('assets.creatingAction') : t('assets.createAction')}
-              </button>
+              <div className="flex items-center gap-2">
+                {isEditing && (
+                  <button
+                    type="button"
+                    onClick={resetToCreateMode}
+                    className="rounded border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100"
+                  >
+                    {t('common.cancel')}
+                  </button>
+                )}
+                <button
+                  type="submit"
+                  disabled={submitting}
+                  className={`rounded px-4 py-2 text-sm font-medium text-white ${
+                    submitting ? 'cursor-not-allowed bg-gray-400' : 'bg-blue-600 hover:bg-blue-700'
+                  }`}
+                >
+                  {submitting
+                    ? t('common.saving')
+                    : isEditing
+                      ? t('common.saveChanges')
+                      : t('assets.createAction')}
+                </button>
+              </div>
             </div>
           </form>
         </div>
@@ -290,9 +376,16 @@ export default function Assets() {
                   {t('assets.baseCurrency')}: {selectedAsset.baseCurrency}
                 </div>
               </div>
-              <p>
-                {t('assets.selectedDescription')}
-              </p>
+              <div className="flex items-center justify-between gap-3">
+                <p>{t('assets.selectedDescription')}</p>
+                <button
+                  type="button"
+                  onClick={startEditingSelectedAsset}
+                  className="shrink-0 rounded border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100"
+                >
+                  {t('assets.editAction')}
+                </button>
+              </div>
             </div>
           ) : (
             <div className="space-y-3 text-sm text-gray-700">
@@ -347,9 +440,15 @@ export default function Assets() {
                   return (
                     <tr
                       key={asset.id}
-                      onClick={() => setSelectedAssetId(asset.id)}
-                      className={`cursor-pointer border-b border-gray-100 ${
-                        isSelected ? 'bg-blue-50' : 'hover:bg-gray-50'
+                      onClick={() => handleSelectAsset(asset.id)}
+                      className={`border-b border-gray-100 ${
+                        isEditing
+                          ? isSelected
+                            ? 'cursor-not-allowed bg-blue-50'
+                            : 'cursor-not-allowed bg-white'
+                          : isSelected
+                            ? 'cursor-pointer bg-blue-50'
+                            : 'cursor-pointer hover:bg-gray-50'
                       }`}
                     >
                       <td className="px-3 py-3 font-medium text-gray-900">
