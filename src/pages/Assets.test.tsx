@@ -233,6 +233,77 @@ describe('Assets page edit mode', () => {
     })
   })
 
+  it('normalizes asset form values before creating an asset', async () => {
+    renderPage()
+
+    await waitFor(() => {
+      expect(getAssets).toHaveBeenCalledTimes(1)
+    })
+
+    fireEvent.change(screen.getByLabelText('Symbol'), {
+      target: { value: ' aapl ' },
+    })
+    fireEvent.change(screen.getByLabelText('Name'), {
+      target: { value: '  Apple   Inc.  ' },
+    })
+    fireEvent.change(screen.getByLabelText('Base currency'), {
+      target: { value: 'TWD' },
+    })
+
+    fireEvent.click(screen.getByRole('button', { name: 'Create asset' }))
+
+    await waitFor(() => {
+      expect(createAsset).toHaveBeenCalledWith({
+        symbol: 'AAPL',
+        name: 'Apple Inc.',
+        type: 'equity',
+        baseCurrency: 'TWD',
+      })
+    })
+  })
+
+  it('rejects unsafe symbol and name input before sending to the api', async () => {
+    renderPage()
+
+    await waitFor(() => {
+      expect(getAssets).toHaveBeenCalledTimes(1)
+    })
+
+    fireEvent.change(screen.getByLabelText('Symbol'), {
+      target: { value: '<script>' },
+    })
+    fireEvent.change(screen.getByLabelText('Name'), {
+      target: { value: 'Safe Name' },
+    })
+
+    fireEvent.click(screen.getByRole('button', { name: 'Create asset' }))
+
+    await waitFor(() => {
+      expect(screen.getByText('Symbol can use only letters, numbers, and . _ : / -')).toBeTruthy()
+    })
+
+    expect(createAsset).not.toHaveBeenCalled()
+
+    fireEvent.change(screen.getByLabelText('Symbol'), {
+      target: { value: 'MSFT' },
+    })
+    fireEvent.change(screen.getByLabelText('Name'), {
+      target: { value: 'Apple <script>' },
+    })
+
+    fireEvent.click(screen.getByRole('button', { name: 'Create asset' }))
+
+    await waitFor(() => {
+      expect(
+        screen.getByText(
+          'Name contains unsupported characters. Use letters, numbers, spaces, and common punctuation only.',
+        ),
+      ).toBeTruthy()
+    })
+
+    expect(createAsset).not.toHaveBeenCalled()
+  })
+
   it('paginates the catalog locally and disables catalog controls while editing', async () => {
     const manyAssets = Array.from({ length: 16 }, (_, index) => ({
       id: `asset-${index + 1}`,

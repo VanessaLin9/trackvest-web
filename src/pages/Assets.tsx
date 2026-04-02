@@ -8,7 +8,16 @@ import {
   type Asset,
   type AssetType,
 } from '../lib/assets.service'
-import { sanitizeLightweightTextInput } from '../lib/input-safety'
+import {
+  ASSET_NAME_MAX_LENGTH,
+  ASSET_SYMBOL_MAX_LENGTH,
+  isSafeAssetName,
+  isSafeAssetSymbol,
+  normalizeAssetNameInput,
+  normalizeAssetSymbolInput,
+  normalizeSupportedCurrencyInput,
+  sanitizeLightweightTextInput,
+} from '../lib/input-safety'
 
 type AssetFormState = {
   symbol: string
@@ -209,12 +218,24 @@ export default function Assets() {
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault()
 
-    const symbol = form.symbol.trim().toUpperCase()
-    const name = form.name.trim()
-    const baseCurrency = form.baseCurrency.trim().toUpperCase()
+    const symbol = normalizeAssetSymbolInput(form.symbol)
+    const name = normalizeAssetNameInput(form.name)
+    const baseCurrency = normalizeSupportedCurrencyInput(form.baseCurrency)
+
+    setForm((current) => ({
+      ...current,
+      symbol,
+      name,
+      baseCurrency,
+    }))
 
     if (!symbol) {
       setErrorMessage(t('assets.symbolRequired'))
+      return
+    }
+
+    if (!isSafeAssetSymbol(symbol)) {
+      setErrorMessage(t('assets.invalidSymbol'))
       return
     }
 
@@ -223,8 +244,18 @@ export default function Assets() {
       return
     }
 
+    if (!isSafeAssetName(name)) {
+      setErrorMessage(t('assets.invalidName'))
+      return
+    }
+
     if (!baseCurrency) {
       setErrorMessage(t('assets.baseCurrencyRequired'))
+      return
+    }
+
+    if (!BASE_CURRENCY_OPTIONS.some((currency) => currency === baseCurrency)) {
+      setErrorMessage(t('assets.invalidBaseCurrency'))
       return
     }
 
@@ -307,10 +338,13 @@ export default function Assets() {
                 id="asset-symbol"
                 type="text"
                 value={form.symbol}
+                maxLength={ASSET_SYMBOL_MAX_LENGTH}
                 onChange={(event) =>
                   setForm((current) => ({
                     ...current,
-                    symbol: event.target.value.toUpperCase(),
+                    symbol: sanitizeLightweightTextInput(event.target.value, {
+                      maxLength: ASSET_SYMBOL_MAX_LENGTH,
+                    }).toUpperCase(),
                   }))
                 }
                 placeholder={t('assets.symbolPlaceholder')}
@@ -357,8 +391,14 @@ export default function Assets() {
                 id="asset-name"
                 type="text"
                 value={form.name}
+                maxLength={ASSET_NAME_MAX_LENGTH}
                 onChange={(event) =>
-                  setForm((current) => ({ ...current, name: event.target.value }))
+                  setForm((current) => ({
+                    ...current,
+                    name: sanitizeLightweightTextInput(event.target.value, {
+                      maxLength: ASSET_NAME_MAX_LENGTH,
+                    }),
+                  }))
                 }
                 placeholder={t('assets.namePlaceholder')}
                 className="w-full rounded border border-gray-300 px-3 py-2"
