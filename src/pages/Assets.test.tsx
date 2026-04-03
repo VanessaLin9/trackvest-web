@@ -200,6 +200,11 @@ describe('Assets page edit mode', () => {
           total: 0,
         }),
       )
+      .mockResolvedValueOnce(
+        makeAssetsResponse([allAssets[2]], {
+          total: 1,
+        }),
+      )
 
     renderPage()
 
@@ -233,6 +238,19 @@ describe('Assets page edit mode', () => {
         type: 'equity',
       })
       expect(screen.getByText('No assets match the current search or filters.')).toBeTruthy()
+      expect(screen.getByRole('button', { name: 'All types' })).toBeTruthy()
+      expect(screen.getByRole('button', { name: 'All currencies' })).toBeTruthy()
+    })
+
+    fireEvent.click(screen.getByRole('button', { name: 'All types' }))
+
+    await waitFor(() => {
+      expect(getAssets).toHaveBeenLastCalledWith({
+        page: 1,
+        q: 'bit',
+        take: 10,
+      })
+      expect(screen.getAllByText('Bitcoin').length).toBeGreaterThan(0)
     })
   })
 
