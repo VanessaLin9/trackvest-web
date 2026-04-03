@@ -20,9 +20,24 @@ export type SaveAssetPayload = {
   baseCurrency: string
 }
 
+export type GetAssetsParams = {
+  q?: string
+  type?: AssetType
+  baseCurrency?: string
+  page?: number
+  take?: number
+}
+
+export type AssetListResponse = {
+  items: Asset[]
+  total: number
+  page: number
+  take: number
+}
+
 export const assetsService = {
-  async getAssets(): Promise<Asset[]> {
-    const response = await api.get<Asset[]>('/assets')
+  async getAssets(params: GetAssetsParams = {}): Promise<AssetListResponse> {
+    const response = await api.get<AssetListResponse>('/assets', { params })
     return response.data
   },
 

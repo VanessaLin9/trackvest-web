@@ -208,6 +208,8 @@ export const messages = {
       catalogDescription: 'Click any row to review what already exists.',
       assetCount_one: '{{count}} asset',
       assetCount_other: '{{count}} assets',
+      matchingCount_one: '{{count}} matching asset',
+      matchingCount_other: '{{count}} matching assets',
       visibleCount: '{{visible}} of {{total}} assets',
       loadingAssets: 'Loading assets...',
       noAssets:
@@ -625,6 +627,8 @@ export const messages = {
       catalogDescription: '點選任一列即可查看目前已建立的內容。',
       assetCount_one: '{{count}} 個資產',
       assetCount_other: '{{count}} 個資產',
+      matchingCount_one: '符合條件的資產共 {{count}} 個',
+      matchingCount_other: '符合條件的資產共 {{count}} 個',
       visibleCount: '顯示 {{visible}} / {{total}} 個資產',
       loadingAssets: '資產載入中...',
       noAssets:

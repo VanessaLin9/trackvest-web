@@ -3,6 +3,7 @@ import { MemoryRouter } from 'react-router-dom'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { I18nProvider } from '../i18n'
 import Assets from './Assets'
+import type { Asset, AssetListResponse } from '../lib/assets.service'
 
 const { getAssets, createAsset, updateAsset } = vi.hoisted(() => ({
   getAssets: vi.fn(),
@@ -21,7 +22,7 @@ vi.mock('../lib/assets.service', () => ({
 }))
 
 describe('Assets page edit mode', () => {
-  const initialAssets = [
+  const initialAssets: Asset[] = [
     {
       id: 'asset-aapl',
       symbol: 'AAPL',
@@ -38,8 +39,24 @@ describe('Assets page edit mode', () => {
     },
   ]
 
+  function makeAssetsResponse(
+    items: Asset[],
+    {
+      total = items.length,
+      page = 1,
+      take = 10,
+    }: Partial<AssetListResponse> = {},
+  ): AssetListResponse {
+    return {
+      items,
+      total,
+      page,
+      take,
+    }
+  }
+
   beforeEach(() => {
-    getAssets.mockResolvedValue(initialAssets)
+    getAssets.mockResolvedValue(makeAssetsResponse(initialAssets))
     createAsset.mockResolvedValue(initialAssets[0])
     updateAsset.mockResolvedValue({
       ...initialAssets[0],
@@ -66,17 +83,19 @@ describe('Assets page edit mode', () => {
 
   it('updates the selected asset and keeps it selected after refresh', async () => {
     getAssets
-      .mockResolvedValueOnce(initialAssets)
-      .mockResolvedValueOnce([
-        {
-          id: 'asset-aapl',
-          symbol: 'AAPL',
-          name: 'Apple Incorporated',
-          type: 'etf',
-          baseCurrency: 'TWD',
-        },
-        initialAssets[1],
-      ])
+      .mockResolvedValueOnce(makeAssetsResponse(initialAssets))
+      .mockResolvedValueOnce(
+        makeAssetsResponse([
+          {
+            id: 'asset-aapl',
+            symbol: 'AAPL',
+            name: 'Apple Incorporated',
+            type: 'etf',
+            baseCurrency: 'TWD',
+          },
+          initialAssets[1],
+        ]),
+      )
 
     renderPage()
 
@@ -158,7 +177,7 @@ describe('Assets page edit mode', () => {
   })
 
   it('filters assets by search text and selected filters', async () => {
-    getAssets.mockResolvedValueOnce([
+    const allAssets: Asset[] = [
       ...initialAssets,
       {
         id: 'asset-btc',
@@ -167,7 +186,20 @@ describe('Assets page edit mode', () => {
         type: 'crypto',
         baseCurrency: 'USD',
       },
-    ])
+    ]
+
+    getAssets
+      .mockResolvedValueOnce(makeAssetsResponse(allAssets, { total: 3 }))
+      .mockResolvedValueOnce(
+        makeAssetsResponse([allAssets[2]], {
+          total: 1,
+        }),
+      )
+      .mockResolvedValueOnce(
+        makeAssetsResponse([], {
+          total: 0,
+        }),
+      )
 
     renderPage()
 
@@ -183,27 +215,31 @@ describe('Assets page edit mode', () => {
     await waitFor(() => {
       expect(screen.getAllByText('Bitcoin').length).toBeGreaterThan(0)
       expect(screen.queryByText('Apple Inc.')).toBeNull()
-      expect(screen.getByText('1 of 3 assets')).toBeTruthy()
+      expect(getAssets).toHaveBeenLastCalledWith({
+        page: 1,
+        q: 'bit',
+        take: 10,
+      })
+      expect(screen.getByText('1 matching asset')).toBeTruthy()
     })
 
     fireEvent.click(screen.getByRole('button', { name: 'Equity' }))
 
     await waitFor(() => {
+      expect(getAssets).toHaveBeenLastCalledWith({
+        page: 1,
+        q: 'bit',
+        take: 10,
+        type: 'equity',
+      })
       expect(screen.getByText('No assets match the current search or filters.')).toBeTruthy()
     })
   })
 
   it('sanitizes lightweight search input before filtering', async () => {
-    getAssets.mockResolvedValueOnce([
-      ...initialAssets,
-      {
-        id: 'asset-btc',
-        symbol: 'BTC',
-        name: 'Bitcoin',
-        type: 'crypto',
-        baseCurrency: 'USD',
-      },
-    ])
+    getAssets
+      .mockResolvedValueOnce(makeAssetsResponse(initialAssets))
+      .mockResolvedValue(makeAssetsResponse([]))
 
     renderPage()
 
@@ -223,13 +259,17 @@ describe('Assets page edit mode', () => {
     expect(searchInput.value.includes('\u0000')).toBe(false)
     expect(searchInput.value.length).toBe(60)
 
-    fireEvent.change(searchInput, {
-      target: { value: '  bit\u0000   ' },
-    })
-
     await waitFor(() => {
-      expect(screen.getAllByText('Bitcoin').length).toBeGreaterThan(0)
-      expect(screen.queryByText('Apple Inc.')).toBeNull()
+      expect(
+        getAssets.mock.calls.some(
+          ([params]) =>
+            params.page === 1 &&
+            params.take === 10 &&
+            typeof params.q === 'string' &&
+            params.q.startsWith('bit') &&
+            params.q.length < 60,
+        ),
+      ).toBe(true)
     })
   })
 
@@ -305,7 +345,7 @@ describe('Assets page edit mode', () => {
   })
 
   it('paginates the catalog locally and disables catalog controls while editing', async () => {
-    const manyAssets = Array.from({ length: 16 }, (_, index) => ({
+    const manyAssets: Asset[] = Array.from({ length: 16 }, (_, index) => ({
       id: `asset-${index + 1}`,
       symbol: `SYM${index + 1}`,
       name: `Asset ${index + 1}`,
@@ -313,7 +353,18 @@ describe('Assets page edit mode', () => {
       baseCurrency: index % 3 === 0 ? 'USD' : 'TWD',
     }))
 
-    getAssets.mockResolvedValueOnce(manyAssets)
+    getAssets
+      .mockResolvedValueOnce(
+        makeAssetsResponse(manyAssets.slice(0, 10), {
+          total: 16,
+        }),
+      )
+      .mockResolvedValueOnce(
+        makeAssetsResponse(manyAssets.slice(10), {
+          total: 16,
+          page: 2,
+        }),
+      )
 
     renderPage()
 
@@ -326,6 +377,10 @@ describe('Assets page edit mode', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Next' }))
 
     await waitFor(() => {
+      expect(getAssets).toHaveBeenLastCalledWith({
+        page: 2,
+        take: 10,
+      })
       expect(screen.getByText('Page 2 / 2')).toBeTruthy()
       expect(screen.getAllByText('Asset 16').length).toBeGreaterThan(0)
       expect(screen.queryByText('Asset 10')).toBeNull()
@@ -342,5 +397,63 @@ describe('Assets page edit mode', () => {
     expect((screen.getByRole('button', { name: 'All types' }) as HTMLButtonElement).disabled).toBe(true)
     expect((screen.getByRole('button', { name: 'All currencies' }) as HTMLButtonElement).disabled).toBe(true)
     expect((screen.getByRole('button', { name: 'Next' }) as HTMLButtonElement).disabled).toBe(true)
+  })
+
+  it('resets to the first page with a single request when filters change from a later page', async () => {
+    const manyAssets: Asset[] = Array.from({ length: 16 }, (_, index) => ({
+      id: `asset-${index + 1}`,
+      symbol: `SYM${index + 1}`,
+      name: `Asset ${index + 1}`,
+      type: index % 2 === 0 ? 'equity' : 'etf',
+      baseCurrency: index % 3 === 0 ? 'USD' : 'TWD',
+    }))
+
+    getAssets
+      .mockResolvedValueOnce(
+        makeAssetsResponse(manyAssets.slice(0, 10), {
+          total: 16,
+        }),
+      )
+      .mockResolvedValueOnce(
+        makeAssetsResponse(manyAssets.slice(10), {
+          total: 16,
+          page: 2,
+        }),
+      )
+      .mockResolvedValueOnce(
+        makeAssetsResponse(manyAssets.filter((asset) => asset.type === 'equity').slice(0, 10), {
+          total: 8,
+        }),
+      )
+
+    renderPage()
+
+    await waitFor(() => {
+      expect(screen.getByText('Page 1 / 2')).toBeTruthy()
+    })
+
+    fireEvent.click(screen.getByRole('button', { name: 'Next' }))
+
+    await waitFor(() => {
+      expect(getAssets).toHaveBeenLastCalledWith({
+        page: 2,
+        take: 10,
+      })
+      expect(screen.getByText('Page 2 / 2')).toBeTruthy()
+    })
+
+    const callsBeforeFilter = getAssets.mock.calls.length
+
+    fireEvent.click(screen.getByRole('button', { name: 'Equity' }))
+
+    await waitFor(() => {
+      expect(getAssets).toHaveBeenCalledTimes(callsBeforeFilter + 1)
+      expect(getAssets).toHaveBeenLastCalledWith({
+        page: 1,
+        take: 10,
+        type: 'equity',
+      })
+      expect(screen.getByText('Page 1 / 1')).toBeTruthy()
+    })
   })
 })
