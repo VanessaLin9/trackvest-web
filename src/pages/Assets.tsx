@@ -17,6 +17,7 @@ import {
   normalizeAssetNameInput,
   normalizeAssetSymbolInput,
   normalizeSupportedCurrencyInput,
+  sanitizeStrictTextInput,
   sanitizeLightweightTextInput,
 } from '../lib/input-safety'
 
@@ -30,6 +31,7 @@ type AssetFormState = {
 const PAGE_SIZE = 10
 const ALL_FILTER_VALUE = 'all'
 const ASSET_SEARCH_MAX_LENGTH = 60
+const ASSET_SEARCH_DEBOUNCE_MS = 300
 
 const DEFAULT_FORM: AssetFormState = {
   symbol: '',
@@ -100,17 +102,28 @@ export default function Assets() {
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
   const [successMessage, setSuccessMessage] = useState<string | null>(null)
   const loadRequestIdRef = useRef(0)
+  const [debouncedSearchQuery, setDebouncedSearchQuery] = useState('')
 
   const normalizedSearchQuery = useMemo(
     () =>
-      sanitizeLightweightTextInput(searchQuery, {
+      sanitizeStrictTextInput(searchQuery, {
         maxLength: ASSET_SEARCH_MAX_LENGTH,
-      }).trim(),
+      }),
     [searchQuery],
   )
 
+  useEffect(() => {
+    const timeoutId = window.setTimeout(() => {
+      setDebouncedSearchQuery(normalizedSearchQuery)
+    }, ASSET_SEARCH_DEBOUNCE_MS)
+
+    return () => {
+      window.clearTimeout(timeoutId)
+    }
+  }, [normalizedSearchQuery])
+
   const hasActiveCatalogFilters =
-    Boolean(normalizedSearchQuery) ||
+    Boolean(debouncedSearchQuery) ||
     typeFilter !== ALL_FILTER_VALUE ||
     currencyFilter !== ALL_FILTER_VALUE
 
@@ -135,8 +148,8 @@ export default function Assets() {
         take: PAGE_SIZE,
       }
 
-      if (normalizedSearchQuery) {
-        query.q = normalizedSearchQuery
+      if (debouncedSearchQuery) {
+        query.q = debouncedSearchQuery
       }
 
       if (typeFilter !== ALL_FILTER_VALUE) {
@@ -176,7 +189,7 @@ export default function Assets() {
 
   useEffect(() => {
     loadAssets().catch(console.error)
-  }, [currentPage, currencyFilter, normalizedSearchQuery, typeFilter])
+  }, [currentPage, currencyFilter, debouncedSearchQuery, typeFilter])
 
   useEffect(() => {
     if (currentPage > totalPages) {
@@ -229,7 +242,11 @@ export default function Assets() {
   }
 
   const handleSearchQueryChange = (value: string) => {
-    setSearchQuery(value)
+    setSearchQuery(
+      sanitizeStrictTextInput(value, {
+        maxLength: ASSET_SEARCH_MAX_LENGTH,
+      }),
+    )
     if (currentPage !== 1) {
       setCurrentPage(1)
     }
@@ -570,11 +587,7 @@ export default function Assets() {
                   type="search"
                   value={searchQuery}
                   onChange={(event) =>
-                    handleSearchQueryChange(
-                      sanitizeLightweightTextInput(event.target.value, {
-                        maxLength: ASSET_SEARCH_MAX_LENGTH,
-                      }),
-                    )
+                    handleSearchQueryChange(event.target.value)
                   }
                   placeholder={t('assets.searchPlaceholder')}
                   disabled={isCatalogLocked}

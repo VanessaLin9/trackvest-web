@@ -69,6 +69,7 @@ describe('Assets page edit mode', () => {
   afterEach(() => {
     cleanup()
     vi.clearAllMocks()
+    vi.useRealTimers()
   })
 
   function renderPage() {
@@ -254,7 +255,7 @@ describe('Assets page edit mode', () => {
     })
   })
 
-  it('sanitizes lightweight search input before filtering', async () => {
+  it('sanitizes and debounces search input before calling the api', async () => {
     getAssets
       .mockResolvedValueOnce(makeAssetsResponse(initialAssets))
       .mockResolvedValue(makeAssetsResponse([]))
@@ -273,11 +274,15 @@ describe('Assets page edit mode', () => {
       },
     })
 
-    expect(searchInput.value.startsWith(' bit')).toBe(true)
+    expect(searchInput.value.startsWith('bit')).toBe(true)
     expect(searchInput.value.includes('\u0000')).toBe(false)
-    expect(searchInput.value.length).toBe(60)
+    expect(searchInput.value.length).toBeLessThanOrEqual(60)
+    expect(getAssets).toHaveBeenCalledTimes(1)
+
+    await new Promise((resolve) => window.setTimeout(resolve, 350))
 
     await waitFor(() => {
+      expect(getAssets).toHaveBeenCalledTimes(2)
       expect(
         getAssets.mock.calls.some(
           ([params]) =>
@@ -285,7 +290,7 @@ describe('Assets page edit mode', () => {
             params.take === 10 &&
             typeof params.q === 'string' &&
             params.q.startsWith('bit') &&
-            params.q.length < 60,
+            params.q.length <= 60,
         ),
       ).toBe(true)
     })
