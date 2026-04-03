@@ -558,17 +558,10 @@ export default function Assets() {
           </div>
         </div>
 
-        {loadingAssets ? (
-          <p className="text-sm text-gray-600">{t('assets.loadingAssets')}</p>
-        ) : totalAssetsCount === 0 ? (
-          <div className="rounded-lg border border-dashed border-gray-300 bg-gray-50 px-4 py-6 text-sm text-gray-600">
-            {hasActiveCatalogFilters ? t('assets.noFilteredAssets') : t('assets.noAssets')}
-          </div>
-        ) : (
-          <div className="space-y-4">
-            <div className="rounded-lg border border-gray-200 bg-gray-50 p-4">
-              <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
-                <div className="w-full max-w-xs shrink-0 space-y-1">
+        <div className="space-y-4">
+          <div className="rounded-lg border border-gray-200 bg-gray-50 p-4">
+            <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+              <div className="w-full max-w-xs shrink-0 space-y-1">
                 <label htmlFor="asset-search" className="block text-sm font-medium text-gray-700">
                   {t('assets.searchLabel')}
                 </label>
@@ -591,86 +584,94 @@ export default function Assets() {
                       : 'border-gray-300'
                   }`}
                 />
+              </div>
+
+              <div className="flex min-w-0 flex-1 flex-col gap-4 lg:flex-row lg:items-end lg:justify-end lg:gap-6">
+                <div className="min-w-0 space-y-1">
+                  <p className="block text-sm font-medium text-gray-700">
+                    {t('assets.typeFilterLabel')}
+                  </p>
+                  <div className="flex flex-wrap gap-2">
+                    {[ALL_FILTER_VALUE, ...ASSET_TYPE_OPTIONS].map((type) => {
+                      const value = String(type)
+                      const isActive = typeFilter === value
+                      const label =
+                        value === ALL_FILTER_VALUE
+                          ? t('assets.allTypes')
+                          : formatTypeLabel(value, t)
+
+                      return (
+                        <button
+                          key={value}
+                          type="button"
+                          onClick={() => handleTypeFilterChange(value)}
+                          disabled={isCatalogLocked}
+                          aria-pressed={isActive}
+                          className={`rounded-full border px-3 py-1.5 text-sm transition ${
+                            isCatalogLocked
+                              ? 'cursor-not-allowed border-gray-200 bg-gray-100 text-gray-400'
+                              : isActive
+                                ? 'border-blue-200 bg-blue-50 text-blue-700'
+                                : 'border-gray-300 bg-white text-gray-700 hover:bg-gray-100'
+                          }`}
+                        >
+                          {label}
+                        </button>
+                      )
+                    })}
+                  </div>
                 </div>
 
-                <div className="flex min-w-0 flex-1 flex-col gap-4 lg:flex-row lg:items-end lg:justify-end lg:gap-6">
-                  <div className="min-w-0 space-y-1">
-                    <p className="block text-sm font-medium text-gray-700">
-                      {t('assets.typeFilterLabel')}
-                    </p>
-                    <div className="flex flex-wrap gap-2">
-                      {[ALL_FILTER_VALUE, ...ASSET_TYPE_OPTIONS].map((type) => {
-                        const value = String(type)
-                        const isActive = typeFilter === value
-                        const label =
-                          value === ALL_FILTER_VALUE
-                            ? t('assets.allTypes')
-                            : formatTypeLabel(value, t)
+                <div className="space-y-1 lg:shrink-0">
+                  <p className="block text-sm font-medium text-gray-700">
+                    {t('assets.currencyFilterLabel')}
+                  </p>
+                  <div className="flex flex-wrap gap-2">
+                    {[ALL_FILTER_VALUE, ...BASE_CURRENCY_OPTIONS].map((currency) => {
+                      const value = String(currency)
+                      const isActive = currencyFilter === value
+                      const label =
+                        value === ALL_FILTER_VALUE
+                          ? t('assets.allCurrencies')
+                          : value
 
-                        return (
-                          <button
-                            key={value}
-                            type="button"
-                            onClick={() => handleTypeFilterChange(value)}
-                            disabled={isCatalogLocked}
-                            aria-pressed={isActive}
-                            className={`rounded-full border px-3 py-1.5 text-sm transition ${
-                              isCatalogLocked
-                                ? 'cursor-not-allowed border-gray-200 bg-gray-100 text-gray-400'
-                                : isActive
-                                  ? 'border-blue-200 bg-blue-50 text-blue-700'
-                                  : 'border-gray-300 bg-white text-gray-700 hover:bg-gray-100'
-                            }`}
-                          >
-                            {label}
-                          </button>
-                        )
-                      })}
-                    </div>
-                  </div>
-
-                  <div className="space-y-1 lg:shrink-0">
-                    <p className="block text-sm font-medium text-gray-700">
-                      {t('assets.currencyFilterLabel')}
-                    </p>
-                    <div className="flex flex-wrap gap-2">
-                      {[ALL_FILTER_VALUE, ...BASE_CURRENCY_OPTIONS].map((currency) => {
-                        const value = String(currency)
-                        const isActive = currencyFilter === value
-                        const label =
-                          value === ALL_FILTER_VALUE
-                            ? t('assets.allCurrencies')
-                            : value
-
-                        return (
-                          <button
-                            key={value}
-                            type="button"
-                            onClick={() => handleCurrencyFilterChange(value)}
-                            disabled={isCatalogLocked}
-                            aria-pressed={isActive}
-                            className={`rounded-full border px-3 py-1.5 text-sm transition ${
-                              isCatalogLocked
-                                ? 'cursor-not-allowed border-gray-200 bg-gray-100 text-gray-400'
-                                : isActive
-                                  ? 'border-blue-200 bg-blue-50 text-blue-700'
-                                  : 'border-gray-300 bg-white text-gray-700 hover:bg-gray-100'
-                            }`}
-                          >
-                            {label}
-                          </button>
-                        )
-                      })}
-                    </div>
+                      return (
+                        <button
+                          key={value}
+                          type="button"
+                          onClick={() => handleCurrencyFilterChange(value)}
+                          disabled={isCatalogLocked}
+                          aria-pressed={isActive}
+                          className={`rounded-full border px-3 py-1.5 text-sm transition ${
+                            isCatalogLocked
+                              ? 'cursor-not-allowed border-gray-200 bg-gray-100 text-gray-400'
+                              : isActive
+                                ? 'border-blue-200 bg-blue-50 text-blue-700'
+                                : 'border-gray-300 bg-white text-gray-700 hover:bg-gray-100'
+                          }`}
+                        >
+                          {label}
+                        </button>
+                      )
+                    })}
                   </div>
                 </div>
               </div>
             </div>
+          </div>
 
-            {isCatalogLocked && (
-              <p className="text-sm text-gray-500">{t('assets.catalogLockedWhileEditing')}</p>
-            )}
+          {isCatalogLocked && (
+            <p className="text-sm text-gray-500">{t('assets.catalogLockedWhileEditing')}</p>
+          )}
 
+          {loadingAssets ? (
+            <p className="text-sm text-gray-600">{t('assets.loadingAssets')}</p>
+          ) : totalAssetsCount === 0 ? (
+            <div className="rounded-lg border border-dashed border-gray-300 bg-gray-50 px-4 py-6 text-sm text-gray-600">
+              {hasActiveCatalogFilters ? t('assets.noFilteredAssets') : t('assets.noAssets')}
+            </div>
+          ) : (
+            <>
             <div className="overflow-x-auto">
               <table className="w-full border-collapse text-sm">
                 <thead>
@@ -743,8 +744,9 @@ export default function Assets() {
                 </button>
               </div>
             </div>
-          </div>
-        )}
+            </>
+          )}
+        </div>
       </section>
     </div>
   )
