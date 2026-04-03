@@ -252,7 +252,14 @@ export default function Assets() {
     }
   }
 
+  const flushDebouncedSearchQuery = () => {
+    if (debouncedSearchQuery !== normalizedSearchQuery) {
+      setDebouncedSearchQuery(normalizedSearchQuery)
+    }
+  }
+
   const handleTypeFilterChange = (value: string) => {
+    flushDebouncedSearchQuery()
     setTypeFilter(value)
     if (currentPage !== 1) {
       setCurrentPage(1)
@@ -260,10 +267,16 @@ export default function Assets() {
   }
 
   const handleCurrencyFilterChange = (value: string) => {
+    flushDebouncedSearchQuery()
     setCurrencyFilter(value)
     if (currentPage !== 1) {
       setCurrentPage(1)
     }
+  }
+
+  const handlePageChange = (nextPage: number) => {
+    flushDebouncedSearchQuery()
+    setCurrentPage(nextPage)
   }
 
   const isCatalogLocked = isEditing
@@ -739,7 +752,7 @@ export default function Assets() {
               <div className="flex items-center gap-2">
                 <button
                   type="button"
-                  onClick={() => setCurrentPage((page) => Math.max(1, page - 1))}
+                  onClick={() => handlePageChange(Math.max(1, currentPage - 1))}
                   disabled={isCatalogLocked || currentPage === 1}
                   className="rounded border border-gray-300 px-3 py-2 text-sm font-medium text-gray-700 disabled:cursor-not-allowed disabled:border-gray-200 disabled:bg-gray-100 disabled:text-gray-400"
                 >
@@ -747,9 +760,7 @@ export default function Assets() {
                 </button>
                 <button
                   type="button"
-                  onClick={() =>
-                    setCurrentPage((page) => Math.min(totalPages, page + 1))
-                  }
+                  onClick={() => handlePageChange(Math.min(totalPages, currentPage + 1))}
                   disabled={isCatalogLocked || currentPage === totalPages}
                   className="rounded border border-gray-300 px-3 py-2 text-sm font-medium text-gray-700 disabled:cursor-not-allowed disabled:border-gray-200 disabled:bg-gray-100 disabled:text-gray-400"
                 >

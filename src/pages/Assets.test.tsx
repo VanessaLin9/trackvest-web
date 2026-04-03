@@ -296,6 +296,52 @@ describe('Assets page edit mode', () => {
     })
   })
 
+  it('flushes pending search input when a filter pill is clicked', async () => {
+    const filteredAssets: Asset[] = [
+      {
+        id: 'asset-btc',
+        symbol: 'BTC',
+        name: 'Bitcoin',
+        type: 'crypto',
+        baseCurrency: 'USD',
+      },
+    ]
+
+    getAssets
+      .mockResolvedValueOnce(makeAssetsResponse(initialAssets))
+      .mockResolvedValueOnce(
+        makeAssetsResponse(filteredAssets, {
+          total: 1,
+        }),
+      )
+
+    renderPage()
+
+    await waitFor(() => {
+      expect(getAssets).toHaveBeenCalledTimes(1)
+      expect(screen.getByLabelText('Search assets')).toBeTruthy()
+    })
+
+    fireEvent.change(screen.getByLabelText('Search assets'), {
+      target: { value: 'bit' },
+    })
+    fireEvent.click(screen.getByRole('button', { name: 'Crypto' }))
+
+    await waitFor(() => {
+      expect(getAssets).toHaveBeenCalledTimes(2)
+      expect(getAssets).toHaveBeenLastCalledWith({
+        page: 1,
+        q: 'bit',
+        take: 10,
+        type: 'crypto',
+      })
+    })
+
+    await new Promise((resolve) => window.setTimeout(resolve, 350))
+
+    expect(getAssets).toHaveBeenCalledTimes(2)
+  })
+
   it('normalizes asset form values before creating an asset', async () => {
     renderPage()
 
