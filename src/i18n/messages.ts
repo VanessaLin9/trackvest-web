@@ -42,53 +42,72 @@ export const messages = {
     dashboard: {
       title: 'Dashboard',
       heroEyebrow: 'Trackvest',
-      heroTitle: 'Daily money cockpit',
+      heroTitle: 'Portfolio overview',
       heroDescription:
-        "This first version is meant to answer three questions fast: did I record today's money movement, what changed this month, and where should I drill in next?",
-      backendTitle: 'Backend',
-      backendHealthy: 'Healthy',
-      backendUnavailable: 'Unavailable',
-      checkingConnection: 'Checking connection...',
-      healthCheckFailed: 'Health check failed',
-      scopeEyebrow: 'MVP Scope',
-      scopeTitle: 'Dashboard first, reporting later',
+        'This first version turns the homepage into an investment cockpit: see total return fast, spot concentration, and decide which asset deserves a deeper look next.',
+      snapshotLabel: 'Current snapshot',
+      mockDataNotice:
+        'This screen is using a mocked portfolio snapshot first so the UI and chart structure can settle before the overview APIs land.',
+      scopeEyebrow: 'Planning note',
+      scopeTitle: 'Asset-level first, transaction detail later',
       scopeDescription:
-        'The dashboard now reads its top summary cards and lower activity section from dedicated APIs. The numbers are still MVP-scoped, but the page is no longer stitching raw cashbook and investment data in the browser.',
-      todaysExpense: "Today's expense",
-      monthExpense: 'Month expense',
-      totalInvestmentAssets: 'Total investment assets',
+        'The homepage is now designed around asset-level portfolio state instead of raw transaction rows. Once the backend overview APIs are ready, these cards and charts can switch from mock data to real snapshots.',
+      assetCount: 'Tracked assets',
+      investedCapital: 'Invested capital',
+      investedCapitalHint: 'Snapshot of the current portfolio cost basis.',
+      marketValue: 'Market value',
+      marketValueHint: 'Marked using the latest price snapshot available to the portfolio view.',
+      totalPnl: 'Total P&L',
       totalReturn: 'Total return',
-      summaryApiWaiting: 'Waiting for summary API.',
-      summaryApiLabel: 'Summary API',
-      accountOverviewTitle: 'Account overview',
-      accountOverviewDescription:
-        'Asset-side balances returned by `GET /dashboard/activity`.',
-      recentActivityTitle: 'Recent activity',
-      recentActivityDescription:
-        'Unified feed returned by `GET /dashboard/activity`.',
-      loadingAccounts: 'Loading accounts...',
-      loadingActivity: 'Loading activity...',
-      noAccounts: 'No asset accounts yet.',
-      noActivity: 'No recent activity yet.',
-      accountsCount_one: '{{count}} account',
-      accountsCount_other: '{{count}} accounts',
-      failedToLoadDashboardData: 'Failed to load dashboard data',
-      currentApiBoundaries: 'Current API boundaries',
-      summaryEndpointDescription:
-        'The four KPI cards at the top already read from this endpoint.',
-      activityEndpointDescription:
-        'Account overview and recent activity now share one dashboard-specific response.',
-      accountBalancesEndpointDescription:
-        'Still worth splitting later if balances need to be reused outside the dashboard page.',
-      account: 'Account',
-      balance: 'Balance',
-      type: 'Type',
-      date: 'Date',
-      activity: 'Activity',
-      amount: 'Amount',
-      cashbook: 'Cashbook',
-      investment: 'Investment',
-      neutral: 'Neutral',
+      pnlDescription: 'Market value minus cost basis across the full portfolio.',
+      returnDescription: 'Portfolio-wide return rate from the same snapshot.',
+      allocationTitle: 'Allocation mix',
+      allocationDescription:
+        'See how concentrated the portfolio is before drilling into any single asset.',
+      performanceTitle: 'P&L by asset',
+      performanceDescription:
+        'Quickly spot which holdings are doing the heavy lifting and which ones are dragging performance.',
+      trendTitle: 'Portfolio trend',
+      trendDescription:
+        'A first-pass trend view comparing invested capital and current portfolio value over time.',
+      assetCountBadge_one: '{{count}} asset tracked',
+      assetCountBadge_other: '{{count}} assets tracked',
+      holdingsTitle: 'Holdings overview',
+      holdingsDescription:
+        'Each row is one asset, not one transaction. Click a row to inspect its current state.',
+      asset: 'Asset',
+      weight: 'Weight',
+      quantity: 'Quantity',
+      avgCost: 'Avg cost',
+      costBasis: 'Cost basis',
+      latestPrice: 'Latest price',
+      investedAmount: 'Invested amount',
+      lastActivity: 'Latest activity',
+      selectedTrendTitle: 'Selected asset trend',
+      selectedTrendDescription:
+        'A compact trend view for the selected asset. Later this can be replaced with a backend-driven holdings trend endpoint.',
+      asset2330Note:
+        'Core Taiwan equity position with the largest portfolio weight.',
+      asset2330Activity: 'Sold 10 shares to trim concentration',
+      asset0050Note:
+        'Broad-market Taiwan ETF used as the more stable accumulation sleeve.',
+      asset0050Activity: 'Monthly DCA continues',
+      assetAaplNote:
+        'USD growth position kept small while the overview API is still shaping up.',
+      assetAaplActivity: 'No trade this month',
+      assetBtcNote:
+        'Highest-volatility holding. Strong contributor to total return, but concentration risk is obvious.',
+      assetBtcActivity: 'Last buy 3 weeks ago',
+      assetQqqNote:
+        'US growth ETF sleeve kept intentionally small during portfolio restructuring.',
+      assetQqqActivity: 'Holding steady',
+      apiPlanningTitle: 'Backend API planning',
+      apiPlanningSummary:
+        'Top summary cards should read from one snapshot endpoint with invested capital, market value, total P&L, and total return.',
+      apiPlanningHoldings:
+        'The asset list needs a holdings endpoint returning one aggregated row per asset, with current quantity, cost basis, market value, and return.',
+      apiPlanningTrend:
+        'Charts will need either a portfolio trend endpoint or per-asset trend data once we stop using mocked snapshots.',
     },
     health: {
       title: 'Health Check',
@@ -462,53 +481,72 @@ export const messages = {
     dashboard: {
       title: '總覽',
       heroEyebrow: 'Trackvest',
-      heroTitle: '每日資金駕駛艙',
+      heroTitle: '投資首頁',
       heroDescription:
-        '這個第一版的目標，是快速回答三個問題：今天的金流有沒有記到、這個月發生了什麼變化、以及下一步該往哪裡鑽查。',
-      backendTitle: '後端',
-      backendHealthy: '正常',
-      backendUnavailable: '無法連線',
-      checkingConnection: '檢查連線中...',
-      healthCheckFailed: '健康檢查失敗',
-      scopeEyebrow: 'MVP 範圍',
-      scopeTitle: '先把總覽做好，再補報表',
+        '首頁第一版先變成投資整理後的駕駛艙：快速看到總報酬、辨認部位集中度，並決定下一個值得深入看的資產。',
+      snapshotLabel: '目前快照',
+      mockDataNotice:
+        '目前先用 mock portfolio snapshot 切版，等首頁 overview API 定案後，再把這些卡片與圖表接成真資料。',
+      scopeEyebrow: '規劃方向',
+      scopeTitle: '先做資產層級，再往下鑽交易細節',
       scopeDescription:
-        '現在總覽頁的摘要卡片與下方活動區塊都改由專用 API 提供。數字仍然維持 MVP 範圍，但頁面已經不再在瀏覽器端自行拼接 cashbook 與 investment 原始資料。',
-      todaysExpense: '今日支出',
-      monthExpense: '本月支出',
-      totalInvestmentAssets: '投資總資產',
-      totalReturn: '總報酬',
-      summaryApiWaiting: '等待摘要 API 回應中。',
-      summaryApiLabel: '摘要 API',
-      accountOverviewTitle: '帳戶概況',
-      accountOverviewDescription:
-        '顯示來自 `GET /dashboard/activity` 的資產側帳戶餘額。',
-      recentActivityTitle: '最近活動',
-      recentActivityDescription:
-        '顯示來自 `GET /dashboard/activity` 的統一活動時間流。',
-      loadingAccounts: '帳戶載入中...',
-      loadingActivity: '活動載入中...',
-      noAccounts: '目前還沒有資產帳戶資料。',
-      noActivity: '目前還沒有最近活動。',
-      accountsCount_one: '{{count}} 個帳戶',
-      accountsCount_other: '{{count}} 個帳戶',
-      failedToLoadDashboardData: '載入總覽資料失敗',
-      currentApiBoundaries: '目前的 API 邊界',
-      summaryEndpointDescription:
-        '上方四張 KPI 卡片已經直接讀取這個 endpoint。',
-      activityEndpointDescription:
-        '帳戶概況與最近活動現在共用同一份 dashboard 專用回應。',
-      accountBalancesEndpointDescription:
-        '如果未來帳戶餘額需要在 dashboard 之外重用，之後仍值得再拆分。',
-      account: '帳戶',
-      balance: '餘額',
-      type: '類型',
-      date: '日期',
-      activity: '活動',
-      amount: '金額',
-      cashbook: '現金帳',
-      investment: '投資',
-      neutral: '中性',
+        '首頁目前以資產整理後的狀態為主，而不是直接攤開交易流水。等後端 overview API 補齊後，這些 cards 與 charts 就能從 mock data 換成真實快照。',
+      assetCount: '追蹤資產數',
+      investedCapital: '總投入成本',
+      investedCapitalHint: '目前 portfolio snapshot 對應的總成本基礎。',
+      marketValue: '目前總市值',
+      marketValueHint: '依目前首頁可見的最新價格快照估算出的總市值。',
+      totalPnl: '總損益',
+      totalReturn: '總報酬率',
+      pnlDescription: '以目前整體市值減去總投入成本得到的損益。',
+      returnDescription: '根據同一份 portfolio snapshot 算出的整體報酬率。',
+      allocationTitle: '資產配置',
+      allocationDescription:
+        '先看整體部位集中在哪裡，再決定要往哪個資產鑽查。',
+      performanceTitle: '各資產損益',
+      performanceDescription:
+        '快速辨認誰在貢獻績效、誰正在拖累整體表現。',
+      trendTitle: '投資組合趨勢',
+      trendDescription:
+        '先用一張趨勢圖比較總投入成本與目前總市值的變化，幫助首頁建立整體節奏。',
+      assetCountBadge_one: '已整理 {{count}} 個資產',
+      assetCountBadge_other: '已整理 {{count}} 個資產',
+      holdingsTitle: '持倉總覽',
+      holdingsDescription:
+        '每一列代表一個資產，不是一筆交易。點擊列後可查看該資產目前的整理狀態。',
+      asset: '資產',
+      weight: '占比',
+      quantity: '持有數量',
+      avgCost: '平均成本',
+      costBasis: '成本基礎',
+      latestPrice: '最新價格',
+      investedAmount: '投入金額',
+      lastActivity: '最近動作',
+      selectedTrendTitle: '選取資產趨勢',
+      selectedTrendDescription:
+        '目前先用簡化趨勢圖展示選取資產的狀態，之後可以替換成後端提供的 holdings trend 資料。',
+      asset2330Note:
+        '台股核心部位，也是目前整體投資組合中占比最高的一檔資產。',
+      asset2330Activity: '最近賣出 10 股，稍微降低集中度',
+      asset0050Note:
+        '作為較穩定的台股 ETF 累積部位，用來平衡單一股票集中風險。',
+      asset0050Activity: '持續每月定期投入',
+      assetAaplNote:
+        '目前占比較小的美股成長部位，主要先保留在首頁整理版型中的多市場情境。',
+      assetAaplActivity: '這個月沒有新增交易',
+      assetBtcNote:
+        '波動最高，但目前也是整體報酬的重要貢獻來源，同時帶來較高集中風險。',
+      assetBtcActivity: '最近一次買進約在三週前',
+      assetQqqNote:
+        '美股成長 ETF 部位目前刻意維持較小，先保留彈性等首頁與 API 結構穩定。',
+      assetQqqActivity: '近期以持有為主',
+      apiPlanningTitle: '後端 API 規劃',
+      apiPlanningSummary:
+        '上方摘要卡片需要一個 snapshot endpoint，回傳總投入、總市值、總損益與總報酬率。',
+      apiPlanningHoldings:
+        '資產列表需要一個 holdings endpoint，以資產為單位回傳目前數量、成本、市值與報酬。',
+      apiPlanningTrend:
+        '圖表之後會需要 portfolio trend 或 per-asset trend endpoint，才能把 mock snapshot 換成真資料。',
     },
     health: {
       title: '健康檢查',
