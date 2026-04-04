@@ -1,7 +1,7 @@
 import { api } from './api'
 import { getRequiredCurrentUserId } from '../app/current-user'
 import type { Account } from './accounts.service'
-import type { Asset } from './assets.service'
+import type { Asset, AssetListResponse } from './assets.service'
 
 export type { Asset } from './assets.service'
 
@@ -83,8 +83,13 @@ export const investmentsService = {
   },
 
   async getAssets(): Promise<Asset[]> {
-    const response = await api.get<Asset[]>('/assets')
-    return response.data
+    const response = await api.get<AssetListResponse>('/assets', {
+      params: {
+        page: 1,
+        take: 100,
+      },
+    })
+    return response.data.items
   },
 
   async getTransactions(
