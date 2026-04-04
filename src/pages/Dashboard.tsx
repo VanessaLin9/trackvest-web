@@ -1,33 +1,33 @@
-import { useMemo, useState } from 'react'
-import {
-  Area,
-  AreaChart,
-  Bar,
-  BarChart,
-  CartesianGrid,
-  Cell,
-  Pie,
-  PieChart,
-  ResponsiveContainer,
-  Tooltip,
-  XAxis,
-  YAxis,
-} from 'recharts'
+import { lazy, Suspense, useMemo, useState } from 'react'
 import { useCurrentUserId } from '../app/current-user'
 import { useI18n } from '../i18n'
+import type {
+  AllocationChartItem,
+  ChartValue,
+  PerformanceDatum,
+  TrendPoint,
+} from '../components/dashboard/PortfolioCharts'
 
-type AllocationItem = {
-  id: string
-  label: string
-  value: number
-  color: string
-}
-
-type TrendPoint = {
-  label: string
-  invested: number
-  marketValue: number
-}
+const AllocationChartCard = lazy(() =>
+  import('../components/dashboard/PortfolioCharts').then((module) => ({
+    default: module.AllocationChartCard,
+  })),
+)
+const PerformanceChartCard = lazy(() =>
+  import('../components/dashboard/PortfolioCharts').then((module) => ({
+    default: module.PerformanceChartCard,
+  })),
+)
+const PortfolioTrendChartCard = lazy(() =>
+  import('../components/dashboard/PortfolioCharts').then((module) => ({
+    default: module.PortfolioTrendChartCard,
+  })),
+)
+const HoldingTrendChartCard = lazy(() =>
+  import('../components/dashboard/PortfolioCharts').then((module) => ({
+    default: module.HoldingTrendChartCard,
+  })),
+)
 
 type Holding = {
   id: string
@@ -44,7 +44,7 @@ type Holding = {
   weight: number
   noteKey: string
   latestActivityKey: string
-  allocation: AllocationItem[]
+  allocation: AllocationChartItem[]
   history: TrendPoint[]
 }
 
@@ -58,7 +58,7 @@ const PORTFOLIO_SUMMARY = {
   holdingsCount: 5,
 }
 
-const PORTFOLIO_ALLOCATION: AllocationItem[] = [
+const PORTFOLIO_ALLOCATION: AllocationChartItem[] = [
   { id: 'equity', label: 'Equity', value: 47, color: '#2563eb' },
   { id: 'etf', label: 'ETF', value: 31, color: '#0f766e' },
   { id: 'crypto', label: 'Crypto', value: 14, color: '#f59e0b' },
@@ -277,10 +277,7 @@ function formatAllocationLabel(
   }
 }
 
-function renderTooltipValue(
-  value: number | string | readonly (number | string)[] | undefined,
-  locale: string,
-) {
+function renderTooltipValue(value: ChartValue, locale: string): string {
   if (value === undefined) {
     return ''
   }
@@ -290,10 +287,30 @@ function renderTooltipValue(
   }
 
   if (typeof value !== 'number') {
-    return value
+    return String(value)
   }
 
   return formatCurrencyWithCode(value, locale)
+}
+
+function ChartCardFallback({
+  title,
+  description,
+  heightClass = 'h-72',
+}: {
+  title: string
+  description: string
+  heightClass?: string
+}) {
+  return (
+    <div className="rounded-3xl border border-gray-200 bg-white p-5 shadow-sm">
+      <div className="mb-4">
+        <h2 className="text-xl font-semibold">{title}</h2>
+        <p className="text-sm text-gray-500">{description}</p>
+      </div>
+      <div className={`rounded-2xl bg-gray-50 ${heightClass} animate-pulse`} />
+    </div>
+  )
 }
 
 export default function Dashboard() {
@@ -306,7 +323,7 @@ export default function Dashboard() {
     [selectedHoldingId],
   )
 
-  const performanceData = useMemo(
+  const performanceData = useMemo<PerformanceDatum[]>(
     () =>
       HOLDINGS.map((holding, index) => ({
         symbol: holding.symbol,
@@ -314,6 +331,15 @@ export default function Dashboard() {
         color: PORTFOLIO_COLORS[index % PORTFOLIO_COLORS.length],
       })),
     [],
+  )
+
+  const allocationChartData = useMemo(
+    () =>
+      PORTFOLIO_ALLOCATION.map((item) => ({
+        ...item,
+        label: formatAllocationLabel(item.id, item.label, t),
+      })),
+    [t],
   )
 
   if (!currentUserId) {
@@ -426,137 +452,56 @@ export default function Dashboard() {
       </section>
 
       <section className="grid gap-6 xl:grid-cols-[0.88fr_1.12fr]">
-        <div className="rounded-3xl border border-gray-200 bg-white p-5 shadow-sm">
-          <div className="mb-4">
-            <h2 className="text-xl font-semibold">{t('dashboard.allocationTitle')}</h2>
-            <p className="text-sm text-gray-500">
-              {t('dashboard.allocationDescription')}
-            </p>
-          </div>
+        <Suspense
+          fallback={
+            <ChartCardFallback
+              title={t('dashboard.allocationTitle')}
+              description={t('dashboard.allocationDescription')}
+            />
+          }
+        >
+          <AllocationChartCard
+            title={t('dashboard.allocationTitle')}
+            description={t('dashboard.allocationDescription')}
+            data={allocationChartData}
+          />
+        </Suspense>
 
-          <div className="h-72">
-            <ResponsiveContainer width="100%" height="100%">
-              <PieChart>
-                <Pie
-                  data={PORTFOLIO_ALLOCATION}
-                  dataKey="value"
-                  nameKey="label"
-                  innerRadius={72}
-                  outerRadius={108}
-                  paddingAngle={3}
-                >
-                  {PORTFOLIO_ALLOCATION.map((entry) => (
-                    <Cell key={entry.id} fill={entry.color} />
-                  ))}
-                </Pie>
-                <Tooltip formatter={(value) => `${value}%`} />
-              </PieChart>
-            </ResponsiveContainer>
-          </div>
-
-          <div className="mt-4 grid gap-3">
-            {PORTFOLIO_ALLOCATION.map((item) => (
-              <div
-                key={item.id}
-                className="flex items-center justify-between rounded-2xl border border-gray-200 bg-gray-50 px-4 py-3"
-              >
-                <div className="flex items-center gap-3">
-                  <span
-                    className="h-3 w-3 rounded-full"
-                    style={{ backgroundColor: item.color }}
-                  />
-                  <span className="font-medium text-gray-800">
-                    {formatAllocationLabel(item.id, item.label, t)}
-                  </span>
-                </div>
-                <span className="text-sm text-gray-600">{item.value}%</span>
-              </div>
-            ))}
-          </div>
-        </div>
-
-        <div className="rounded-3xl border border-gray-200 bg-white p-5 shadow-sm">
-          <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
-            <div>
-              <h2 className="text-xl font-semibold">{t('dashboard.performanceTitle')}</h2>
-              <p className="text-sm text-gray-500">
-                {t('dashboard.performanceDescription')}
-              </p>
-            </div>
-            <span className="rounded-full bg-emerald-50 px-3 py-1 text-xs font-medium text-emerald-700">
-              {t('dashboard.assetCountBadge', { count: HOLDINGS.length })}
-            </span>
-          </div>
-
-          <div className="h-80">
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={performanceData} margin={{ top: 8, right: 12, left: 0, bottom: 0 }}>
-                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" />
-                <XAxis dataKey="symbol" tickLine={false} axisLine={false} />
-                <YAxis
-                  tickLine={false}
-                  axisLine={false}
-                  tickFormatter={(value) => `${Math.round(value / 1000)}k`}
-                />
-                <Tooltip formatter={(value) => renderTooltipValue(value, locale)} />
-                <Bar dataKey="pnl" radius={[10, 10, 0, 0]}>
-                  {performanceData.map((entry) => (
-                    <Cell key={entry.symbol} fill={entry.color} />
-                  ))}
-                </Bar>
-              </BarChart>
-            </ResponsiveContainer>
-          </div>
-        </div>
+        <Suspense
+          fallback={
+            <ChartCardFallback
+              title={t('dashboard.performanceTitle')}
+              description={t('dashboard.performanceDescription')}
+              heightClass="h-80"
+            />
+          }
+        >
+          <PerformanceChartCard
+            title={t('dashboard.performanceTitle')}
+            description={t('dashboard.performanceDescription')}
+            badge={t('dashboard.assetCountBadge', { count: HOLDINGS.length })}
+            data={performanceData}
+            valueFormatter={(value) => renderTooltipValue(value, locale)}
+          />
+        </Suspense>
       </section>
 
-      <section className="rounded-3xl border border-gray-200 bg-white p-5 shadow-sm">
-        <div className="mb-4">
-          <h2 className="text-xl font-semibold">{t('dashboard.trendTitle')}</h2>
-          <p className="text-sm text-gray-500">
-            {t('dashboard.trendDescription')}
-          </p>
-        </div>
-
-        <div className="h-80">
-          <ResponsiveContainer width="100%" height="100%">
-            <AreaChart data={PORTFOLIO_TREND} margin={{ top: 8, right: 8, left: 0, bottom: 0 }}>
-              <defs>
-                <linearGradient id="portfolioInvestedGradient" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="0%" stopColor="#94a3b8" stopOpacity={0.2} />
-                  <stop offset="100%" stopColor="#94a3b8" stopOpacity={0.01} />
-                </linearGradient>
-                <linearGradient id="portfolioValueGradient" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="0%" stopColor="#2563eb" stopOpacity={0.28} />
-                  <stop offset="100%" stopColor="#2563eb" stopOpacity={0.03} />
-                </linearGradient>
-              </defs>
-              <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e5e7eb" />
-              <XAxis dataKey="label" tickLine={false} axisLine={false} />
-              <YAxis
-                tickLine={false}
-                axisLine={false}
-                tickFormatter={(value) => `${Math.round(value / 1000)}k`}
-              />
-              <Tooltip formatter={(value) => renderTooltipValue(value, locale)} />
-              <Area
-                type="monotone"
-                dataKey="invested"
-                stroke="#64748b"
-                fill="url(#portfolioInvestedGradient)"
-                strokeWidth={2}
-              />
-              <Area
-                type="monotone"
-                dataKey="marketValue"
-                stroke="#2563eb"
-                fill="url(#portfolioValueGradient)"
-                strokeWidth={2.5}
-              />
-            </AreaChart>
-          </ResponsiveContainer>
-        </div>
-      </section>
+      <Suspense
+        fallback={
+          <ChartCardFallback
+            title={t('dashboard.trendTitle')}
+            description={t('dashboard.trendDescription')}
+            heightClass="h-80"
+          />
+        }
+      >
+        <PortfolioTrendChartCard
+          title={t('dashboard.trendTitle')}
+          description={t('dashboard.trendDescription')}
+          data={PORTFOLIO_TREND}
+          valueFormatter={(value) => renderTooltipValue(value, locale)}
+        />
+      </Suspense>
 
       <section className="grid gap-6 xl:grid-cols-[1.1fr_0.9fr]">
         <div className="rounded-3xl border border-gray-200 bg-white p-5 shadow-sm">
@@ -677,39 +622,25 @@ export default function Dashboard() {
             </p>
           </section>
 
+          <Suspense
+            fallback={
+              <ChartCardFallback
+                title={t('dashboard.selectedTrendTitle')}
+                description={t('dashboard.selectedTrendDescription')}
+                heightClass="h-56"
+              />
+            }
+          >
+            <HoldingTrendChartCard
+              title={t('dashboard.selectedTrendTitle')}
+              description={t('dashboard.selectedTrendDescription')}
+              data={selectedHolding.history}
+              valueFormatter={(value) => renderTooltipValue(value, locale)}
+            />
+          </Suspense>
+
           <section className="rounded-3xl border border-gray-200 bg-white p-5 shadow-sm">
-            <div className="mb-4">
-              <h2 className="text-lg font-semibold">{t('dashboard.selectedTrendTitle')}</h2>
-              <p className="text-sm text-gray-500">
-                {t('dashboard.selectedTrendDescription')}
-              </p>
-            </div>
-
-            <div className="h-56">
-              <ResponsiveContainer width="100%" height="100%">
-                <AreaChart data={selectedHolding.history} margin={{ top: 8, right: 8, left: 0, bottom: 0 }}>
-                  <defs>
-                    <linearGradient id="selectedHoldingGradient" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="0%" stopColor="#2563eb" stopOpacity={0.35} />
-                      <stop offset="100%" stopColor="#2563eb" stopOpacity={0.02} />
-                    </linearGradient>
-                  </defs>
-                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e5e7eb" />
-                  <XAxis dataKey="label" tickLine={false} axisLine={false} />
-                  <YAxis hide />
-                  <Tooltip formatter={(value) => renderTooltipValue(value, locale)} />
-                  <Area
-                    type="monotone"
-                    dataKey="marketValue"
-                    stroke="#2563eb"
-                    fill="url(#selectedHoldingGradient)"
-                    strokeWidth={2.5}
-                  />
-                </AreaChart>
-              </ResponsiveContainer>
-            </div>
-
-            <div className="mt-4 grid gap-3 sm:grid-cols-2">
+            <div className="mt-0 grid gap-3 sm:grid-cols-2">
               <div className="rounded-2xl border border-gray-200 bg-gray-50 px-4 py-3">
                 <p className="text-xs uppercase tracking-[0.2em] text-gray-500">
                   {t('dashboard.investedAmount')}
