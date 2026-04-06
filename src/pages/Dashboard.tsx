@@ -75,6 +75,10 @@ function formatSignedCurrency(
   return `${prefix}${formatCurrency(Math.abs(value), locale)}${currency ? ` ${currency}` : ''}`
 }
 
+function getHoldingLatestPriceCurrency(holding: PortfolioHolding) {
+  return holding.latestPriceCurrency ?? holding.assetBaseCurrency
+}
+
 function formatPercent(
   value: number,
   options: { signed?: boolean } = {},
@@ -800,7 +804,11 @@ export default function Dashboard() {
                       <p className="mt-2 text-xl font-semibold text-gray-900">
                         {selectedHolding.latestPrice == null
                           ? t('common.notAvailable')
-                          : formatCurrency(selectedHolding.latestPrice, locale)}
+                          : formatCurrencyWithCode(
+                              selectedHolding.latestPrice,
+                              locale,
+                              getHoldingLatestPriceCurrency(selectedHolding),
+                            )}
                       </p>
                       <p className="mt-2 text-xs text-gray-500">
                         {t('dashboard.latestPriceHint')}

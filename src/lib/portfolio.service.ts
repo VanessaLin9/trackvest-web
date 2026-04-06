@@ -20,6 +20,8 @@ export type PortfolioHolding = {
   quantity: number
   avgCost: number
   latestPrice: number | null
+  latestPriceCurrency: string | null
+  assetBaseCurrency: string
   investedAmount: number
   marketValue: number
   pnl: number
