@@ -12,6 +12,7 @@ import {
   portfolioService,
   type PortfolioHolding,
 } from '../lib/portfolio.service'
+import { usePreferencesStore } from '../store/preferences'
 
 const AllocationChartCard = lazy(() =>
   import('../components/dashboard/PortfolioCharts').then((module) => ({
@@ -225,6 +226,12 @@ export default function Dashboard() {
   const currentUserId = useCurrentUserId()
   const { t, locale } = useI18n()
   const [selectedHoldingId, setSelectedHoldingId] = useState<string | null>(null)
+  const {
+    displayCurrencyMode,
+    preferredBaseCurrency,
+    setDisplayCurrencyMode,
+    setPreferredBaseCurrency,
+  } = usePreferencesStore()
 
   const summaryQuery = useQuery({
     queryKey: ['portfolio', 'summary', currentUserId],
@@ -415,6 +422,83 @@ export default function Dashboard() {
           <p className="mt-3 text-sm leading-6 text-amber-900/80">
             {t('dashboard.scopeDescription')}
           </p>
+          <div className="mt-5 rounded-2xl border border-amber-200/80 bg-white/70 p-4">
+            <p className="text-xs uppercase tracking-[0.2em] text-amber-700">
+              {t('dashboard.displayPreferencesTitle')}
+            </p>
+            <p className="mt-2 text-sm leading-6 text-amber-900/80">
+              {t('dashboard.displayPreferencesDescription')}
+            </p>
+
+            <div className="mt-4 space-y-3">
+              <div>
+                <p className="mb-2 text-xs font-medium uppercase tracking-[0.18em] text-gray-500">
+                  {t('dashboard.displayCurrencyModeLabel')}
+                </p>
+                <div className="inline-flex rounded-full border border-amber-200 bg-white p-1">
+                  {[
+                    {
+                      value: 'original',
+                      label: t('dashboard.displayCurrencyModeOriginal'),
+                    },
+                    {
+                      value: 'base',
+                      label: t('dashboard.displayCurrencyModeBase'),
+                    },
+                  ].map((option) => {
+                    const isActive = displayCurrencyMode === option.value
+
+                    return (
+                      <button
+                        key={option.value}
+                        type="button"
+                        onClick={() =>
+                          setDisplayCurrencyMode(option.value as typeof displayCurrencyMode)
+                        }
+                        aria-pressed={isActive}
+                        className={`rounded-full px-3 py-1.5 text-xs font-medium transition ${
+                          isActive
+                            ? 'bg-amber-500 text-white'
+                            : 'text-amber-900 hover:bg-amber-50'
+                        }`}
+                      >
+                        {option.label}
+                      </button>
+                    )
+                  })}
+                </div>
+              </div>
+
+              <div>
+                <p className="mb-2 text-xs font-medium uppercase tracking-[0.18em] text-gray-500">
+                  {t('dashboard.preferredBaseCurrencyLabel')}
+                </p>
+                <div className="inline-flex rounded-full border border-amber-200 bg-white p-1">
+                  {['TWD', 'USD'].map((currency) => {
+                    const isActive = preferredBaseCurrency === currency
+
+                    return (
+                      <button
+                        key={currency}
+                        type="button"
+                        onClick={() =>
+                          setPreferredBaseCurrency(currency as typeof preferredBaseCurrency)
+                        }
+                        aria-pressed={isActive}
+                        className={`rounded-full px-3 py-1.5 text-xs font-medium transition ${
+                          isActive
+                            ? 'bg-slate-900 text-white'
+                            : 'text-slate-700 hover:bg-slate-50'
+                        }`}
+                      >
+                        {currency}
+                      </button>
+                    )
+                  })}
+                </div>
+              </div>
+            </div>
+          </div>
           <div className="mt-5 grid gap-3 sm:grid-cols-2">
             <div className="rounded-2xl bg-white px-4 py-3 shadow-sm">
               <p className="text-xs uppercase tracking-[0.2em] text-gray-500">

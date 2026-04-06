@@ -58,6 +58,13 @@ export const messages = {
       scopeTitle: 'Asset-level first, transaction detail later',
       scopeDescription:
         'The homepage is now designed around asset-level portfolio state instead of raw transaction rows. Once the backend overview APIs are ready, these cards and charts can switch from mock data to real snapshots.',
+      displayPreferencesTitle: 'Display preferences foundation',
+      displayPreferencesDescription:
+        'These preferences are now persisted on the frontend so display-currency behavior can plug into them once FX normalization is ready.',
+      displayCurrencyModeLabel: 'Currency mode',
+      displayCurrencyModeOriginal: 'Original',
+      displayCurrencyModeBase: 'Preferred base',
+      preferredBaseCurrencyLabel: 'Preferred base currency',
       assetCount: 'Tracked assets',
       investedCapital: 'Invested capital',
       investedCapitalHint: 'Snapshot of the current portfolio cost basis.',
@@ -507,6 +514,13 @@ export const messages = {
       scopeTitle: '先做資產層級，再往下鑽交易細節',
       scopeDescription:
         '首頁目前以資產整理後的狀態為主，而不是直接攤開交易流水。等後端 overview API 補齊後，這些 cards 與 charts 就能從 mock data 換成真實快照。',
+      displayPreferencesTitle: '顯示偏好基礎',
+      displayPreferencesDescription:
+        '這些偏好現在先存在前端 store，等後續換匯與顯示幣別邏輯完成後，就能直接接上使用。',
+      displayCurrencyModeLabel: '顯示模式',
+      displayCurrencyModeOriginal: '原幣別',
+      displayCurrencyModeBase: '偏好基準',
+      preferredBaseCurrencyLabel: '偏好基準幣別',
       assetCount: '追蹤資產數',
       investedCapital: '總投入成本',
       investedCapitalHint: '目前 portfolio snapshot 對應的總成本基礎。',
