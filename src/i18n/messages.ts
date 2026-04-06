@@ -46,6 +46,12 @@ export const messages = {
       heroDescription:
         'This first version turns the homepage into an investment cockpit: see total return fast, spot concentration, and decide which asset deserves a deeper look next.',
       snapshotLabel: 'Current snapshot',
+      snapshotAsOf: 'Updated {{date}}',
+      snapshotLiveNotice:
+        'Using the latest portfolio snapshot available to your current accounts.',
+      mixedCurrencyNoticeTitle: 'Mixed-currency portfolio detected',
+      mixedCurrencyNoticeBody:
+        'This first version does not normalize FX yet. Overview totals and charts are still based on raw per-asset values and should be treated as provisional until currency conversion lands.',
       mockDataNotice:
         'This screen is using a mocked portfolio snapshot first so the UI and chart structure can settle before the overview APIs land.',
       scopeEyebrow: 'Planning note',
@@ -75,6 +81,9 @@ export const messages = {
       holdingsTitle: 'Holdings overview',
       holdingsDescription:
         'Each row is one asset, not one transaction. Click a row to inspect its current state.',
+      emptyTitle: 'No active holdings yet',
+      emptyDescription:
+        'Record a buy transaction first, then this overview can start summarizing your portfolio.',
       asset: 'Asset',
       weight: 'Weight',
       quantity: 'Quantity',
@@ -83,6 +92,7 @@ export const messages = {
       latestPrice: 'Latest price',
       investedAmount: 'Invested amount',
       lastActivity: 'Latest activity',
+      noRecentActivity: 'No recent activity yet',
       selectedTrendTitle: 'Selected asset trend',
       selectedTrendDescription:
         'A compact trend view for the selected asset. Later this can be replaced with a backend-driven holdings trend endpoint.',
@@ -108,6 +118,7 @@ export const messages = {
         'The asset list needs a holdings endpoint returning one aggregated row per asset, with current quantity, cost basis, market value, and return.',
       apiPlanningTrend:
         'Charts will need either a portfolio trend endpoint or per-asset trend data once we stop using mocked snapshots.',
+      failedToLoad: 'Failed to load portfolio overview.',
     },
     health: {
       title: 'Health Check',
@@ -485,6 +496,11 @@ export const messages = {
       heroDescription:
         '首頁第一版先變成投資整理後的駕駛艙：快速看到總報酬、辨認部位集中度，並決定下一個值得深入看的資產。',
       snapshotLabel: '目前快照',
+      snapshotAsOf: '更新時間 {{date}}',
+      snapshotLiveNotice: '目前顯示的是你現有帳戶可取得的最新投資快照。',
+      mixedCurrencyNoticeTitle: '偵測到多幣別投資組合',
+      mixedCurrencyNoticeBody:
+        '首頁第一版尚未完成換匯整理。現在的總覽數字與圖表仍是直接使用各資產原始數值加總，請先視為過渡狀態，等後續補上匯率轉換後再做正式判讀。',
       mockDataNotice:
         '目前先用 mock portfolio snapshot 切版，等首頁 overview API 定案後，再把這些卡片與圖表接成真資料。',
       scopeEyebrow: '規劃方向',
@@ -514,6 +530,9 @@ export const messages = {
       holdingsTitle: '持倉總覽',
       holdingsDescription:
         '每一列代表一個資產，不是一筆交易。點擊列後可查看該資產目前的整理狀態。',
+      emptyTitle: '目前還沒有持倉',
+      emptyDescription:
+        '先新增一筆買入交易，首頁才會開始整理你的投資持倉與報酬表現。',
       asset: '資產',
       weight: '占比',
       quantity: '持有數量',
@@ -522,6 +541,7 @@ export const messages = {
       latestPrice: '最新價格',
       investedAmount: '投入金額',
       lastActivity: '最近動作',
+      noRecentActivity: '目前還沒有最近動作',
       selectedTrendTitle: '選取資產趨勢',
       selectedTrendDescription:
         '目前先用簡化趨勢圖展示選取資產的狀態，之後可以替換成後端提供的 holdings trend 資料。',
@@ -547,6 +567,7 @@ export const messages = {
         '資產列表需要一個 holdings endpoint，以資產為單位回傳目前數量、成本、市值與報酬。',
       apiPlanningTrend:
         '圖表之後會需要 portfolio trend 或 per-asset trend endpoint，才能把 mock snapshot 換成真資料。',
+      failedToLoad: '投資首頁載入失敗。',
     },
     health: {
       title: '健康檢查',
