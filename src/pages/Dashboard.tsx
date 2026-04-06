@@ -255,6 +255,10 @@ export default function Dashboard() {
   const summary = summaryQuery.data
   const displayCurrency = summary?.baseCurrency ?? null
   const hasMixedCurrencyPortfolio = Boolean(summary && summary.baseCurrency == null && holdings.length > 0)
+  const isBaseCurrencyAligned =
+    displayCurrencyMode === 'base' &&
+    summary?.baseCurrency != null &&
+    summary.baseCurrency === preferredBaseCurrency
 
   useEffect(() => {
     setSelectedHoldingId((current) =>
@@ -354,6 +358,22 @@ export default function Dashboard() {
 
     return getErrorMessage(holdingTrendQuery.error, t('dashboard.failedToLoad'))
   }, [holdingTrendQuery.error, t])
+
+  const displayModeStatusMessage = useMemo(() => {
+    if (displayCurrencyMode === 'original') {
+      return t('dashboard.displayModeStatusOriginal')
+    }
+
+    if (isBaseCurrencyAligned) {
+      return t('dashboard.displayModeStatusBaseAligned', {
+        currency: preferredBaseCurrency,
+      })
+    }
+
+    return t('dashboard.displayModeStatusBasePending', {
+      currency: preferredBaseCurrency,
+    })
+  }, [displayCurrencyMode, isBaseCurrencyAligned, preferredBaseCurrency, t])
 
   const isInitialLoading =
     Boolean(currentUserId) &&
@@ -498,6 +518,15 @@ export default function Dashboard() {
                 </div>
               </div>
             </div>
+
+            <div className="mt-4 rounded-2xl border border-amber-200 bg-amber-50/70 px-4 py-3">
+              <p className="text-[11px] font-medium uppercase tracking-[0.18em] text-amber-700">
+                {t('dashboard.displayModeStatusLabel')}
+              </p>
+              <p className="mt-2 text-sm leading-6 text-amber-950/85">
+                {displayModeStatusMessage}
+              </p>
+            </div>
           </div>
           <div className="mt-5 grid gap-3 sm:grid-cols-2">
             <div className="rounded-2xl bg-white px-4 py-3 shadow-sm">
@@ -532,7 +561,11 @@ export default function Dashboard() {
             {t('dashboard.mixedCurrencyNoticeTitle')}
           </p>
           <p className="mt-1 text-sm text-amber-900/85">
-            {t('dashboard.mixedCurrencyNoticeBody')}
+            {displayCurrencyMode === 'base'
+              ? t('dashboard.mixedCurrencyNoticeWithPreference', {
+                  currency: preferredBaseCurrency,
+                })
+              : t('dashboard.mixedCurrencyNoticeBody')}
           </p>
         </div>
       ) : null}
