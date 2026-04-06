@@ -361,7 +361,9 @@ export default function Dashboard() {
 
   const displayModeStatusMessage = useMemo(() => {
     if (displayCurrencyMode === 'original') {
-      return t('dashboard.displayModeStatusOriginal')
+      return t('dashboard.displayModeStatusOriginal', {
+        currentCurrency: summary?.baseCurrency ?? preferredBaseCurrency,
+      })
     }
 
     if (isBaseCurrencyAligned) {
@@ -372,8 +374,9 @@ export default function Dashboard() {
 
     return t('dashboard.displayModeStatusBasePending', {
       currency: preferredBaseCurrency,
+      currentCurrency: summary?.baseCurrency ?? preferredBaseCurrency,
     })
-  }, [displayCurrencyMode, isBaseCurrencyAligned, preferredBaseCurrency, t])
+  }, [displayCurrencyMode, isBaseCurrencyAligned, preferredBaseCurrency, summary?.baseCurrency, t])
 
   const isInitialLoading =
     Boolean(currentUserId) &&
@@ -797,11 +800,10 @@ export default function Dashboard() {
                       <p className="mt-2 text-xl font-semibold text-gray-900">
                         {selectedHolding.latestPrice == null
                           ? t('common.notAvailable')
-                          : formatCurrencyWithCode(
-                              selectedHolding.latestPrice,
-                              locale,
-                              displayCurrency,
-                            )}
+                          : formatCurrency(selectedHolding.latestPrice, locale)}
+                      </p>
+                      <p className="mt-2 text-xs text-gray-500">
+                        {t('dashboard.latestPriceHint')}
                       </p>
                     </div>
                     <div className="rounded-2xl bg-gray-50 px-4 py-3">

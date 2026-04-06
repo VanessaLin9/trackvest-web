@@ -69,11 +69,11 @@ export const messages = {
       preferredBaseCurrencyLabel: 'Preferred base currency',
       displayModeStatusLabel: 'Current display status',
       displayModeStatusOriginal:
-        'Numbers are currently shown from the raw portfolio snapshot view.',
+        'The backend is currently returning a normalized portfolio snapshot in {{currentCurrency}}. Original per-asset currency display can be connected later if needed.',
       displayModeStatusBaseAligned:
         'Preferred base currency is set to {{currency}}, and the current portfolio snapshot already matches it.',
       displayModeStatusBasePending:
-        'Preferred base currency is set to {{currency}}, but FX-normalized display is not ready yet. Current numbers still follow the raw snapshot.',
+        'Preferred base currency is set to {{currency}}, but the backend is currently normalizing the portfolio to {{currentCurrency}}. Frontend-side display switching can be connected once selectable API support lands.',
       assetCount: 'Tracked assets',
       investedCapital: 'Invested capital',
       investedCapitalHint: 'Snapshot of the current portfolio cost basis.',
@@ -106,6 +106,7 @@ export const messages = {
       avgCost: 'Avg cost',
       costBasis: 'Cost basis',
       latestPrice: 'Latest price',
+      latestPriceHint: 'Shown as the raw asset quote from backend price snapshots.',
       investedAmount: 'Invested amount',
       lastActivity: 'Latest activity',
       noRecentActivity: 'No recent activity yet',
@@ -534,11 +535,11 @@ export const messages = {
       preferredBaseCurrencyLabel: '偏好基準幣別',
       displayModeStatusLabel: '目前顯示狀態',
       displayModeStatusOriginal:
-        '目前數字仍是依照 portfolio snapshot 的原始視角呈現。',
+        '後端目前回傳的是已換算成 {{currentCurrency}} 的 portfolio snapshot；若之後真的要切回各資產原幣別視角，再另外接顯示邏輯即可。',
       displayModeStatusBaseAligned:
         '偏好基準幣別目前設為 {{currency}}，而現在的 portfolio snapshot 也已經和它一致。',
       displayModeStatusBasePending:
-        '偏好基準幣別目前設為 {{currency}}，但首頁還沒完成換匯整理；現在看到的數字仍然沿用原始 snapshot。',
+        '偏好基準幣別目前設為 {{currency}}，但後端現在仍是把 portfolio 換算到 {{currentCurrency}}。等 API 之後支援可選顯示幣別時，前端再把切換接上。',
       assetCount: '追蹤資產數',
       investedCapital: '總投入成本',
       investedCapitalHint: '目前 portfolio snapshot 對應的總成本基礎。',
@@ -571,6 +572,7 @@ export const messages = {
       avgCost: '平均成本',
       costBasis: '成本基礎',
       latestPrice: '最新價格',
+      latestPriceHint: '目前顯示的是後端 price snapshot 的原始報價。',
       investedAmount: '投入金額',
       lastActivity: '最近動作',
       noRecentActivity: '目前還沒有最近動作',
