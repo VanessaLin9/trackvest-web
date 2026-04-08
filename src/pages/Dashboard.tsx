@@ -75,6 +75,10 @@ function formatSignedCurrency(
   return `${prefix}${formatCurrency(Math.abs(value), locale)}${currency ? ` ${currency}` : ''}`
 }
 
+function getHoldingLatestPriceCurrency(holding: PortfolioHolding) {
+  return holding.latestPriceCurrency ?? holding.assetBaseCurrency
+}
+
 function formatPercent(
   value: number,
   options: { signed?: boolean } = {},
@@ -232,33 +236,53 @@ export default function Dashboard() {
     setDisplayCurrencyMode,
     setPreferredBaseCurrency,
   } = usePreferencesStore()
+  const requestedDisplayCurrency =
+    displayCurrencyMode === 'base' ? preferredBaseCurrency : undefined
 
   const summaryQuery = useQuery({
-    queryKey: ['portfolio', 'summary', currentUserId],
-    queryFn: () => portfolioService.getSummary(),
+    queryKey: ['portfolio', 'summary', currentUserId, requestedDisplayCurrency ?? 'default'],
+    queryFn: () =>
+      portfolioService.getSummary(
+        requestedDisplayCurrency
+          ? { preferredBaseCurrency: requestedDisplayCurrency }
+          : undefined,
+      ),
     enabled: Boolean(currentUserId),
   })
 
   const holdingsQuery = useQuery({
-    queryKey: ['portfolio', 'holdings', currentUserId],
-    queryFn: () => portfolioService.getHoldings(),
+    queryKey: ['portfolio', 'holdings', currentUserId, requestedDisplayCurrency ?? 'default'],
+    queryFn: () =>
+      portfolioService.getHoldings(
+        requestedDisplayCurrency
+          ? { preferredBaseCurrency: requestedDisplayCurrency }
+          : undefined,
+      ),
     enabled: Boolean(currentUserId),
   })
 
   const trendQuery = useQuery({
-    queryKey: ['portfolio', 'trend', currentUserId],
-    queryFn: () => portfolioService.getTrend(),
+    queryKey: ['portfolio', 'trend', currentUserId, requestedDisplayCurrency ?? 'default'],
+    queryFn: () =>
+      portfolioService.getTrend(
+        requestedDisplayCurrency
+          ? { preferredBaseCurrency: requestedDisplayCurrency }
+          : undefined,
+      ),
     enabled: Boolean(currentUserId),
   })
 
   const holdings = holdingsQuery.data?.items ?? []
   const summary = summaryQuery.data
-  const displayCurrency = summary?.baseCurrency ?? null
-  const hasMixedCurrencyPortfolio = Boolean(summary && summary.baseCurrency == null && holdings.length > 0)
+  const displayCurrency =
+    summary?.effectiveDisplayCurrency ??
+    holdingsQuery.data?.effectiveDisplayCurrency ??
+    trendQuery.data?.effectiveDisplayCurrency ??
+    summary?.baseCurrency ??
+    null
   const isBaseCurrencyAligned =
-    displayCurrencyMode === 'base' &&
-    summary?.baseCurrency != null &&
-    summary.baseCurrency === preferredBaseCurrency
+    summary?.displayCurrencyMode === 'preferred-base' &&
+    summary.effectiveDisplayCurrency === preferredBaseCurrency
 
   useEffect(() => {
     setSelectedHoldingId((current) =>
@@ -274,8 +298,20 @@ export default function Dashboard() {
   )
 
   const holdingTrendQuery = useQuery({
-    queryKey: ['portfolio', 'holding-trend', currentUserId, selectedHolding?.assetId],
-    queryFn: () => portfolioService.getHoldingTrend(selectedHolding!.assetId),
+    queryKey: [
+      'portfolio',
+      'holding-trend',
+      currentUserId,
+      selectedHolding?.assetId,
+      requestedDisplayCurrency ?? 'default',
+    ],
+    queryFn: () =>
+      portfolioService.getHoldingTrend(
+        selectedHolding!.assetId,
+        requestedDisplayCurrency
+          ? { preferredBaseCurrency: requestedDisplayCurrency }
+          : undefined,
+      ),
     enabled: Boolean(currentUserId && selectedHolding?.assetId),
   })
 
@@ -360,20 +396,24 @@ export default function Dashboard() {
   }, [holdingTrendQuery.error, t])
 
   const displayModeStatusMessage = useMemo(() => {
-    if (displayCurrencyMode === 'original') {
-      return t('dashboard.displayModeStatusOriginal')
+    if (summary?.displayCurrencyMode === 'portfolio-default') {
+      return t('dashboard.displayModeStatusOriginal', {
+        currency: summary.effectiveDisplayCurrency ?? t('common.notAvailable'),
+      })
     }
 
     if (isBaseCurrencyAligned) {
       return t('dashboard.displayModeStatusBaseAligned', {
-        currency: preferredBaseCurrency,
+        currency: summary?.effectiveDisplayCurrency ?? preferredBaseCurrency,
       })
     }
 
     return t('dashboard.displayModeStatusBasePending', {
       currency: preferredBaseCurrency,
+      currentCurrency:
+        summary?.effectiveDisplayCurrency ?? t('common.notAvailable'),
     })
-  }, [displayCurrencyMode, isBaseCurrencyAligned, preferredBaseCurrency, t])
+  }, [isBaseCurrencyAligned, preferredBaseCurrency, summary?.displayCurrencyMode, summary?.effectiveDisplayCurrency, t])
 
   const isInitialLoading =
     Boolean(currentUserId) &&
@@ -552,21 +592,6 @@ export default function Dashboard() {
       {overviewErrorMessage ? (
         <div className="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
           {overviewErrorMessage}
-        </div>
-      ) : null}
-
-      {hasMixedCurrencyPortfolio ? (
-        <div className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3">
-          <p className="text-sm font-medium text-amber-950">
-            {t('dashboard.mixedCurrencyNoticeTitle')}
-          </p>
-          <p className="mt-1 text-sm text-amber-900/85">
-            {displayCurrencyMode === 'base'
-              ? t('dashboard.mixedCurrencyNoticeWithPreference', {
-                  currency: preferredBaseCurrency,
-                })
-              : t('dashboard.mixedCurrencyNoticeBody')}
-          </p>
         </div>
       ) : null}
 
@@ -800,8 +825,11 @@ export default function Dashboard() {
                           : formatCurrencyWithCode(
                               selectedHolding.latestPrice,
                               locale,
-                              displayCurrency,
+                              getHoldingLatestPriceCurrency(selectedHolding),
                             )}
+                      </p>
+                      <p className="mt-2 text-xs text-gray-500">
+                        {t('dashboard.latestPriceHint')}
                       </p>
                     </div>
                     <div className="rounded-2xl bg-gray-50 px-4 py-3">

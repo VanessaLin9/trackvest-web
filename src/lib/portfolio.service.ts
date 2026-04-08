@@ -3,6 +3,9 @@ import { api } from './api'
 import type { AssetType } from './assets.service'
 
 export type PortfolioSummary = {
+  displayCurrencyMode: 'portfolio-default' | 'preferred-base'
+  requestedDisplayCurrency: string | null
+  effectiveDisplayCurrency: string | null
   asOf: string
   baseCurrency: string | null
   investedCapital: number
@@ -20,6 +23,8 @@ export type PortfolioHolding = {
   quantity: number
   avgCost: number
   latestPrice: number | null
+  latestPriceCurrency: string | null
+  assetBaseCurrency: string
   investedAmount: number
   marketValue: number
   pnl: number
@@ -35,6 +40,9 @@ export type PortfolioAllocationByType = {
 }
 
 export type PortfolioHoldingsResponse = {
+  displayCurrencyMode: 'portfolio-default' | 'preferred-base'
+  requestedDisplayCurrency: string | null
+  effectiveDisplayCurrency: string | null
   items: PortfolioHolding[]
   allocationByType: PortfolioAllocationByType[]
 }
@@ -47,6 +55,9 @@ export type PortfolioTrendPoint = {
 }
 
 export type PortfolioTrendResponse = {
+  displayCurrencyMode: 'portfolio-default' | 'preferred-base'
+  requestedDisplayCurrency: string | null
+  effectiveDisplayCurrency: string | null
   points: PortfolioTrendPoint[]
 }
 
@@ -59,36 +70,61 @@ export type PortfolioHoldingTrendPoint = {
 
 export type PortfolioHoldingTrendResponse = {
   assetId: string
+  displayCurrencyMode: 'portfolio-default' | 'preferred-base'
+  requestedDisplayCurrency: string | null
+  effectiveDisplayCurrency: string | null
   points: PortfolioHoldingTrendPoint[]
 }
 
+type PortfolioDisplayCurrencyQuery = {
+  preferredBaseCurrency?: string
+}
+
+function buildPortfolioDisplayCurrencyParams(query?: PortfolioDisplayCurrencyQuery) {
+  return query?.preferredBaseCurrency
+    ? { preferredBaseCurrency: query.preferredBaseCurrency }
+    : undefined
+}
+
 export const portfolioService = {
-  async getSummary(): Promise<PortfolioSummary> {
+  async getSummary(query?: PortfolioDisplayCurrencyQuery): Promise<PortfolioSummary> {
     getRequiredCurrentUserId()
 
-    const response = await api.get<PortfolioSummary>('/portfolio/summary')
+    const response = await api.get<PortfolioSummary>('/portfolio/summary', {
+      params: buildPortfolioDisplayCurrencyParams(query),
+    })
     return response.data
   },
 
-  async getHoldings(): Promise<PortfolioHoldingsResponse> {
+  async getHoldings(query?: PortfolioDisplayCurrencyQuery): Promise<PortfolioHoldingsResponse> {
     getRequiredCurrentUserId()
 
-    const response = await api.get<PortfolioHoldingsResponse>('/portfolio/holdings')
+    const response = await api.get<PortfolioHoldingsResponse>('/portfolio/holdings', {
+      params: buildPortfolioDisplayCurrencyParams(query),
+    })
     return response.data
   },
 
-  async getTrend(): Promise<PortfolioTrendResponse> {
+  async getTrend(query?: PortfolioDisplayCurrencyQuery): Promise<PortfolioTrendResponse> {
     getRequiredCurrentUserId()
 
-    const response = await api.get<PortfolioTrendResponse>('/portfolio/trend')
+    const response = await api.get<PortfolioTrendResponse>('/portfolio/trend', {
+      params: buildPortfolioDisplayCurrencyParams(query),
+    })
     return response.data
   },
 
-  async getHoldingTrend(assetId: string): Promise<PortfolioHoldingTrendResponse> {
+  async getHoldingTrend(
+    assetId: string,
+    query?: PortfolioDisplayCurrencyQuery,
+  ): Promise<PortfolioHoldingTrendResponse> {
     getRequiredCurrentUserId()
 
     const response = await api.get<PortfolioHoldingTrendResponse>(
       `/portfolio/holdings/${assetId}/trend`,
+      {
+        params: buildPortfolioDisplayCurrencyParams(query),
+      },
     )
     return response.data
   },

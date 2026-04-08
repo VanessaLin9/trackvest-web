@@ -49,11 +49,6 @@ export const messages = {
       snapshotAsOf: 'Updated {{date}}',
       snapshotLiveNotice:
         'Using the latest portfolio snapshot available to your current accounts.',
-      mixedCurrencyNoticeTitle: 'Mixed-currency portfolio detected',
-      mixedCurrencyNoticeBody:
-        'This first version does not normalize FX yet. Overview totals and charts are still based on raw per-asset values and should be treated as provisional until currency conversion lands.',
-      mixedCurrencyNoticeWithPreference:
-        'Preferred base currency is set to {{currency}}, but this first version does not normalize FX yet. Overview totals and charts are still based on raw per-asset values and should be treated as provisional until currency conversion lands.',
       mockDataNotice:
         'This screen is using a mocked portfolio snapshot first so the UI and chart structure can settle before the overview APIs land.',
       scopeEyebrow: 'Planning note',
@@ -62,18 +57,18 @@ export const messages = {
         'The homepage is now designed around asset-level portfolio state instead of raw transaction rows. Once the backend overview APIs are ready, these cards and charts can switch from mock data to real snapshots.',
       displayPreferencesTitle: 'Display preferences foundation',
       displayPreferencesDescription:
-        'These preferences are now persisted on the frontend so display-currency behavior can plug into them once FX normalization is ready.',
+        'These preferences are now wired to the portfolio API contract so the homepage can request a preferred display currency when needed.',
       displayCurrencyModeLabel: 'Currency mode',
-      displayCurrencyModeOriginal: 'Original',
+      displayCurrencyModeOriginal: 'Portfolio default',
       displayCurrencyModeBase: 'Preferred base',
       preferredBaseCurrencyLabel: 'Preferred base currency',
       displayModeStatusLabel: 'Current display status',
       displayModeStatusOriginal:
-        'Numbers are currently shown from the raw portfolio snapshot view.',
+        'Numbers are currently shown in the portfolio default display currency: {{currency}}.',
       displayModeStatusBaseAligned:
-        'Preferred base currency is set to {{currency}}, and the current portfolio snapshot already matches it.',
+        'Preferred base currency is set to {{currency}}, and the current portfolio snapshot is already normalized to it.',
       displayModeStatusBasePending:
-        'Preferred base currency is set to {{currency}}, but FX-normalized display is not ready yet. Current numbers still follow the raw snapshot.',
+        'Preferred base currency is set to {{currency}}, but the current response is still normalized to {{currentCurrency}}.',
       assetCount: 'Tracked assets',
       investedCapital: 'Invested capital',
       investedCapitalHint: 'Snapshot of the current portfolio cost basis.',
@@ -106,6 +101,8 @@ export const messages = {
       avgCost: 'Avg cost',
       costBasis: 'Cost basis',
       latestPrice: 'Latest price',
+      latestPriceHint:
+        'Shown in the asset quote currency returned by backend price snapshots.',
       investedAmount: 'Invested amount',
       lastActivity: 'Latest activity',
       noRecentActivity: 'No recent activity yet',
@@ -514,11 +511,6 @@ export const messages = {
       snapshotLabel: '目前快照',
       snapshotAsOf: '更新時間 {{date}}',
       snapshotLiveNotice: '目前顯示的是你現有帳戶可取得的最新投資快照。',
-      mixedCurrencyNoticeTitle: '偵測到多幣別投資組合',
-      mixedCurrencyNoticeBody:
-        '首頁第一版尚未完成換匯整理。現在的總覽數字與圖表仍是直接使用各資產原始數值加總，請先視為過渡狀態，等後續補上匯率轉換後再做正式判讀。',
-      mixedCurrencyNoticeWithPreference:
-        '目前偏好基準幣別設為 {{currency}}，但首頁第一版尚未完成換匯整理。現在的總覽數字與圖表仍是直接使用各資產原始數值加總，請先視為過渡狀態，等後續補上匯率轉換後再做正式判讀。',
       mockDataNotice:
         '目前先用 mock portfolio snapshot 切版，等首頁 overview API 定案後，再把這些卡片與圖表接成真資料。',
       scopeEyebrow: '規劃方向',
@@ -527,18 +519,18 @@ export const messages = {
         '首頁目前以資產整理後的狀態為主，而不是直接攤開交易流水。等後端 overview API 補齊後，這些 cards 與 charts 就能從 mock data 換成真實快照。',
       displayPreferencesTitle: '顯示偏好基礎',
       displayPreferencesDescription:
-        '這些偏好現在先存在前端 store，等後續換匯與顯示幣別邏輯完成後，就能直接接上使用。',
+        '這些偏好現在已經接到 portfolio API contract，首頁可以依需求請求偏好的顯示幣別。',
       displayCurrencyModeLabel: '顯示模式',
-      displayCurrencyModeOriginal: '原幣別',
+      displayCurrencyModeOriginal: '投組預設',
       displayCurrencyModeBase: '偏好基準',
       preferredBaseCurrencyLabel: '偏好基準幣別',
       displayModeStatusLabel: '目前顯示狀態',
       displayModeStatusOriginal:
-        '目前數字仍是依照 portfolio snapshot 的原始視角呈現。',
+        '目前數字是依照投組預設顯示幣別 {{currency}} 呈現。',
       displayModeStatusBaseAligned:
-        '偏好基準幣別目前設為 {{currency}}，而現在的 portfolio snapshot 也已經和它一致。',
+        '偏好基準幣別目前設為 {{currency}}，而目前回傳的 portfolio snapshot 也已經正規化到這個幣別。',
       displayModeStatusBasePending:
-        '偏好基準幣別目前設為 {{currency}}，但首頁還沒完成換匯整理；現在看到的數字仍然沿用原始 snapshot。',
+        '偏好基準幣別目前設為 {{currency}}，但目前回傳的資料仍正規化到 {{currentCurrency}}。',
       assetCount: '追蹤資產數',
       investedCapital: '總投入成本',
       investedCapitalHint: '目前 portfolio snapshot 對應的總成本基礎。',
@@ -571,6 +563,7 @@ export const messages = {
       avgCost: '平均成本',
       costBasis: '成本基礎',
       latestPrice: '最新價格',
+      latestPriceHint: '目前顯示的是後端 price snapshot 回傳的資產報價幣別。',
       investedAmount: '投入金額',
       lastActivity: '最近動作',
       noRecentActivity: '目前還沒有最近動作',
