@@ -14,8 +14,8 @@ type FxCurrentRateQuery = {
 }
 
 export const fxService = {
-  async getCurrentRate(query: FxCurrentRateQuery = {}): Promise<FxCurrentRate> {
-    const response = await api.get<FxCurrentRate>('/fx/rates/current', {
+  async getTodayRate(query: FxCurrentRateQuery = {}): Promise<FxCurrentRate> {
+    const response = await api.get<FxCurrentRate>('/fx/rates/today', {
       params: {
         base: query.base,
         quote: query.quote,

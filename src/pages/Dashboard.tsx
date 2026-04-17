@@ -259,8 +259,8 @@ export default function Dashboard() {
   })
 
   const fxRateQuery = useQuery({
-    queryKey: ['fx', 'current-rate', 'USD', 'TWD'],
-    queryFn: () => fxService.getCurrentRate({ base: 'USD', quote: 'TWD' }),
+    queryKey: ['fx', 'today-rate', 'USD', 'TWD'],
+    queryFn: () => fxService.getTodayRate({ base: 'USD', quote: 'TWD' }),
     enabled: Boolean(currentUserId),
   })
 
