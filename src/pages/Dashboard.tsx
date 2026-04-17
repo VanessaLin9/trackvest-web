@@ -512,8 +512,8 @@ export default function Dashboard() {
               {t('dashboard.displayPreferencesDescription')}
             </p>
 
-            <div className="mt-4 space-y-3">
-              <div>
+            <div className="mt-4 flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
+              <div className="min-w-0 flex-1">
                 <p className="mb-2 text-xs font-medium uppercase tracking-[0.18em] text-gray-500">
                   {t('dashboard.displayCurrencyModeLabel')}
                 </p>
@@ -551,7 +551,14 @@ export default function Dashboard() {
                 </div>
               </div>
 
-              <div>
+              <div
+                aria-hidden={displayCurrencyMode !== 'base'}
+                className={`min-w-[13rem] transition-opacity duration-200 ${
+                  displayCurrencyMode === 'base'
+                    ? 'opacity-100'
+                    : 'pointer-events-none opacity-0'
+                }`}
+              >
                 <p className="mb-2 text-xs font-medium uppercase tracking-[0.18em] text-gray-500">
                   {t('dashboard.preferredBaseCurrencyLabel')}
                 </p>
