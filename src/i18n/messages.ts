@@ -69,6 +69,11 @@ export const messages = {
         'Preferred base currency is set to {{currency}}, and the current portfolio snapshot is already normalized to it.',
       displayModeStatusBasePending:
         'Preferred base currency is set to {{currency}}, but the current response is still normalized to {{currentCurrency}}.',
+      fxRateTitle: 'Today’s FX reference',
+      fxRateLoading: 'Loading today’s USD/TWD reference...',
+      fxRateUnavailable: 'FX reference is unavailable right now.',
+      fxRatePair: '{{base}} / {{quote}}',
+      fxRateMeta: 'Reference date {{date}} · Source {{provider}}',
       assetCount: 'Tracked assets',
       investedCapital: 'Invested capital',
       investedCapitalHint: 'Snapshot of the current portfolio cost basis.',
@@ -531,6 +536,11 @@ export const messages = {
         '偏好基準幣別目前設為 {{currency}}，而目前回傳的 portfolio snapshot 也已經正規化到這個幣別。',
       displayModeStatusBasePending:
         '偏好基準幣別目前設為 {{currency}}，但目前回傳的資料仍正規化到 {{currentCurrency}}。',
+      fxRateTitle: '今日匯率參考',
+      fxRateLoading: '正在載入今日 USD/TWD 匯率...',
+      fxRateUnavailable: '目前無法取得匯率資訊。',
+      fxRatePair: '{{base}} / {{quote}}',
+      fxRateMeta: '參考日期 {{date}} · 來源 {{provider}}',
       assetCount: '追蹤資產數',
       investedCapital: '總投入成本',
       investedCapitalHint: '目前 portfolio snapshot 對應的總成本基礎。',

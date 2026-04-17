@@ -13,6 +13,7 @@ import {
   type PortfolioHolding,
 } from '../lib/portfolio.service'
 import { usePreferencesStore } from '../store/preferences'
+import { fxService } from '../lib/fx.service'
 
 const AllocationChartCard = lazy(() =>
   import('../components/dashboard/PortfolioCharts').then((module) => ({
@@ -139,6 +140,13 @@ function formatSnapshotDate(value: string, locale: string) {
   })
 }
 
+function formatFxRate(value: number, locale: string) {
+  return value.toLocaleString(locale, {
+    minimumFractionDigits: 4,
+    maximumFractionDigits: 6,
+  })
+}
+
 function getHoldingBarColor(pnl: number) {
   if (pnl > 0) {
     return '#0f766e'
@@ -247,6 +255,12 @@ export default function Dashboard() {
           ? { preferredBaseCurrency: requestedDisplayCurrency }
           : undefined,
       ),
+    enabled: Boolean(currentUserId),
+  })
+
+  const fxRateQuery = useQuery({
+    queryKey: ['fx', 'today-rate', 'USD', 'TWD'],
+    queryFn: () => fxService.getTodayRate({ base: 'USD', quote: 'TWD' }),
     enabled: Boolean(currentUserId),
   })
 
@@ -395,6 +409,14 @@ export default function Dashboard() {
     return getErrorMessage(holdingTrendQuery.error, t('dashboard.failedToLoad'))
   }, [holdingTrendQuery.error, t])
 
+  const fxRateErrorMessage = useMemo(() => {
+    if (!fxRateQuery.error) {
+      return null
+    }
+
+    return getErrorMessage(fxRateQuery.error, t('dashboard.fxRateUnavailable'))
+  }, [fxRateQuery.error, t])
+
   const displayModeStatusMessage = useMemo(() => {
     if (summary?.displayCurrencyMode === 'portfolio-default') {
       return t('dashboard.displayModeStatusOriginal', {
@@ -490,8 +512,8 @@ export default function Dashboard() {
               {t('dashboard.displayPreferencesDescription')}
             </p>
 
-            <div className="mt-4 space-y-3">
-              <div>
+            <div className="mt-4 flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
+              <div className="min-w-0 flex-1">
                 <p className="mb-2 text-xs font-medium uppercase tracking-[0.18em] text-gray-500">
                   {t('dashboard.displayCurrencyModeLabel')}
                 </p>
@@ -529,7 +551,14 @@ export default function Dashboard() {
                 </div>
               </div>
 
-              <div>
+              <div
+                aria-hidden={displayCurrencyMode !== 'base'}
+                className={`min-w-[13rem] transition-opacity duration-200 ${
+                  displayCurrencyMode === 'base'
+                    ? 'opacity-100'
+                    : 'pointer-events-none opacity-0'
+                }`}
+              >
                 <p className="mb-2 text-xs font-medium uppercase tracking-[0.18em] text-gray-500">
                   {t('dashboard.preferredBaseCurrencyLabel')}
                 </p>
@@ -585,6 +614,43 @@ export default function Dashboard() {
                 {formatPercent(summary?.totalReturnRate ?? 0)}
               </p>
             </div>
+          </div>
+
+          <div className="mt-4 rounded-2xl border border-amber-200/80 bg-white/80 px-4 py-4 shadow-sm">
+            <p className="text-xs uppercase tracking-[0.2em] text-amber-700">
+              {t('dashboard.fxRateTitle')}
+            </p>
+            {fxRateQuery.isLoading ? (
+              <p className="mt-2 text-sm text-amber-900/80">
+                {t('dashboard.fxRateLoading')}
+              </p>
+            ) : fxRateErrorMessage ? (
+              <p className="mt-2 text-sm text-red-700">{fxRateErrorMessage}</p>
+            ) : fxRateQuery.data ? (
+              <>
+                <div className="mt-2 flex items-baseline gap-3">
+                  <p className="text-xl font-semibold text-slate-900">
+                    {formatFxRate(fxRateQuery.data.rate, locale)}
+                  </p>
+                  <p className="text-sm text-amber-900/80">
+                    {t('dashboard.fxRatePair', {
+                      base: fxRateQuery.data.base,
+                      quote: fxRateQuery.data.quote,
+                    })}
+                  </p>
+                </div>
+                <p className="mt-1 text-sm text-amber-900/80">
+                  {t('dashboard.fxRateMeta', {
+                    date: fxRateQuery.data.date,
+                    provider: fxRateQuery.data.provider,
+                  })}
+                </p>
+              </>
+            ) : (
+              <p className="mt-2 text-sm text-amber-900/80">
+                {t('dashboard.fxRateUnavailable')}
+              </p>
+            )}
           </div>
         </div>
       </section>
