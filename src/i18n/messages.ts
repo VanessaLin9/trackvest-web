@@ -70,9 +70,9 @@ export const messages = {
       displayModeStatusBasePending:
         'Preferred base currency is set to {{currency}}, but the current response is still normalized to {{currentCurrency}}.',
       fxRateTitle: 'Today’s FX reference',
-      fxRateLoading: 'Loading today’s TWD/USD reference...',
+      fxRateLoading: 'Loading today’s USD/TWD reference...',
       fxRateUnavailable: 'FX reference is unavailable right now.',
-      fxRateValue: '1 {{base}} = {{rate}} {{quote}}',
+      fxRatePair: '{{base}} / {{quote}}',
       fxRateMeta: 'Reference date {{date}} · Source {{provider}}',
       assetCount: 'Tracked assets',
       investedCapital: 'Invested capital',
@@ -537,9 +537,9 @@ export const messages = {
       displayModeStatusBasePending:
         '偏好基準幣別目前設為 {{currency}}，但目前回傳的資料仍正規化到 {{currentCurrency}}。',
       fxRateTitle: '今日匯率參考',
-      fxRateLoading: '正在載入今日 TWD/USD 匯率...',
+      fxRateLoading: '正在載入今日 USD/TWD 匯率...',
       fxRateUnavailable: '目前無法取得匯率資訊。',
-      fxRateValue: '1 {{base}} = {{rate}} {{quote}}',
+      fxRatePair: '{{base}} / {{quote}}',
       fxRateMeta: '參考日期 {{date}} · 來源 {{provider}}',
       assetCount: '追蹤資產數',
       investedCapital: '總投入成本',
