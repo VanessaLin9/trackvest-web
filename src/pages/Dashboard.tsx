@@ -259,8 +259,8 @@ export default function Dashboard() {
   })
 
   const fxRateQuery = useQuery({
-    queryKey: ['fx', 'current-rate', 'TWD', 'USD'],
-    queryFn: () => fxService.getCurrentRate({ base: 'TWD', quote: 'USD' }),
+    queryKey: ['fx', 'current-rate', 'USD', 'TWD'],
+    queryFn: () => fxService.getCurrentRate({ base: 'USD', quote: 'TWD' }),
     enabled: Boolean(currentUserId),
   })
 
@@ -621,14 +621,18 @@ export default function Dashboard() {
               <p className="mt-2 text-sm text-red-700">{fxRateErrorMessage}</p>
             ) : fxRateQuery.data ? (
               <>
-                <p className="mt-2 text-xl font-semibold text-slate-900">
-                  {t('dashboard.fxRateValue', {
-                    base: fxRateQuery.data.base,
-                    rate: formatFxRate(fxRateQuery.data.rate, locale),
-                    quote: fxRateQuery.data.quote,
-                  })}
-                </p>
-                <p className="mt-2 text-sm text-amber-900/80">
+                <div className="mt-2 flex items-baseline gap-3">
+                  <p className="text-xl font-semibold text-slate-900">
+                    {formatFxRate(fxRateQuery.data.rate, locale)}
+                  </p>
+                  <p className="text-sm text-amber-900/80">
+                    {t('dashboard.fxRatePair', {
+                      base: fxRateQuery.data.base,
+                      quote: fxRateQuery.data.quote,
+                    })}
+                  </p>
+                </div>
+                <p className="mt-1 text-sm text-amber-900/80">
                   {t('dashboard.fxRateMeta', {
                     date: fxRateQuery.data.date,
                     provider: fxRateQuery.data.provider,
