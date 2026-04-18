@@ -12,6 +12,7 @@ const { getAssets, createAsset, updateAsset } = vi.hoisted(() => ({
 }))
 
 vi.mock('../lib/assets.service', () => ({
+  ASSET_CLASS_OPTIONS: ['equity', 'bond', 'cash', 'crypto', 'precious_metal'],
   ASSET_TYPE_OPTIONS: ['equity', 'etf', 'crypto', 'cash'],
   BASE_CURRENCY_OPTIONS: ['USD', 'TWD'],
   assetsService: {
@@ -28,6 +29,7 @@ describe('Assets page edit mode', () => {
       symbol: 'AAPL',
       name: 'Apple Inc.',
       type: 'equity',
+      assetClass: 'equity',
       baseCurrency: 'USD',
     },
     {
@@ -35,6 +37,7 @@ describe('Assets page edit mode', () => {
       symbol: '0050',
       name: 'Taiwan Top 50',
       type: 'etf',
+      assetClass: 'equity',
       baseCurrency: 'TWD',
     },
   ]
@@ -62,6 +65,7 @@ describe('Assets page edit mode', () => {
       ...initialAssets[0],
       name: 'Apple Incorporated',
       type: 'etf',
+      assetClass: 'bond',
       baseCurrency: 'TWD',
     })
   })
@@ -92,6 +96,7 @@ describe('Assets page edit mode', () => {
             symbol: 'AAPL',
             name: 'Apple Incorporated',
             type: 'etf',
+            assetClass: 'bond',
             baseCurrency: 'TWD',
           },
           initialAssets[1],
@@ -120,6 +125,9 @@ describe('Assets page edit mode', () => {
     fireEvent.change(screen.getByLabelText('Type'), {
       target: { value: 'etf' },
     })
+    fireEvent.change(screen.getByLabelText('Asset class'), {
+      target: { value: 'bond' },
+    })
 
     fireEvent.click(screen.getByRole('button', { name: 'Save changes' }))
 
@@ -128,6 +136,7 @@ describe('Assets page edit mode', () => {
         symbol: 'AAPL',
         name: 'Apple Incorporated',
         type: 'etf',
+        assetClass: 'bond',
         baseCurrency: 'TWD',
       })
     })
@@ -185,6 +194,7 @@ describe('Assets page edit mode', () => {
         symbol: 'BTC',
         name: 'Bitcoin',
         type: 'crypto',
+        assetClass: 'crypto',
         baseCurrency: 'USD',
       },
     ]
@@ -303,6 +313,7 @@ describe('Assets page edit mode', () => {
         symbol: 'BTC',
         name: 'Bitcoin',
         type: 'crypto',
+        assetClass: 'crypto',
         baseCurrency: 'USD',
       },
     ]
@@ -366,6 +377,7 @@ describe('Assets page edit mode', () => {
         symbol: 'AAPL',
         name: 'Apple Inc.',
         type: 'equity',
+        assetClass: 'equity',
         baseCurrency: 'TWD',
       })
     })
@@ -419,6 +431,7 @@ describe('Assets page edit mode', () => {
       symbol: `SYM${index + 1}`,
       name: `Asset ${index + 1}`,
       type: index % 2 === 0 ? 'equity' : 'etf',
+      assetClass: index % 4 === 0 ? 'bond' : 'equity',
       baseCurrency: index % 3 === 0 ? 'USD' : 'TWD',
     }))
 
@@ -474,6 +487,7 @@ describe('Assets page edit mode', () => {
       symbol: `SYM${index + 1}`,
       name: `Asset ${index + 1}`,
       type: index % 2 === 0 ? 'equity' : 'etf',
+      assetClass: index % 4 === 0 ? 'bond' : 'equity',
       baseCurrency: index % 3 === 0 ? 'USD' : 'TWD',
     }))
 

@@ -3,9 +3,11 @@ import { Link } from 'react-router-dom'
 import { useI18n } from '../i18n'
 import {
   assetsService,
+  ASSET_CLASS_OPTIONS,
   ASSET_TYPE_OPTIONS,
   BASE_CURRENCY_OPTIONS,
   type Asset,
+  type AssetClass,
   type AssetType,
   type GetAssetsParams,
 } from '../lib/assets.service'
@@ -25,6 +27,7 @@ type AssetFormState = {
   symbol: string
   name: string
   type: AssetType
+  assetClass: AssetClass
   baseCurrency: string
 }
 
@@ -37,7 +40,22 @@ const DEFAULT_FORM: AssetFormState = {
   symbol: '',
   name: '',
   type: 'equity',
+  assetClass: 'equity',
   baseCurrency: 'USD',
+}
+
+function getSuggestedAssetClassForType(type: AssetType): AssetClass {
+  switch (type) {
+    case 'equity':
+      return 'equity'
+    case 'crypto':
+      return 'crypto'
+    case 'cash':
+      return 'cash'
+    case 'etf':
+    default:
+      return 'equity'
+  }
 }
 
 function toAssetFormState(asset: Asset): AssetFormState {
@@ -45,6 +63,7 @@ function toAssetFormState(asset: Asset): AssetFormState {
     symbol: asset.symbol,
     name: asset.name,
     type: asset.type,
+    assetClass: asset.assetClass ?? getSuggestedAssetClassForType(asset.type),
     baseCurrency: asset.baseCurrency,
   }
 }
@@ -83,6 +102,30 @@ function formatTypeLabel(
       return t('assets.typeCash')
     default:
       return type.toUpperCase()
+  }
+}
+
+function formatAssetClassLabel(
+  assetClass: string | null | undefined,
+  t: (key: string) => string,
+) {
+  if (!assetClass) {
+    return t('assets.unknownAssetClass')
+  }
+
+  switch (assetClass) {
+    case 'equity':
+      return t('assets.assetClassEquity')
+    case 'bond':
+      return t('assets.assetClassBond')
+    case 'cash':
+      return t('assets.assetClassCash')
+    case 'crypto':
+      return t('assets.assetClassCrypto')
+    case 'precious_metal':
+      return t('assets.assetClassPreciousMetal')
+    default:
+      return assetClass.toUpperCase()
   }
 }
 
@@ -334,6 +377,7 @@ export default function Assets() {
         symbol,
         name,
         type: form.type,
+        assetClass: form.assetClass,
         baseCurrency,
       }
 
@@ -479,10 +523,20 @@ export default function Assets() {
                 id="asset-type"
                 value={form.type}
                 onChange={(event) =>
-                  setForm((current) => ({
-                    ...current,
-                    type: event.target.value as AssetType,
-                  }))
+                  setForm((current) => {
+                    const nextType = event.target.value as AssetType
+                    const previousSuggestedClass = getSuggestedAssetClassForType(current.type)
+                    const nextSuggestedClass = getSuggestedAssetClassForType(nextType)
+
+                    return {
+                      ...current,
+                      type: nextType,
+                      assetClass:
+                        current.assetClass === previousSuggestedClass
+                          ? nextSuggestedClass
+                          : current.assetClass,
+                    }
+                  })
                 }
                 className="w-full rounded border border-gray-300 px-3 py-2"
               >
@@ -492,6 +546,30 @@ export default function Assets() {
                   </option>
                 ))}
               </select>
+            </div>
+
+            <div className="space-y-1 md:col-span-2">
+              <label htmlFor="asset-asset-class" className="block text-sm font-medium text-gray-700">
+                {t('assets.assetClass')}
+              </label>
+              <select
+                id="asset-asset-class"
+                value={form.assetClass}
+                onChange={(event) =>
+                  setForm((current) => ({
+                    ...current,
+                    assetClass: event.target.value as AssetClass,
+                  }))
+                }
+                className="w-full rounded border border-gray-300 px-3 py-2"
+              >
+                {ASSET_CLASS_OPTIONS.map((assetClass) => (
+                  <option key={assetClass} value={assetClass}>
+                    {formatAssetClassLabel(assetClass, t)}
+                  </option>
+                ))}
+              </select>
+              <p className="text-xs text-gray-500">{t('assets.assetClassHint')}</p>
             </div>
 
             <div className="md:col-span-2 flex items-center justify-between rounded-lg bg-gray-50 px-4 py-3">
@@ -544,6 +622,9 @@ export default function Assets() {
                 <div className="text-gray-600">{selectedAsset.name}</div>
                 <div className="mt-3 text-sm text-gray-500">
                   {t('assets.baseCurrency')}: {selectedAsset.baseCurrency}
+                </div>
+                <div className="mt-1 text-sm text-gray-500">
+                  {t('assets.assetClass')}: {formatAssetClassLabel(selectedAsset.assetClass, t)}
                 </div>
               </div>
               <div className="flex items-center justify-between gap-3">

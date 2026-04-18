@@ -26,12 +26,14 @@ export type SaveAssetPayload = {
   symbol: string
   name: string
   type: AssetType
+  assetClass: AssetClass
   baseCurrency: string
 }
 
 export type GetAssetsParams = {
   q?: string
   type?: AssetType
+  assetClass?: AssetClass
   baseCurrency?: string
   page?: number
   take?: number
