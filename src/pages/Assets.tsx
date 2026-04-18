@@ -786,6 +786,7 @@ export default function Assets() {
                     <th className="px-3 py-3 font-medium text-gray-600">{t('assets.symbol')}</th>
                     <th className="px-3 py-3 font-medium text-gray-600">{t('assets.name')}</th>
                     <th className="px-3 py-3 font-medium text-gray-600">{t('assets.type')}</th>
+                    <th className="px-3 py-3 font-medium text-gray-600">{t('assets.assetClass')}</th>
                     <th className="px-3 py-3 font-medium text-gray-600">{t('assets.baseCurrency')}</th>
                   </tr>
                 </thead>
@@ -813,6 +814,9 @@ export default function Assets() {
                         <td className="px-3 py-3 text-gray-700">{asset.name}</td>
                         <td className="px-3 py-3 capitalize text-gray-600">
                           {formatTypeLabel(asset.type, t)}
+                        </td>
+                        <td className="px-3 py-3 text-gray-600">
+                          {formatAssetClassLabel(asset.assetClass, t)}
                         </td>
                         <td className="px-3 py-3 text-gray-600">
                           {asset.baseCurrency}
