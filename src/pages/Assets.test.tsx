@@ -239,21 +239,26 @@ describe('Assets page edit mode', () => {
       expect(screen.getByText('1 matching asset')).toBeTruthy()
     })
 
-    fireEvent.click(screen.getByRole('button', { name: 'Equity' }))
+    fireEvent.change(screen.getByLabelText('Filter by asset class'), {
+      target: { value: 'equity' },
+    })
 
     await waitFor(() => {
       expect(getAssets).toHaveBeenLastCalledWith({
         page: 1,
         q: 'bit',
         take: 10,
-        type: 'equity',
+        assetClass: 'equity',
       })
       expect(screen.getByText('No assets match the current search or filters.')).toBeTruthy()
-      expect(screen.getByRole('button', { name: 'All types' })).toBeTruthy()
-      expect(screen.getByRole('button', { name: 'All currencies' })).toBeTruthy()
+      expect(screen.getByLabelText('Filter by asset class')).toBeTruthy()
+      expect(screen.getByLabelText('Filter by type')).toBeTruthy()
+      expect(screen.getByLabelText('Filter by base currency')).toBeTruthy()
     })
 
-    fireEvent.click(screen.getByRole('button', { name: 'All types' }))
+    fireEvent.change(screen.getByLabelText('Filter by asset class'), {
+      target: { value: 'all' },
+    })
 
     await waitFor(() => {
       expect(getAssets).toHaveBeenLastCalledWith({
@@ -306,7 +311,7 @@ describe('Assets page edit mode', () => {
     })
   })
 
-  it('flushes pending search input when a filter pill is clicked', async () => {
+  it('flushes pending search input when a filter dropdown changes', async () => {
     const filteredAssets: Asset[] = [
       {
         id: 'asset-btc',
@@ -336,7 +341,9 @@ describe('Assets page edit mode', () => {
     fireEvent.change(screen.getByLabelText('Search assets'), {
       target: { value: 'bit' },
     })
-    fireEvent.click(screen.getByRole('button', { name: 'Crypto' }))
+    fireEvent.change(screen.getByLabelText('Filter by type'), {
+      target: { value: 'crypto' },
+    })
 
     await waitFor(() => {
       expect(getAssets).toHaveBeenCalledTimes(2)
@@ -476,8 +483,9 @@ describe('Assets page edit mode', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Edit' }))
 
     expect((screen.getByLabelText('Search assets') as HTMLInputElement).disabled).toBe(true)
-    expect((screen.getByRole('button', { name: 'All types' }) as HTMLButtonElement).disabled).toBe(true)
-    expect((screen.getByRole('button', { name: 'All currencies' }) as HTMLButtonElement).disabled).toBe(true)
+    expect((screen.getByLabelText('Filter by asset class') as HTMLSelectElement).disabled).toBe(true)
+    expect((screen.getByLabelText('Filter by type') as HTMLSelectElement).disabled).toBe(true)
+    expect((screen.getByLabelText('Filter by base currency') as HTMLSelectElement).disabled).toBe(true)
     expect((screen.getByRole('button', { name: 'Next' }) as HTMLButtonElement).disabled).toBe(true)
   })
 
@@ -527,7 +535,9 @@ describe('Assets page edit mode', () => {
 
     const callsBeforeFilter = getAssets.mock.calls.length
 
-    fireEvent.click(screen.getByRole('button', { name: 'Equity' }))
+    fireEvent.change(screen.getByLabelText('Filter by type'), {
+      target: { value: 'equity' },
+    })
 
     await waitFor(() => {
       expect(getAssets).toHaveBeenCalledTimes(callsBeforeFilter + 1)
