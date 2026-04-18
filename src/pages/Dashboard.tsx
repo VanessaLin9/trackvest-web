@@ -40,6 +40,10 @@ const HoldingTrendChartCard = lazy(() =>
 )
 
 const PORTFOLIO_COLORS = ['#0f766e', '#2563eb', '#f59e0b', '#9333ea', '#ef4444']
+const REBALANCE_TARGETS = {
+  equity: 0.8,
+  bond: 0.2,
+} as const
 
 function getErrorMessage(err: unknown, fallback: string) {
   if (err && typeof err === 'object' && 'response' in err) {
@@ -105,6 +109,11 @@ function formatPercent(
     signed && value > 0 ? '+' : signed && value < 0 ? '-' : ''
 
   return `${prefix}${(Math.abs(value) * 100).toFixed(2)}%`
+}
+
+function formatPercentPoints(value: number) {
+  const prefix = value > 0 ? '+' : value < 0 ? '-' : ''
+  return `${prefix}${Math.abs(value * 100).toFixed(2)}pp`
 }
 
 function formatHoldingType(
@@ -236,6 +245,20 @@ function renderTooltipValue(
   }
 
   return formatCurrencyWithCode(value, locale, currency)
+}
+
+function calculateBuyToTargetAmount(
+  currentValue: number,
+  totalValue: number,
+  targetWeight: number,
+) {
+  const targetValue = totalValue * targetWeight
+
+  if (currentValue >= targetValue || targetWeight >= 1) {
+    return 0
+  }
+
+  return (targetValue - currentValue) / (1 - targetWeight)
 }
 
 function ChartCardFallback({
@@ -419,6 +442,63 @@ export default function Dashboard() {
       })),
     [holdings],
   )
+
+  const rebalancePlan = useMemo(() => {
+    const allocationByAssetClass = holdingsQuery.data?.allocationByAssetClass ?? []
+    const totalMarketValue = allocationByAssetClass.reduce(
+      (sum, item) => sum + item.marketValue,
+      0,
+    )
+
+    if (totalMarketValue <= 0) {
+      return null
+    }
+
+    const equityValue =
+      allocationByAssetClass.find((item) => item.assetClass === 'equity')?.marketValue ?? 0
+    const bondValue =
+      allocationByAssetClass.find((item) => item.assetClass === 'bond')?.marketValue ?? 0
+
+    const equityWeight = equityValue / totalMarketValue
+    const bondWeight = bondValue / totalMarketValue
+    const equityGap = REBALANCE_TARGETS.equity - equityWeight
+    const bondGap = REBALANCE_TARGETS.bond - bondWeight
+
+    const buyEquityAmount = calculateBuyToTargetAmount(
+      equityValue,
+      totalMarketValue,
+      REBALANCE_TARGETS.equity,
+    )
+    const buyBondAmount = calculateBuyToTargetAmount(
+      bondValue,
+      totalMarketValue,
+      REBALANCE_TARGETS.bond,
+    )
+
+    const dominantRecommendation =
+      buyEquityAmount > buyBondAmount
+        ? {
+            assetClass: 'equity' as const,
+            amount: buyEquityAmount,
+          }
+        : buyBondAmount > 0
+          ? {
+              assetClass: 'bond' as const,
+              amount: buyBondAmount,
+            }
+          : null
+
+    return {
+      totalMarketValue,
+      equityWeight,
+      bondWeight,
+      equityGap,
+      bondGap,
+      buyEquityAmount,
+      buyBondAmount,
+      dominantRecommendation,
+    }
+  }, [holdingsQuery.data?.allocationByAssetClass])
 
   const portfolioTrendData = useMemo<TrendPoint[]>(
     () =>
@@ -763,6 +843,159 @@ export default function Dashboard() {
           </p>
           <p className="mt-2 text-xs text-gray-500">{t('dashboard.returnDescription')}</p>
         </div>
+      </section>
+
+      <section className="rounded-[2rem] border border-slate-200 bg-white p-6 shadow-sm">
+        <div className="flex flex-wrap items-start justify-between gap-4">
+          <div className="space-y-2">
+            <p className="text-xs uppercase tracking-[0.22em] text-slate-500">
+              {t('dashboard.rebalanceEyebrow')}
+            </p>
+            <h2 className="text-2xl font-semibold text-slate-900">
+              {t('dashboard.rebalanceTitle')}
+            </h2>
+            <p className="max-w-3xl text-sm leading-6 text-slate-600">
+              {t('dashboard.rebalanceDescription')}
+            </p>
+          </div>
+
+          <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-right">
+            <p className="text-xs uppercase tracking-[0.18em] text-slate-500">
+              {t('dashboard.rebalanceTargetLabel')}
+            </p>
+            <p className="mt-2 text-lg font-semibold text-slate-900">
+              {t('dashboard.rebalanceTargetValue')}
+            </p>
+          </div>
+        </div>
+
+        {rebalancePlan ? (
+          <div className="mt-6 grid gap-4 xl:grid-cols-[1.1fr_0.9fr]">
+            <div className="grid gap-4 md:grid-cols-2">
+              <div className="rounded-2xl border border-blue-100 bg-blue-50/70 p-4">
+                <p className="text-xs uppercase tracking-[0.18em] text-blue-700">
+                  {t('dashboard.assetClassEquity')}
+                </p>
+                <p className="mt-2 text-2xl font-semibold text-slate-900">
+                  {formatPercent(rebalancePlan.equityWeight, { signed: false })}
+                </p>
+                <div className="mt-3 space-y-1 text-sm text-slate-600">
+                  <p>
+                    {t('dashboard.rebalanceCurrentLabel')}{' '}
+                    {formatCurrencyWithCode(
+                      rebalancePlan.totalMarketValue * rebalancePlan.equityWeight,
+                      locale,
+                      displayCurrency,
+                    )}
+                  </p>
+                  <p>
+                    {t('dashboard.rebalanceGapLabel')}{' '}
+                    <span
+                      className={
+                        rebalancePlan.equityGap >= 0 ? 'text-emerald-700' : 'text-amber-700'
+                      }
+                    >
+                      {formatPercentPoints(rebalancePlan.equityGap)}
+                    </span>
+                  </p>
+                  <p>
+                    {t('dashboard.rebalanceBuyMoreLabel')}{' '}
+                    {rebalancePlan.buyEquityAmount > 0
+                      ? formatCurrencyWithCode(
+                          rebalancePlan.buyEquityAmount,
+                          locale,
+                          displayCurrency,
+                        )
+                      : t('dashboard.rebalanceAtOrAboveTarget')}
+                  </p>
+                </div>
+              </div>
+
+              <div className="rounded-2xl border border-teal-100 bg-teal-50/70 p-4">
+                <p className="text-xs uppercase tracking-[0.18em] text-teal-700">
+                  {t('dashboard.assetClassBond')}
+                </p>
+                <p className="mt-2 text-2xl font-semibold text-slate-900">
+                  {formatPercent(rebalancePlan.bondWeight, { signed: false })}
+                </p>
+                <div className="mt-3 space-y-1 text-sm text-slate-600">
+                  <p>
+                    {t('dashboard.rebalanceCurrentLabel')}{' '}
+                    {formatCurrencyWithCode(
+                      rebalancePlan.totalMarketValue * rebalancePlan.bondWeight,
+                      locale,
+                      displayCurrency,
+                    )}
+                  </p>
+                  <p>
+                    {t('dashboard.rebalanceGapLabel')}{' '}
+                    <span
+                      className={
+                        rebalancePlan.bondGap >= 0 ? 'text-emerald-700' : 'text-amber-700'
+                      }
+                    >
+                      {formatPercentPoints(rebalancePlan.bondGap)}
+                    </span>
+                  </p>
+                  <p>
+                    {t('dashboard.rebalanceBuyMoreLabel')}{' '}
+                    {rebalancePlan.buyBondAmount > 0
+                      ? formatCurrencyWithCode(
+                          rebalancePlan.buyBondAmount,
+                          locale,
+                          displayCurrency,
+                        )
+                      : t('dashboard.rebalanceAtOrAboveTarget')}
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            <div className="rounded-3xl border border-slate-200 bg-slate-50 p-5">
+              <p className="text-xs uppercase tracking-[0.2em] text-slate-500">
+                {t('dashboard.rebalanceActionTitle')}
+              </p>
+              {rebalancePlan.dominantRecommendation ? (
+                <>
+                  <p className="mt-3 text-2xl font-semibold text-slate-900">
+                    {t('dashboard.rebalanceActionBuy', {
+                      assetClass:
+                        rebalancePlan.dominantRecommendation.assetClass === 'equity'
+                          ? t('dashboard.assetClassEquity')
+                          : t('dashboard.assetClassBond'),
+                    })}
+                  </p>
+                  <p className="mt-2 text-sm leading-6 text-slate-600">
+                    {t('dashboard.rebalanceActionDescription', {
+                      amount: formatCurrencyWithCode(
+                        rebalancePlan.dominantRecommendation.amount,
+                        locale,
+                        displayCurrency,
+                      ),
+                    })}
+                  </p>
+                </>
+              ) : (
+                <p className="mt-3 text-sm leading-6 text-slate-600">
+                  {t('dashboard.rebalanceNoActionNeeded')}
+                </p>
+              )}
+
+              <div className="mt-5 rounded-2xl border border-slate-200 bg-white px-4 py-3">
+                <p className="text-[11px] font-medium uppercase tracking-[0.18em] text-slate-500">
+                  {t('dashboard.rebalanceFootnoteLabel')}
+                </p>
+                <p className="mt-2 text-sm leading-6 text-slate-600">
+                  {t('dashboard.rebalanceFootnote')}
+                </p>
+              </div>
+            </div>
+          </div>
+        ) : (
+          <div className="mt-6 rounded-2xl border border-dashed border-slate-300 bg-slate-50 px-5 py-6 text-sm text-slate-600">
+            {t('dashboard.rebalanceEmptyState')}
+          </div>
+        )}
       </section>
 
       {holdings.length === 0 ? (

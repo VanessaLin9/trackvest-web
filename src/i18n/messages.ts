@@ -99,6 +99,27 @@ export const messages = {
       assetClassCash: 'Cash',
       assetClassCrypto: 'Crypto',
       assetClassPreciousMetal: 'Precious metal',
+      rebalanceEyebrow: 'Rebalance',
+      rebalanceTitle: 'Bring the portfolio back toward target',
+      rebalanceDescription:
+        'First pass uses asset class weights from the current holdings snapshot. This card is intentionally compact so we can validate the workflow before the dedicated rebalance API lands.',
+      rebalanceTargetLabel: 'Target mix',
+      rebalanceTargetValue: '80% Equity / 20% Bond',
+      rebalanceCurrentLabel: 'Current:',
+      rebalanceGapLabel: 'Gap:',
+      rebalanceBuyMoreLabel: 'Buy more:',
+      rebalanceAtOrAboveTarget: 'At or above target',
+      rebalanceActionTitle: 'Suggested next move',
+      rebalanceActionBuy: 'Add more {{assetClass}}',
+      rebalanceActionDescription:
+        'If you only top up one side for now, start with about {{amount}} to move the portfolio closer to the target mix.',
+      rebalanceNoActionNeeded:
+        'Current equity and bond weights are already close to the target mix.',
+      rebalanceFootnoteLabel: 'Planning note',
+      rebalanceFootnote:
+        'This first version only looks at equity and bond asset classes. Specific asset suggestions can come later with a dedicated backend rebalance endpoint.',
+      rebalanceEmptyState:
+        'Rebalance guidance will appear once the portfolio has enough asset-class data to compare equity and bond exposure.',
       performanceTitle: 'P&L by asset',
       performanceDescription:
         'Quickly spot which holdings are doing the heavy lifting and which ones are dragging performance.',
@@ -590,6 +611,27 @@ export const messages = {
       assetClassCash: '現金',
       assetClassCrypto: '加密資產',
       assetClassPreciousMetal: '貴金屬',
+      rebalanceEyebrow: '再平衡',
+      rebalanceTitle: '把投組慢慢拉回目標配置',
+      rebalanceDescription:
+        '第一版先使用目前 holdings snapshot 的 asset class 權重來估算。這張卡刻意先做成 compact 版，方便我們在專用 rebalance API 完成前先驗證流程。',
+      rebalanceTargetLabel: '目標配置',
+      rebalanceTargetValue: '80% 股票 / 20% 債券',
+      rebalanceCurrentLabel: '目前：',
+      rebalanceGapLabel: '差距：',
+      rebalanceBuyMoreLabel: '建議再買：',
+      rebalanceAtOrAboveTarget: '已達或高於目標',
+      rebalanceActionTitle: '下一步建議',
+      rebalanceActionBuy: '優先補 {{assetClass}}',
+      rebalanceActionDescription:
+        '如果這一輪只先補一邊，先補約 {{amount}}，就能讓投組更接近目標配置。',
+      rebalanceNoActionNeeded:
+        '目前股票與債券的配置已經很接近目標比例。',
+      rebalanceFootnoteLabel: '規劃備註',
+      rebalanceFootnote:
+        '第一版只先看股票與債券這兩個 asset class。更細的具體資產建議，之後再配合專用 rebalance API 補上。',
+      rebalanceEmptyState:
+        '等投組累積足夠的 asset class 資料後，這裡就會顯示再平衡建議。',
       performanceTitle: '各資產損益',
       performanceDescription:
         '快速辨認誰在貢獻績效、誰正在拖累整體表現。',
