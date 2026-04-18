@@ -3,9 +3,11 @@ import { Link } from 'react-router-dom'
 import { useI18n } from '../i18n'
 import {
   assetsService,
+  ASSET_CLASS_OPTIONS,
   ASSET_TYPE_OPTIONS,
   BASE_CURRENCY_OPTIONS,
   type Asset,
+  type AssetClass,
   type AssetType,
   type GetAssetsParams,
 } from '../lib/assets.service'
@@ -25,6 +27,7 @@ type AssetFormState = {
   symbol: string
   name: string
   type: AssetType
+  assetClass: AssetClass
   baseCurrency: string
 }
 
@@ -37,7 +40,22 @@ const DEFAULT_FORM: AssetFormState = {
   symbol: '',
   name: '',
   type: 'equity',
+  assetClass: 'equity',
   baseCurrency: 'USD',
+}
+
+function getSuggestedAssetClassForType(type: AssetType): AssetClass {
+  switch (type) {
+    case 'equity':
+      return 'equity'
+    case 'crypto':
+      return 'crypto'
+    case 'cash':
+      return 'cash'
+    case 'etf':
+    default:
+      return 'equity'
+  }
 }
 
 function toAssetFormState(asset: Asset): AssetFormState {
@@ -45,6 +63,7 @@ function toAssetFormState(asset: Asset): AssetFormState {
     symbol: asset.symbol,
     name: asset.name,
     type: asset.type,
+    assetClass: asset.assetClass ?? getSuggestedAssetClassForType(asset.type),
     baseCurrency: asset.baseCurrency,
   }
 }
@@ -86,6 +105,49 @@ function formatTypeLabel(
   }
 }
 
+function formatAssetClassLabel(
+  assetClass: string | null | undefined,
+  t: (key: string) => string,
+) {
+  if (!assetClass) {
+    return t('assets.unknownAssetClass')
+  }
+
+  switch (assetClass) {
+    case 'equity':
+      return t('assets.assetClassEquity')
+    case 'bond':
+      return t('assets.assetClassBond')
+    case 'cash':
+      return t('assets.assetClassCash')
+    case 'crypto':
+      return t('assets.assetClassCrypto')
+    case 'precious_metal':
+      return t('assets.assetClassPreciousMetal')
+    default:
+      return assetClass.toUpperCase()
+  }
+}
+
+function FilterChevronIcon() {
+  return (
+    <svg
+      aria-hidden="true"
+      viewBox="0 0 20 20"
+      fill="none"
+      className="h-4 w-4"
+    >
+      <path
+        d="M6 8l4 4 4-4"
+        stroke="currentColor"
+        strokeWidth="1.8"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  )
+}
+
 export default function Assets() {
   const { t } = useI18n()
   const [assets, setAssets] = useState<Asset[]>([])
@@ -93,6 +155,7 @@ export default function Assets() {
   const [selectedAssetId, setSelectedAssetId] = useState<string | null>(null)
   const [form, setForm] = useState<AssetFormState>(DEFAULT_FORM)
   const [searchQuery, setSearchQuery] = useState('')
+  const [assetClassFilter, setAssetClassFilter] = useState<string>(ALL_FILTER_VALUE)
   const [typeFilter, setTypeFilter] = useState<string>(ALL_FILTER_VALUE)
   const [currencyFilter, setCurrencyFilter] = useState<string>(ALL_FILTER_VALUE)
   const [currentPage, setCurrentPage] = useState(1)
@@ -124,6 +187,7 @@ export default function Assets() {
 
   const hasActiveCatalogFilters =
     Boolean(debouncedSearchQuery) ||
+    assetClassFilter !== ALL_FILTER_VALUE ||
     typeFilter !== ALL_FILTER_VALUE ||
     currencyFilter !== ALL_FILTER_VALUE
 
@@ -154,6 +218,10 @@ export default function Assets() {
 
       if (typeFilter !== ALL_FILTER_VALUE) {
         query.type = typeFilter as AssetType
+      }
+
+      if (assetClassFilter !== ALL_FILTER_VALUE) {
+        query.assetClass = assetClassFilter as AssetClass
       }
 
       if (currencyFilter !== ALL_FILTER_VALUE) {
@@ -189,7 +257,7 @@ export default function Assets() {
 
   useEffect(() => {
     loadAssets().catch(console.error)
-  }, [currentPage, currencyFilter, debouncedSearchQuery, typeFilter])
+  }, [assetClassFilter, currentPage, currencyFilter, debouncedSearchQuery, typeFilter])
 
   useEffect(() => {
     if (currentPage > totalPages) {
@@ -266,6 +334,14 @@ export default function Assets() {
     }
   }
 
+  const handleAssetClassFilterChange = (value: string) => {
+    flushDebouncedSearchQuery()
+    setAssetClassFilter(value)
+    if (currentPage !== 1) {
+      setCurrentPage(1)
+    }
+  }
+
   const handleCurrencyFilterChange = (value: string) => {
     flushDebouncedSearchQuery()
     setCurrencyFilter(value)
@@ -334,6 +410,7 @@ export default function Assets() {
         symbol,
         name,
         type: form.type,
+        assetClass: form.assetClass,
         baseCurrency,
       }
 
@@ -479,10 +556,20 @@ export default function Assets() {
                 id="asset-type"
                 value={form.type}
                 onChange={(event) =>
-                  setForm((current) => ({
-                    ...current,
-                    type: event.target.value as AssetType,
-                  }))
+                  setForm((current) => {
+                    const nextType = event.target.value as AssetType
+                    const previousSuggestedClass = getSuggestedAssetClassForType(current.type)
+                    const nextSuggestedClass = getSuggestedAssetClassForType(nextType)
+
+                    return {
+                      ...current,
+                      type: nextType,
+                      assetClass:
+                        current.assetClass === previousSuggestedClass
+                          ? nextSuggestedClass
+                          : current.assetClass,
+                    }
+                  })
                 }
                 className="w-full rounded border border-gray-300 px-3 py-2"
               >
@@ -492,6 +579,30 @@ export default function Assets() {
                   </option>
                 ))}
               </select>
+            </div>
+
+            <div className="space-y-1 md:col-span-2">
+              <label htmlFor="asset-asset-class" className="block text-sm font-medium text-gray-700">
+                {t('assets.assetClass')}
+              </label>
+              <select
+                id="asset-asset-class"
+                value={form.assetClass}
+                onChange={(event) =>
+                  setForm((current) => ({
+                    ...current,
+                    assetClass: event.target.value as AssetClass,
+                  }))
+                }
+                className="w-full rounded border border-gray-300 px-3 py-2"
+              >
+                {ASSET_CLASS_OPTIONS.map((assetClass) => (
+                  <option key={assetClass} value={assetClass}>
+                    {formatAssetClassLabel(assetClass, t)}
+                  </option>
+                ))}
+              </select>
+              <p className="text-xs text-gray-500">{t('assets.assetClassHint')}</p>
             </div>
 
             <div className="md:col-span-2 flex items-center justify-between rounded-lg bg-gray-50 px-4 py-3">
@@ -544,6 +655,9 @@ export default function Assets() {
                 <div className="text-gray-600">{selectedAsset.name}</div>
                 <div className="mt-3 text-sm text-gray-500">
                   {t('assets.baseCurrency')}: {selectedAsset.baseCurrency}
+                </div>
+                <div className="mt-1 text-sm text-gray-500">
+                  {t('assets.assetClass')}: {formatAssetClassLabel(selectedAsset.assetClass, t)}
                 </div>
               </div>
               <div className="flex items-center justify-between gap-3">
@@ -604,82 +718,99 @@ export default function Assets() {
                   }
                   placeholder={t('assets.searchPlaceholder')}
                   disabled={isCatalogLocked}
-                  className={`w-full rounded border px-3 py-2 ${
+                  className={`w-full rounded-xl border px-3 py-2.5 text-sm shadow-sm transition focus:outline-none focus:ring-2 focus:ring-slate-200 ${
                     isCatalogLocked
                       ? 'cursor-not-allowed border-gray-200 bg-gray-100 text-gray-500'
-                      : 'border-gray-300'
+                      : 'border-slate-300 bg-white text-slate-800 focus:border-slate-400'
                   }`}
                 />
               </div>
 
-              <div className="flex min-w-0 flex-1 flex-col gap-4 lg:flex-row lg:items-end lg:justify-end lg:gap-6">
-                <div className="min-w-0 space-y-1">
-                  <p className="block text-sm font-medium text-gray-700">
+              <div className="flex min-w-0 flex-1 flex-col gap-4 lg:flex-row lg:items-end lg:justify-end lg:gap-4">
+                <div className="w-full lg:w-40 space-y-1">
+                  <label htmlFor="asset-type-filter" className="block text-sm font-medium text-gray-700">
                     {t('assets.typeFilterLabel')}
-                  </p>
-                  <div className="flex flex-wrap gap-2">
-                    {[ALL_FILTER_VALUE, ...ASSET_TYPE_OPTIONS].map((type) => {
-                      const value = String(type)
-                      const isActive = typeFilter === value
-                      const label =
-                        value === ALL_FILTER_VALUE
-                          ? t('assets.allTypes')
-                          : formatTypeLabel(value, t)
-
-                      return (
-                        <button
-                          key={value}
-                          type="button"
-                          onClick={() => handleTypeFilterChange(value)}
-                          disabled={isCatalogLocked}
-                          aria-pressed={isActive}
-                          className={`rounded-full border px-3 py-1.5 text-sm transition ${
-                            isCatalogLocked
-                              ? 'cursor-not-allowed border-gray-200 bg-gray-100 text-gray-400'
-                              : isActive
-                                ? 'border-blue-200 bg-blue-50 text-blue-700'
-                                : 'border-gray-300 bg-white text-gray-700 hover:bg-gray-100'
-                          }`}
-                        >
-                          {label}
-                        </button>
-                      )
-                    })}
+                  </label>
+                  <div className="relative">
+                    <select
+                      id="asset-type-filter"
+                      value={typeFilter}
+                      onChange={(event) => handleTypeFilterChange(event.target.value)}
+                      disabled={isCatalogLocked}
+                      className={`w-full appearance-none rounded-xl border px-3 py-2.5 pr-10 text-sm shadow-sm transition focus:outline-none focus:ring-2 focus:ring-slate-200 ${
+                        isCatalogLocked
+                          ? 'cursor-not-allowed border-gray-200 bg-gray-100 text-gray-500'
+                          : 'border-slate-300 bg-white text-slate-800 focus:border-slate-400'
+                      }`}
+                    >
+                      <option value={ALL_FILTER_VALUE}>{t('assets.allTypes')}</option>
+                      {ASSET_TYPE_OPTIONS.map((type) => (
+                        <option key={type} value={type}>
+                          {formatTypeLabel(type, t)}
+                        </option>
+                      ))}
+                    </select>
+                    <span className="pointer-events-none absolute inset-y-0 right-3 flex items-center text-slate-500">
+                      <FilterChevronIcon />
+                    </span>
                   </div>
                 </div>
 
-                <div className="space-y-1 lg:shrink-0">
-                  <p className="block text-sm font-medium text-gray-700">
-                    {t('assets.currencyFilterLabel')}
-                  </p>
-                  <div className="flex flex-wrap gap-2">
-                    {[ALL_FILTER_VALUE, ...BASE_CURRENCY_OPTIONS].map((currency) => {
-                      const value = String(currency)
-                      const isActive = currencyFilter === value
-                      const label =
-                        value === ALL_FILTER_VALUE
-                          ? t('assets.allCurrencies')
-                          : value
+                <div className="w-full lg:w-44 space-y-1">
+                  <label htmlFor="asset-class-filter" className="block text-sm font-medium text-gray-700">
+                    {t('assets.assetClassFilterLabel')}
+                  </label>
+                  <div className="relative">
+                    <select
+                      id="asset-class-filter"
+                      value={assetClassFilter}
+                      onChange={(event) => handleAssetClassFilterChange(event.target.value)}
+                      disabled={isCatalogLocked}
+                      className={`w-full appearance-none rounded-xl border px-3 py-2.5 pr-10 text-sm shadow-sm transition focus:outline-none focus:ring-2 focus:ring-slate-200 ${
+                        isCatalogLocked
+                          ? 'cursor-not-allowed border-gray-200 bg-gray-100 text-gray-500'
+                          : 'border-slate-300 bg-white text-slate-800 focus:border-slate-400'
+                      }`}
+                    >
+                      <option value={ALL_FILTER_VALUE}>{t('assets.allAssetClasses')}</option>
+                      {ASSET_CLASS_OPTIONS.map((assetClass) => (
+                        <option key={assetClass} value={assetClass}>
+                          {formatAssetClassLabel(assetClass, t)}
+                        </option>
+                      ))}
+                    </select>
+                    <span className="pointer-events-none absolute inset-y-0 right-3 flex items-center text-slate-500">
+                      <FilterChevronIcon />
+                    </span>
+                  </div>
+                </div>
 
-                      return (
-                        <button
-                          key={value}
-                          type="button"
-                          onClick={() => handleCurrencyFilterChange(value)}
-                          disabled={isCatalogLocked}
-                          aria-pressed={isActive}
-                          className={`rounded-full border px-3 py-1.5 text-sm transition ${
-                            isCatalogLocked
-                              ? 'cursor-not-allowed border-gray-200 bg-gray-100 text-gray-400'
-                              : isActive
-                                ? 'border-blue-200 bg-blue-50 text-blue-700'
-                                : 'border-gray-300 bg-white text-gray-700 hover:bg-gray-100'
-                          }`}
-                        >
-                          {label}
-                        </button>
-                      )
-                    })}
+                <div className="w-full lg:w-40 space-y-1">
+                  <label htmlFor="asset-currency-filter" className="block text-sm font-medium text-gray-700">
+                    {t('assets.currencyFilterLabel')}
+                  </label>
+                  <div className="relative">
+                    <select
+                      id="asset-currency-filter"
+                      value={currencyFilter}
+                      onChange={(event) => handleCurrencyFilterChange(event.target.value)}
+                      disabled={isCatalogLocked}
+                      className={`w-full appearance-none rounded-xl border px-3 py-2.5 pr-10 text-sm shadow-sm transition focus:outline-none focus:ring-2 focus:ring-slate-200 ${
+                        isCatalogLocked
+                          ? 'cursor-not-allowed border-gray-200 bg-gray-100 text-gray-500'
+                          : 'border-slate-300 bg-white text-slate-800 focus:border-slate-400'
+                      }`}
+                    >
+                      <option value={ALL_FILTER_VALUE}>{t('assets.allCurrencies')}</option>
+                      {BASE_CURRENCY_OPTIONS.map((currency) => (
+                        <option key={currency} value={currency}>
+                          {currency}
+                        </option>
+                      ))}
+                    </select>
+                    <span className="pointer-events-none absolute inset-y-0 right-3 flex items-center text-slate-500">
+                      <FilterChevronIcon />
+                    </span>
                   </div>
                 </div>
               </div>
@@ -705,6 +836,7 @@ export default function Assets() {
                     <th className="px-3 py-3 font-medium text-gray-600">{t('assets.symbol')}</th>
                     <th className="px-3 py-3 font-medium text-gray-600">{t('assets.name')}</th>
                     <th className="px-3 py-3 font-medium text-gray-600">{t('assets.type')}</th>
+                    <th className="px-3 py-3 font-medium text-gray-600">{t('assets.assetClass')}</th>
                     <th className="px-3 py-3 font-medium text-gray-600">{t('assets.baseCurrency')}</th>
                   </tr>
                 </thead>
@@ -732,6 +864,9 @@ export default function Assets() {
                         <td className="px-3 py-3 text-gray-700">{asset.name}</td>
                         <td className="px-3 py-3 capitalize text-gray-600">
                           {formatTypeLabel(asset.type, t)}
+                        </td>
+                        <td className="px-3 py-3 text-gray-600">
+                          {formatAssetClassLabel(asset.assetClass, t)}
                         </td>
                         <td className="px-3 py-3 text-gray-600">
                           {asset.baseCurrency}

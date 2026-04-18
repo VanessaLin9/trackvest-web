@@ -1,15 +1,24 @@
 import { api } from './api'
 
 export const ASSET_TYPE_OPTIONS = ['equity', 'etf', 'crypto', 'cash'] as const
+export const ASSET_CLASS_OPTIONS = [
+  'equity',
+  'bond',
+  'cash',
+  'crypto',
+  'precious_metal',
+] as const
 export const BASE_CURRENCY_OPTIONS = ['USD', 'TWD'] as const
 
 export type AssetType = (typeof ASSET_TYPE_OPTIONS)[number]
+export type AssetClass = (typeof ASSET_CLASS_OPTIONS)[number]
 
 export type Asset = {
   id: string
   symbol: string
   name: string
   type: AssetType
+  assetClass?: AssetClass | null
   baseCurrency: string
 }
 
@@ -17,12 +26,14 @@ export type SaveAssetPayload = {
   symbol: string
   name: string
   type: AssetType
+  assetClass: AssetClass
   baseCurrency: string
 }
 
 export type GetAssetsParams = {
   q?: string
   type?: AssetType
+  assetClass?: AssetClass
   baseCurrency?: string
   page?: number
   take?: number

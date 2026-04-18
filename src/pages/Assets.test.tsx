@@ -12,6 +12,7 @@ const { getAssets, createAsset, updateAsset } = vi.hoisted(() => ({
 }))
 
 vi.mock('../lib/assets.service', () => ({
+  ASSET_CLASS_OPTIONS: ['equity', 'bond', 'cash', 'crypto', 'precious_metal'],
   ASSET_TYPE_OPTIONS: ['equity', 'etf', 'crypto', 'cash'],
   BASE_CURRENCY_OPTIONS: ['USD', 'TWD'],
   assetsService: {
@@ -28,6 +29,7 @@ describe('Assets page edit mode', () => {
       symbol: 'AAPL',
       name: 'Apple Inc.',
       type: 'equity',
+      assetClass: 'equity',
       baseCurrency: 'USD',
     },
     {
@@ -35,6 +37,7 @@ describe('Assets page edit mode', () => {
       symbol: '0050',
       name: 'Taiwan Top 50',
       type: 'etf',
+      assetClass: 'equity',
       baseCurrency: 'TWD',
     },
   ]
@@ -62,6 +65,7 @@ describe('Assets page edit mode', () => {
       ...initialAssets[0],
       name: 'Apple Incorporated',
       type: 'etf',
+      assetClass: 'bond',
       baseCurrency: 'TWD',
     })
   })
@@ -92,6 +96,7 @@ describe('Assets page edit mode', () => {
             symbol: 'AAPL',
             name: 'Apple Incorporated',
             type: 'etf',
+            assetClass: 'bond',
             baseCurrency: 'TWD',
           },
           initialAssets[1],
@@ -120,6 +125,9 @@ describe('Assets page edit mode', () => {
     fireEvent.change(screen.getByLabelText('Type'), {
       target: { value: 'etf' },
     })
+    fireEvent.change(screen.getByLabelText('Asset class'), {
+      target: { value: 'bond' },
+    })
 
     fireEvent.click(screen.getByRole('button', { name: 'Save changes' }))
 
@@ -128,6 +136,7 @@ describe('Assets page edit mode', () => {
         symbol: 'AAPL',
         name: 'Apple Incorporated',
         type: 'etf',
+        assetClass: 'bond',
         baseCurrency: 'TWD',
       })
     })
@@ -185,6 +194,7 @@ describe('Assets page edit mode', () => {
         symbol: 'BTC',
         name: 'Bitcoin',
         type: 'crypto',
+        assetClass: 'crypto',
         baseCurrency: 'USD',
       },
     ]
@@ -229,21 +239,26 @@ describe('Assets page edit mode', () => {
       expect(screen.getByText('1 matching asset')).toBeTruthy()
     })
 
-    fireEvent.click(screen.getByRole('button', { name: 'Equity' }))
+    fireEvent.change(screen.getByLabelText('Filter by asset class'), {
+      target: { value: 'equity' },
+    })
 
     await waitFor(() => {
       expect(getAssets).toHaveBeenLastCalledWith({
         page: 1,
         q: 'bit',
         take: 10,
-        type: 'equity',
+        assetClass: 'equity',
       })
       expect(screen.getByText('No assets match the current search or filters.')).toBeTruthy()
-      expect(screen.getByRole('button', { name: 'All types' })).toBeTruthy()
-      expect(screen.getByRole('button', { name: 'All currencies' })).toBeTruthy()
+      expect(screen.getByLabelText('Filter by asset class')).toBeTruthy()
+      expect(screen.getByLabelText('Filter by type')).toBeTruthy()
+      expect(screen.getByLabelText('Filter by base currency')).toBeTruthy()
     })
 
-    fireEvent.click(screen.getByRole('button', { name: 'All types' }))
+    fireEvent.change(screen.getByLabelText('Filter by asset class'), {
+      target: { value: 'all' },
+    })
 
     await waitFor(() => {
       expect(getAssets).toHaveBeenLastCalledWith({
@@ -296,13 +311,14 @@ describe('Assets page edit mode', () => {
     })
   })
 
-  it('flushes pending search input when a filter pill is clicked', async () => {
+  it('flushes pending search input when a filter dropdown changes', async () => {
     const filteredAssets: Asset[] = [
       {
         id: 'asset-btc',
         symbol: 'BTC',
         name: 'Bitcoin',
         type: 'crypto',
+        assetClass: 'crypto',
         baseCurrency: 'USD',
       },
     ]
@@ -325,7 +341,9 @@ describe('Assets page edit mode', () => {
     fireEvent.change(screen.getByLabelText('Search assets'), {
       target: { value: 'bit' },
     })
-    fireEvent.click(screen.getByRole('button', { name: 'Crypto' }))
+    fireEvent.change(screen.getByLabelText('Filter by type'), {
+      target: { value: 'crypto' },
+    })
 
     await waitFor(() => {
       expect(getAssets).toHaveBeenCalledTimes(2)
@@ -366,6 +384,7 @@ describe('Assets page edit mode', () => {
         symbol: 'AAPL',
         name: 'Apple Inc.',
         type: 'equity',
+        assetClass: 'equity',
         baseCurrency: 'TWD',
       })
     })
@@ -419,6 +438,7 @@ describe('Assets page edit mode', () => {
       symbol: `SYM${index + 1}`,
       name: `Asset ${index + 1}`,
       type: index % 2 === 0 ? 'equity' : 'etf',
+      assetClass: index % 4 === 0 ? 'bond' : 'equity',
       baseCurrency: index % 3 === 0 ? 'USD' : 'TWD',
     }))
 
@@ -463,8 +483,9 @@ describe('Assets page edit mode', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Edit' }))
 
     expect((screen.getByLabelText('Search assets') as HTMLInputElement).disabled).toBe(true)
-    expect((screen.getByRole('button', { name: 'All types' }) as HTMLButtonElement).disabled).toBe(true)
-    expect((screen.getByRole('button', { name: 'All currencies' }) as HTMLButtonElement).disabled).toBe(true)
+    expect((screen.getByLabelText('Filter by asset class') as HTMLSelectElement).disabled).toBe(true)
+    expect((screen.getByLabelText('Filter by type') as HTMLSelectElement).disabled).toBe(true)
+    expect((screen.getByLabelText('Filter by base currency') as HTMLSelectElement).disabled).toBe(true)
     expect((screen.getByRole('button', { name: 'Next' }) as HTMLButtonElement).disabled).toBe(true)
   })
 
@@ -474,6 +495,7 @@ describe('Assets page edit mode', () => {
       symbol: `SYM${index + 1}`,
       name: `Asset ${index + 1}`,
       type: index % 2 === 0 ? 'equity' : 'etf',
+      assetClass: index % 4 === 0 ? 'bond' : 'equity',
       baseCurrency: index % 3 === 0 ? 'USD' : 'TWD',
     }))
 
@@ -513,7 +535,9 @@ describe('Assets page edit mode', () => {
 
     const callsBeforeFilter = getAssets.mock.calls.length
 
-    fireEvent.click(screen.getByRole('button', { name: 'Equity' }))
+    fireEvent.change(screen.getByLabelText('Filter by type'), {
+      target: { value: 'equity' },
+    })
 
     await waitFor(() => {
       expect(getAssets).toHaveBeenCalledTimes(callsBeforeFilter + 1)

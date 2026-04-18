@@ -1,6 +1,6 @@
 import { getRequiredCurrentUserId } from '../app/current-user'
 import { api } from './api'
-import type { AssetType } from './assets.service'
+import type { AssetClass, AssetType } from './assets.service'
 
 export type PortfolioSummary = {
   displayCurrencyMode: 'portfolio-default' | 'preferred-base'
@@ -20,6 +20,7 @@ export type PortfolioHolding = {
   symbol: string
   name: string
   type: AssetType
+  assetClass?: AssetClass | null
   quantity: number
   avgCost: number
   latestPrice: number | null
@@ -39,12 +40,19 @@ export type PortfolioAllocationByType = {
   weight: number
 }
 
+export type PortfolioAllocationByAssetClass = {
+  assetClass: AssetClass
+  marketValue: number
+  weight: number
+}
+
 export type PortfolioHoldingsResponse = {
   displayCurrencyMode: 'portfolio-default' | 'preferred-base'
   requestedDisplayCurrency: string | null
   effectiveDisplayCurrency: string | null
   items: PortfolioHolding[]
   allocationByType: PortfolioAllocationByType[]
+  allocationByAssetClass?: PortfolioAllocationByAssetClass[]
 }
 
 export type PortfolioTrendPoint = {

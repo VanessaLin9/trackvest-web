@@ -29,7 +29,21 @@ vi.mock('../lib/portfolio.service', () => ({
 }))
 
 vi.mock('../components/dashboard/PortfolioCharts', () => ({
-  AllocationChartCard: ({ title }: { title: string }) => <div>{title}</div>,
+  AllocationChartCard: ({
+    title,
+    headerRight,
+    data,
+  }: {
+    title: string
+    headerRight?: ReactNode
+    data: Array<{ id: string; label: string }>
+  }) => (
+    <div>
+      <div>{title}</div>
+      {headerRight}
+      <div>{data.map((item) => item.label).join(', ')}</div>
+    </div>
+  ),
   PerformanceChartCard: ({ title }: { title: string }) => <div>{title}</div>,
   PortfolioTrendChartCard: ({ title }: { title: string }) => <div>{title}</div>,
   HoldingTrendChartCard: ({ title }: { title: string }) => <div>{title}</div>,
@@ -87,6 +101,7 @@ describe('Dashboard smoke tests', () => {
         symbol: '2330',
         name: 'TSMC',
         type: 'equity' as const,
+        assetClass: 'equity' as const,
         quantity: 20,
         avgCost: 901,
         latestPrice: 950,
@@ -104,6 +119,7 @@ describe('Dashboard smoke tests', () => {
         symbol: '0050',
         name: 'Taiwan 50 ETF',
         type: 'etf' as const,
+        assetClass: 'bond' as const,
         quantity: 30,
         avgCost: 190.2,
         latestPrice: 205,
@@ -125,6 +141,18 @@ describe('Dashboard smoke tests', () => {
       },
       {
         type: 'etf' as const,
+        marketValue: 6150,
+        weight: 0.2445328,
+      },
+    ],
+    allocationByAssetClass: [
+      {
+        assetClass: 'equity' as const,
+        marketValue: 19000,
+        weight: 0.7554672,
+      },
+      {
+        assetClass: 'bond' as const,
         marketValue: 6150,
         weight: 0.2445328,
       },
@@ -159,6 +187,18 @@ describe('Dashboard smoke tests', () => {
       },
       {
         type: 'etf' as const,
+        marketValue: 192.126,
+        weight: 0.2445328,
+      },
+    ],
+    allocationByAssetClass: [
+      {
+        assetClass: 'equity' as const,
+        marketValue: 593.56,
+        weight: 0.7554672,
+      },
+      {
+        assetClass: 'bond' as const,
         marketValue: 192.126,
         weight: 0.2445328,
       },
@@ -252,6 +292,7 @@ describe('Dashboard smoke tests', () => {
     usePreferencesStore.setState({
       displayCurrencyMode: 'original',
       preferredBaseCurrency: 'TWD',
+      allocationViewMode: 'assetClass',
     })
 
     getSummary.mockResolvedValue(twdSummary)
@@ -267,6 +308,7 @@ describe('Dashboard smoke tests', () => {
     usePreferencesStore.setState({
       displayCurrencyMode: 'original',
       preferredBaseCurrency: 'TWD',
+      allocationViewMode: 'assetClass',
     })
   })
 
@@ -338,6 +380,7 @@ describe('Dashboard smoke tests', () => {
     usePreferencesStore.setState({
       displayCurrencyMode: 'base',
       preferredBaseCurrency: 'USD',
+      allocationViewMode: 'assetClass',
     })
 
     renderPage()
@@ -376,8 +419,13 @@ describe('Dashboard smoke tests', () => {
       expect(screen.getByText('23,726 TWD')).toBeTruthy()
     })
 
-    fireEvent.click(screen.getByRole('button', { name: 'USD' }))
     fireEvent.click(screen.getByRole('button', { name: 'Preferred base' }))
+
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: 'USD' })).toBeTruthy()
+    })
+
+    fireEvent.click(screen.getByRole('button', { name: 'USD' }))
 
     await waitFor(() => {
       expect(getSummary).toHaveBeenLastCalledWith({ preferredBaseCurrency: 'USD' })
@@ -387,6 +435,21 @@ describe('Dashboard smoke tests', () => {
         preferredBaseCurrency: 'USD',
       })
       expect(screen.getByText('785.69 USD')).toBeTruthy()
+    })
+  })
+
+  it('defaults allocation view to asset class and lets the user switch to type', async () => {
+    renderPage()
+
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: 'Asset Class' })).toBeTruthy()
+      expect(screen.getByText('Equity, Bond')).toBeTruthy()
+    })
+
+    fireEvent.click(screen.getByRole('button', { name: 'Type' }))
+
+    await waitFor(() => {
+      expect(screen.getByText('Equity, ETF')).toBeTruthy()
     })
   })
 })

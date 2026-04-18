@@ -1,3 +1,4 @@
+import type { ReactNode } from 'react'
 import {
   Area,
   AreaChart,
@@ -44,6 +45,7 @@ type AllocationChartCardProps = {
   title: string
   description: string
   data: AllocationChartItem[]
+  headerRight?: ReactNode
 }
 
 type PerformanceChartCardProps = {
@@ -52,6 +54,7 @@ type PerformanceChartCardProps = {
   badge: string
   data: PerformanceDatum[]
   valueFormatter: ValueFormatter
+  yAxisTickFormatter?: (value: number) => string
 }
 
 type TrendChartCardProps = {
@@ -65,12 +68,16 @@ export function AllocationChartCard({
   title,
   description,
   data,
+  headerRight,
 }: AllocationChartCardProps) {
   return (
     <div className="rounded-3xl border border-gray-200 bg-white p-5 shadow-sm">
-      <div className="mb-4">
-        <h2 className="text-xl font-semibold">{title}</h2>
-        <p className="text-sm text-gray-500">{description}</p>
+      <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <h2 className="text-xl font-semibold">{title}</h2>
+          <p className="text-sm text-gray-500">{description}</p>
+        </div>
+        {headerRight}
       </div>
 
       <div className="h-72">
@@ -120,6 +127,7 @@ export function PerformanceChartCard({
   badge,
   data,
   valueFormatter,
+  yAxisTickFormatter,
 }: PerformanceChartCardProps) {
   return (
     <div className="rounded-3xl border border-gray-200 bg-white p-5 shadow-sm">
@@ -141,7 +149,7 @@ export function PerformanceChartCard({
             <YAxis
               tickLine={false}
               axisLine={false}
-              tickFormatter={(value) => `${Math.round(value / 1000)}k`}
+              tickFormatter={yAxisTickFormatter}
             />
             <Tooltip formatter={(value) => valueFormatter(value)} />
             <Bar dataKey="pnl" radius={[10, 10, 0, 0]}>
