@@ -54,6 +54,7 @@ type PerformanceChartCardProps = {
   badge: string
   data: PerformanceDatum[]
   valueFormatter: ValueFormatter
+  yAxisTickFormatter?: (value: number) => string
 }
 
 type TrendChartCardProps = {
@@ -126,6 +127,7 @@ export function PerformanceChartCard({
   badge,
   data,
   valueFormatter,
+  yAxisTickFormatter,
 }: PerformanceChartCardProps) {
   return (
     <div className="rounded-3xl border border-gray-200 bg-white p-5 shadow-sm">
@@ -147,7 +149,7 @@ export function PerformanceChartCard({
             <YAxis
               tickLine={false}
               axisLine={false}
-              tickFormatter={(value) => `${Math.round(value / 1000)}k`}
+              tickFormatter={yAxisTickFormatter}
             />
             <Tooltip formatter={(value) => valueFormatter(value)} />
             <Bar dataKey="pnl" radius={[10, 10, 0, 0]}>

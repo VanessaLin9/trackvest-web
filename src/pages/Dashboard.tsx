@@ -79,6 +79,19 @@ function formatSignedCurrency(
   return `${prefix}${formatCurrency(Math.abs(value), locale)}${currency ? ` ${currency}` : ''}`
 }
 
+function formatCompactCurrencyAxis(value: number, locale: string) {
+  const absoluteValue = Math.abs(value)
+
+  if (absoluteValue < 1000) {
+    return formatCurrency(value, locale)
+  }
+
+  return new Intl.NumberFormat(locale, {
+    notation: 'compact',
+    maximumFractionDigits: absoluteValue < 10000 ? 1 : 0,
+  }).format(value)
+}
+
 function getHoldingLatestPriceCurrency(holding: PortfolioHolding) {
   return holding.latestPriceCurrency ?? holding.assetBaseCurrency
 }
@@ -838,6 +851,9 @@ export default function Dashboard() {
                 data={performanceData}
                 valueFormatter={(value) =>
                   renderTooltipValue(value, locale, displayCurrency)
+                }
+                yAxisTickFormatter={(value) =>
+                  formatCompactCurrencyAxis(value, locale)
                 }
               />
             </Suspense>
