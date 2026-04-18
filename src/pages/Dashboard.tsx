@@ -12,7 +12,10 @@ import {
   portfolioService,
   type PortfolioHolding,
 } from '../lib/portfolio.service'
-import { usePreferencesStore } from '../store/preferences'
+import {
+  usePreferencesStore,
+  type AllocationViewMode,
+} from '../store/preferences'
 import { fxService } from '../lib/fx.service'
 
 const AllocationChartCard = lazy(() =>
@@ -109,6 +112,26 @@ function formatHoldingType(
   }
 }
 
+function formatHoldingAssetClass(
+  assetClass: PortfolioHolding['assetClass'],
+  t: (key: string) => string,
+) {
+  switch (assetClass) {
+    case 'equity':
+      return t('dashboard.assetClassEquity')
+    case 'bond':
+      return t('dashboard.assetClassBond')
+    case 'cash':
+      return t('dashboard.assetClassCash')
+    case 'crypto':
+      return t('dashboard.assetClassCrypto')
+    case 'precious_metal':
+      return t('dashboard.assetClassPreciousMetal')
+    default:
+      return t('common.notAvailable')
+  }
+}
+
 function formatAllocationLabel(
   id: string,
   fallback: string,
@@ -116,13 +139,17 @@ function formatAllocationLabel(
 ) {
   switch (id) {
     case 'equity':
-      return t('assets.typeEquity')
+      return t('dashboard.assetClassEquity')
+    case 'bond':
+      return t('dashboard.assetClassBond')
     case 'etf':
       return t('assets.typeEtf')
+    case 'precious_metal':
+      return t('dashboard.assetClassPreciousMetal')
     case 'crypto':
-      return t('assets.typeCrypto')
+      return t('dashboard.assetClassCrypto')
     case 'cash':
-      return t('assets.typeCash')
+      return t('dashboard.assetClassCash')
     case 'marketValue':
       return t('dashboard.marketValue')
     case 'costBasis':
@@ -163,12 +190,16 @@ function getAllocationColor(type: string) {
   switch (type) {
     case 'equity':
       return '#2563eb'
+    case 'bond':
+      return '#14b8a6'
     case 'etf':
       return '#0f766e'
     case 'crypto':
       return '#f59e0b'
     case 'cash':
       return '#9333ea'
+    case 'precious_metal':
+      return '#ca8a04'
     default:
       return '#94a3b8'
   }
@@ -241,8 +272,10 @@ export default function Dashboard() {
   const {
     displayCurrencyMode,
     preferredBaseCurrency,
+    allocationViewMode,
     setDisplayCurrencyMode,
     setPreferredBaseCurrency,
+    setAllocationViewMode,
   } = usePreferencesStore()
   const requestedDisplayCurrency =
     displayCurrencyMode === 'base' ? preferredBaseCurrency : undefined
@@ -329,15 +362,37 @@ export default function Dashboard() {
     enabled: Boolean(currentUserId && selectedHolding?.assetId),
   })
 
+  const hasAssetClassAllocation =
+    (holdingsQuery.data?.allocationByAssetClass?.length ?? 0) > 0
+  const effectiveAllocationViewMode: AllocationViewMode =
+    allocationViewMode === 'assetClass' && hasAssetClassAllocation
+      ? 'assetClass'
+      : 'type'
+
   const allocationChartData = useMemo<AllocationChartItem[]>(
-    () =>
-      (holdingsQuery.data?.allocationByType ?? []).map((item) => ({
+    () => {
+      if (effectiveAllocationViewMode === 'assetClass') {
+        return (holdingsQuery.data?.allocationByAssetClass ?? []).map((item) => ({
+          id: item.assetClass,
+          label: formatAllocationLabel(item.assetClass, item.assetClass, t),
+          value: Number((item.weight * 100).toFixed(2)),
+          color: getAllocationColor(item.assetClass),
+        }))
+      }
+
+      return (holdingsQuery.data?.allocationByType ?? []).map((item) => ({
         id: item.type,
         label: formatAllocationLabel(item.type, item.type, t),
         value: Number((item.weight * 100).toFixed(2)),
         color: getAllocationColor(item.type),
-      })),
-    [holdingsQuery.data?.allocationByType, t],
+      }))
+    },
+    [
+      effectiveAllocationViewMode,
+      holdingsQuery.data?.allocationByAssetClass,
+      holdingsQuery.data?.allocationByType,
+      t,
+    ],
   )
 
   const performanceData = useMemo<PerformanceDatum[]>(
@@ -719,8 +774,51 @@ export default function Dashboard() {
             >
               <AllocationChartCard
                 title={t('dashboard.allocationTitle')}
-                description={t('dashboard.allocationDescription')}
+                description={
+                  effectiveAllocationViewMode === 'assetClass'
+                    ? t('dashboard.allocationDescriptionAssetClass')
+                    : t('dashboard.allocationDescriptionType')
+                }
                 data={allocationChartData}
+                headerRight={
+                  hasAssetClassAllocation ? (
+                    <div>
+                      <p className="mb-2 text-[11px] font-medium uppercase tracking-[0.18em] text-gray-500">
+                        {t('dashboard.allocationViewLabel')}
+                      </p>
+                      <div className="inline-flex rounded-full border border-slate-200 bg-slate-50 p-1">
+                        {([
+                          {
+                            value: 'assetClass',
+                            label: t('dashboard.allocationViewAssetClass'),
+                          },
+                          {
+                            value: 'type',
+                            label: t('dashboard.allocationViewType'),
+                          },
+                        ] as const).map((option) => {
+                          const isActive = effectiveAllocationViewMode === option.value
+
+                          return (
+                            <button
+                              key={option.value}
+                              type="button"
+                              onClick={() => setAllocationViewMode(option.value)}
+                              aria-pressed={isActive}
+                              className={`rounded-full px-3 py-1.5 text-xs font-medium transition ${
+                                isActive
+                                  ? 'bg-slate-900 text-white'
+                                  : 'text-slate-700 hover:bg-white'
+                              }`}
+                            >
+                              {option.label}
+                            </button>
+                          )
+                        })}
+                      </div>
+                    </div>
+                  ) : null
+                }
               />
             </Suspense>
 
@@ -896,6 +994,14 @@ export default function Dashboard() {
                       </p>
                       <p className="mt-2 text-xs text-gray-500">
                         {t('dashboard.latestPriceHint')}
+                      </p>
+                    </div>
+                    <div className="rounded-2xl bg-gray-50 px-4 py-3">
+                      <p className="text-xs uppercase tracking-[0.2em] text-gray-500">
+                        {t('dashboard.assetClassLabel')}
+                      </p>
+                      <p className="mt-2 text-sm font-medium text-gray-900">
+                        {formatHoldingAssetClass(selectedHolding.assetClass, t)}
                       </p>
                     </div>
                     <div className="rounded-2xl bg-gray-50 px-4 py-3">

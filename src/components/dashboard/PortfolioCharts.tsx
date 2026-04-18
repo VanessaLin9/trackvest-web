@@ -1,3 +1,4 @@
+import type { ReactNode } from 'react'
 import {
   Area,
   AreaChart,
@@ -44,6 +45,7 @@ type AllocationChartCardProps = {
   title: string
   description: string
   data: AllocationChartItem[]
+  headerRight?: ReactNode
 }
 
 type PerformanceChartCardProps = {
@@ -65,12 +67,16 @@ export function AllocationChartCard({
   title,
   description,
   data,
+  headerRight,
 }: AllocationChartCardProps) {
   return (
     <div className="rounded-3xl border border-gray-200 bg-white p-5 shadow-sm">
-      <div className="mb-4">
-        <h2 className="text-xl font-semibold">{title}</h2>
-        <p className="text-sm text-gray-500">{description}</p>
+      <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <h2 className="text-xl font-semibold">{title}</h2>
+          <p className="text-sm text-gray-500">{description}</p>
+        </div>
+        {headerRight}
       </div>
 
       <div className="h-72">

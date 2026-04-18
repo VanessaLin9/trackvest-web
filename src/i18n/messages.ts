@@ -86,6 +86,19 @@ export const messages = {
       allocationTitle: 'Allocation mix',
       allocationDescription:
         'See how concentrated the portfolio is before drilling into any single asset.',
+      allocationDescriptionAssetClass:
+        'Default to the underlying asset class view so the portfolio mix stays useful for allocation and rebalancing.',
+      allocationDescriptionType:
+        'Switch to product type when you want to inspect how the portfolio is packaged and traded.',
+      allocationViewLabel: 'Allocation view',
+      allocationViewAssetClass: 'Asset Class',
+      allocationViewType: 'Type',
+      assetClassLabel: 'Asset class',
+      assetClassEquity: 'Equity',
+      assetClassBond: 'Bond',
+      assetClassCash: 'Cash',
+      assetClassCrypto: 'Crypto',
+      assetClassPreciousMetal: 'Precious metal',
       performanceTitle: 'P&L by asset',
       performanceDescription:
         'Quickly spot which holdings are doing the heavy lifting and which ones are dragging performance.',
@@ -553,6 +566,19 @@ export const messages = {
       allocationTitle: '資產配置',
       allocationDescription:
         '先看整體部位集中在哪裡，再決定要往哪個資產鑽查。',
+      allocationDescriptionAssetClass:
+        '預設先看底層資產類別，這樣配置分析和之後的再平衡判斷會比較準。',
+      allocationDescriptionType:
+        '如果想看產品包裝形式，再切到 Type 視角查看股票、ETF、現金等分布。',
+      allocationViewLabel: '配置視角',
+      allocationViewAssetClass: 'Asset Class',
+      allocationViewType: 'Type',
+      assetClassLabel: '資產類別',
+      assetClassEquity: '股票',
+      assetClassBond: '債券',
+      assetClassCash: '現金',
+      assetClassCrypto: '加密資產',
+      assetClassPreciousMetal: '貴金屬',
       performanceTitle: '各資產損益',
       performanceDescription:
         '快速辨認誰在貢獻績效、誰正在拖累整體表現。',
