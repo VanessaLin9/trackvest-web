@@ -507,23 +507,13 @@ export default function Dashboard() {
       return null
     }
 
-    const dominantRecommendation =
-      data.recommendedBuyAmountByAssetClass.equity >
-      data.recommendedBuyAmountByAssetClass.bond
-        ? {
-            assetClass: 'equity' as const,
-            amount: data.recommendedBuyAmountByAssetClass.equity,
-          }
-        : data.recommendedBuyAmountByAssetClass.bond > 0
-          ? {
-              assetClass: 'bond' as const,
-              amount: data.recommendedBuyAmountByAssetClass.bond,
-            }
-          : null
+    const totalRecommendedBuyAmount =
+      Math.max(0, data.recommendedBuyAmountByAssetClass.equity) +
+      Math.max(0, data.recommendedBuyAmountByAssetClass.bond)
 
     return {
       ...data,
-      dominantRecommendation,
+      totalRecommendedBuyAmount,
     }
   }, [rebalanceQuery.data])
 
@@ -1126,25 +1116,70 @@ export default function Dashboard() {
                     <p className="text-xs uppercase tracking-[0.2em] text-slate-500">
                       {t('dashboard.rebalanceActionTitle')}
                     </p>
-                    {rebalancePlan.dominantRecommendation ? (
+                    {rebalancePlan.totalRecommendedBuyAmount > 0 ? (
                       <>
                         <p className="mt-3 text-2xl font-semibold text-slate-900">
-                          {t('dashboard.rebalanceActionBuy', {
-                            assetClass:
-                              rebalancePlan.dominantRecommendation.assetClass === 'equity'
-                                ? t('dashboard.assetClassEquity')
-                                : t('dashboard.assetClassBond'),
-                          })}
+                          {formatCurrencyWithCode(
+                            rebalancePlan.totalRecommendedBuyAmount,
+                            locale,
+                            displayCurrency,
+                          )}
                         </p>
                         <p className="mt-2 text-sm leading-6 text-slate-600">
                           {t('dashboard.rebalanceActionDescription', {
                             amount: formatCurrencyWithCode(
-                              rebalancePlan.dominantRecommendation.amount,
+                              rebalancePlan.totalRecommendedBuyAmount,
                               locale,
                               displayCurrency,
                             ),
                           })}
                         </p>
+                        {rebalancePlan.suggestions?.length ? (
+                          <div className="mt-5 space-y-3">
+                            {rebalancePlan.suggestions.map((suggestion) => (
+                              <div
+                                key={suggestion.assetId}
+                                className="rounded-2xl border border-slate-200 bg-white px-4 py-3"
+                              >
+                                <div className="flex flex-wrap items-baseline justify-between gap-3">
+                                  <div>
+                                    <p className="text-sm font-semibold text-slate-900">
+                                      {suggestion.symbol}
+                                    </p>
+                                    <p className="text-xs text-slate-500">
+                                      {suggestion.name}
+                                    </p>
+                                  </div>
+                                  <p className="text-sm font-medium text-slate-900">
+                                    {formatCurrencyWithCode(
+                                      suggestion.suggestedBuyAmount,
+                                      locale,
+                                      displayCurrency,
+                                    )}
+                                  </p>
+                                </div>
+                                <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-sm text-slate-600">
+                                  <p>
+                                    {t('dashboard.rebalanceSuggestionQuantity', {
+                                      quantity: suggestion.estimatedQuantity.toFixed(2),
+                                    })}
+                                  </p>
+                                  {suggestion.latestPrice != null ? (
+                                    <p>
+                                      {t('dashboard.rebalanceSuggestionPrice', {
+                                        price: formatCurrencyWithCode(
+                                          suggestion.latestPrice,
+                                          locale,
+                                          suggestion.latestPriceCurrency,
+                                        ),
+                                      })}
+                                    </p>
+                                  ) : null}
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        ) : null}
                       </>
                     ) : (
                       <p className="mt-3 text-sm leading-6 text-slate-600">

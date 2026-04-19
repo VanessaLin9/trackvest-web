@@ -79,6 +79,19 @@ export type PortfolioRebalanceMarketValue = {
   bond: number
 }
 
+export type PortfolioRebalanceSuggestion = {
+  assetClass: AssetClass
+  assetId: string
+  symbol: string
+  name: string
+  currentMarketValue: number
+  currentWeightWithinAssetClass: number
+  suggestedBuyAmount: number
+  estimatedQuantity: number
+  latestPrice: number | null
+  latestPriceCurrency: string | null
+}
+
 export type PortfolioRebalanceResponse = {
   asOf: string
   displayCurrencyMode: 'portfolio-default' | 'preferred-base'
@@ -91,6 +104,7 @@ export type PortfolioRebalanceResponse = {
   marketValueByAssetClass: PortfolioRebalanceMarketValue
   recommendedBuyAmountByAssetClass: PortfolioRebalanceMarketValue
   trackedMarketValue: number
+  suggestions?: PortfolioRebalanceSuggestion[]
   notes: string[]
 }
 

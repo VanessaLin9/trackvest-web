@@ -118,12 +118,13 @@ export const messages = {
       rebalanceGapLabel: 'Gap:',
       rebalanceBuyMoreLabel: 'Buy more:',
       rebalanceAtOrAboveTarget: 'At or above target',
-      rebalanceActionTitle: 'Suggested next move',
-      rebalanceActionBuy: 'Add more {{assetClass}}',
+      rebalanceActionTitle: 'Estimated top-up',
       rebalanceActionDescription:
-        'If you only top up one side for now, start with about {{amount}} to move the portfolio closer to the target mix.',
+        'Buying about {{amount}} should move the portfolio back toward the current target mix.',
       rebalanceNoActionNeeded:
         'Current equity and bond weights are already close to the target mix.',
+      rebalanceSuggestionQuantity: 'Buy about {{quantity}} shares',
+      rebalanceSuggestionPrice: 'Latest price {{price}}',
       rebalanceFootnoteLabel: 'Planning note',
       rebalanceFootnote:
         'This first version only looks at equity and bond asset classes. Specific asset suggestions can come later once the rebalance flow grows beyond asset-class guidance.',
@@ -639,12 +640,13 @@ export const messages = {
       rebalanceGapLabel: '差距：',
       rebalanceBuyMoreLabel: '建議再買：',
       rebalanceAtOrAboveTarget: '已達或高於目標',
-      rebalanceActionTitle: '下一步建議',
-      rebalanceActionBuy: '優先補 {{assetClass}}',
+      rebalanceActionTitle: '預估還需補多少',
       rebalanceActionDescription:
-        '如果這一輪只先補一邊，先補約 {{amount}}，就能讓投組更接近目標配置。',
+        '大約再買 {{amount}}，就能把投組往目前的目標配置拉回去。',
       rebalanceNoActionNeeded:
         '目前股票與債券的配置已經很接近目標比例。',
+      rebalanceSuggestionQuantity: '大約再買 {{quantity}} 股',
+      rebalanceSuggestionPrice: '最新價格 {{price}}',
       rebalanceFootnoteLabel: '規劃備註',
       rebalanceFootnote:
         '第一版只先看股票與債券這兩個 asset class。更細的具體資產建議，之後再把再平衡流程往下擴充。',

@@ -302,6 +302,32 @@ describe('Dashboard smoke tests', () => {
     marketValueByAssetClass: { equity: 19000, bond: 6150 },
     recommendedBuyAmountByAssetClass: { equity: 3440.23, bond: 0 },
     trackedMarketValue: 25150,
+    suggestions: [
+      {
+        assetClass: 'equity' as const,
+        assetId: 'asset-2330',
+        symbol: '2330',
+        name: 'TSMC',
+        currentMarketValue: 19000,
+        currentWeightWithinAssetClass: 0.7554672,
+        suggestedBuyAmount: 2500,
+        estimatedQuantity: 2.63,
+        latestPrice: 950,
+        latestPriceCurrency: 'TWD',
+      },
+      {
+        assetClass: 'bond' as const,
+        assetId: 'asset-0050',
+        symbol: '0050',
+        name: 'Taiwan 50 ETF',
+        currentMarketValue: 6150,
+        currentWeightWithinAssetClass: 1,
+        suggestedBuyAmount: 940.23,
+        estimatedQuantity: 4.59,
+        latestPrice: 205,
+        latestPriceCurrency: 'TWD',
+      },
+    ],
     notes: ['Recommended buy amounts assume a buy-only rebalance and do not suggest selling.'],
   }
 
@@ -372,8 +398,8 @@ describe('Dashboard smoke tests', () => {
       expect(screen.getByText('Tracked assets')).toBeTruthy()
       expect(screen.getByText('23,726 TWD')).toBeTruthy()
       expect(screen.getByText('25,150 TWD')).toBeTruthy()
-      expect(screen.getByText('2330')).toBeTruthy()
-      expect(screen.getByText('0050')).toBeTruthy()
+      expect(screen.getAllByText('2330').length).toBeGreaterThan(0)
+      expect(screen.getAllByText('0050').length).toBeGreaterThan(0)
     })
   })
 
@@ -385,7 +411,7 @@ describe('Dashboard smoke tests', () => {
       expect(screen.getByText('台積電股利入帳')).toBeTruthy()
     })
 
-    fireEvent.click(screen.getByText('Taiwan 50 ETF'))
+    fireEvent.click(screen.getAllByText('Taiwan 50 ETF')[1])
 
     await waitFor(() => {
       expect(screen.getByRole('heading', { name: '0050' })).toBeTruthy()
