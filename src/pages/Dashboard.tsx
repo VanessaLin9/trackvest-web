@@ -38,12 +38,7 @@ const HoldingTrendChartCard = lazy(() =>
     default: module.HoldingTrendChartCard,
   })),
 )
-
 const PORTFOLIO_COLORS = ['#0f766e', '#2563eb', '#f59e0b', '#9333ea', '#ef4444']
-const REBALANCE_TARGETS = {
-  equity: 0.8,
-  bond: 0.2,
-} as const
 
 function getErrorMessage(err: unknown, fallback: string) {
   if (err && typeof err === 'object' && 'response' in err) {
@@ -247,20 +242,6 @@ function renderTooltipValue(
   return formatCurrencyWithCode(value, locale, currency)
 }
 
-function calculateBuyToTargetAmount(
-  currentValue: number,
-  totalValue: number,
-  targetWeight: number,
-) {
-  const targetValue = totalValue * targetWeight
-
-  if (currentValue >= targetValue || targetWeight >= 1) {
-    return 0
-  }
-
-  return (targetValue - currentValue) / (1 - targetWeight)
-}
-
 function ChartCardFallback({
   title,
   description,
@@ -348,6 +329,17 @@ export default function Dashboard() {
     queryKey: ['portfolio', 'trend', currentUserId, requestedDisplayCurrency ?? 'default'],
     queryFn: () =>
       portfolioService.getTrend(
+        requestedDisplayCurrency
+          ? { preferredBaseCurrency: requestedDisplayCurrency }
+          : undefined,
+      ),
+    enabled: Boolean(currentUserId),
+  })
+
+  const rebalanceQuery = useQuery({
+    queryKey: ['portfolio', 'rebalance', currentUserId, requestedDisplayCurrency ?? 'default'],
+    queryFn: () =>
+      portfolioService.getRebalance(
         requestedDisplayCurrency
           ? { preferredBaseCurrency: requestedDisplayCurrency }
           : undefined,
@@ -444,61 +436,31 @@ export default function Dashboard() {
   )
 
   const rebalancePlan = useMemo(() => {
-    const allocationByAssetClass = holdingsQuery.data?.allocationByAssetClass ?? []
-    const totalMarketValue = allocationByAssetClass.reduce(
-      (sum, item) => sum + item.marketValue,
-      0,
-    )
+    const data = rebalanceQuery.data
 
-    if (totalMarketValue <= 0) {
+    if (!data || data.trackedMarketValue <= 0) {
       return null
     }
 
-    const equityValue =
-      allocationByAssetClass.find((item) => item.assetClass === 'equity')?.marketValue ?? 0
-    const bondValue =
-      allocationByAssetClass.find((item) => item.assetClass === 'bond')?.marketValue ?? 0
-
-    const equityWeight = equityValue / totalMarketValue
-    const bondWeight = bondValue / totalMarketValue
-    const equityGap = REBALANCE_TARGETS.equity - equityWeight
-    const bondGap = REBALANCE_TARGETS.bond - bondWeight
-
-    const buyEquityAmount = calculateBuyToTargetAmount(
-      equityValue,
-      totalMarketValue,
-      REBALANCE_TARGETS.equity,
-    )
-    const buyBondAmount = calculateBuyToTargetAmount(
-      bondValue,
-      totalMarketValue,
-      REBALANCE_TARGETS.bond,
-    )
-
     const dominantRecommendation =
-      buyEquityAmount > buyBondAmount
+      data.recommendedBuyAmountByAssetClass.equity >
+      data.recommendedBuyAmountByAssetClass.bond
         ? {
             assetClass: 'equity' as const,
-            amount: buyEquityAmount,
+            amount: data.recommendedBuyAmountByAssetClass.equity,
           }
-        : buyBondAmount > 0
+        : data.recommendedBuyAmountByAssetClass.bond > 0
           ? {
               assetClass: 'bond' as const,
-              amount: buyBondAmount,
+              amount: data.recommendedBuyAmountByAssetClass.bond,
             }
           : null
 
     return {
-      totalMarketValue,
-      equityWeight,
-      bondWeight,
-      equityGap,
-      bondGap,
-      buyEquityAmount,
-      buyBondAmount,
+      ...data,
       dominantRecommendation,
     }
-  }, [holdingsQuery.data?.allocationByAssetClass])
+  }, [rebalanceQuery.data])
 
   const portfolioTrendData = useMemo<TrendPoint[]>(
     () =>
@@ -934,12 +896,24 @@ export default function Dashboard() {
                     {t('dashboard.rebalanceTargetLabel')}
                   </p>
                   <p className="mt-2 text-lg font-semibold text-slate-900">
-                    {t('dashboard.rebalanceTargetValue')}
+                    {`${formatPercent(rebalancePlan?.targets.equity ?? 0.8, {
+                      signed: false,
+                    })} / ${formatPercent(rebalancePlan?.targets.bond ?? 0.2, {
+                      signed: false,
+                    })}`}
                   </p>
                 </div>
               </div>
 
-              {rebalancePlan ? (
+              {rebalanceQuery.isLoading ? (
+                <div className="mt-6 rounded-2xl border border-dashed border-slate-300 bg-slate-50 px-5 py-6 text-sm text-slate-600">
+                  {t('dashboard.loading')}
+                </div>
+              ) : rebalanceQuery.error ? (
+                <div className="mt-6 rounded-2xl border border-red-200 bg-red-50 px-5 py-6 text-sm text-red-700">
+                  {getErrorMessage(rebalanceQuery.error, t('dashboard.failedToLoad'))}
+                </div>
+              ) : rebalancePlan ? (
                 <div className="mt-6 space-y-4">
                   <div className="grid gap-4 md:grid-cols-2">
                     <div className="rounded-2xl border border-blue-100 bg-blue-50/70 p-4">
@@ -947,13 +921,13 @@ export default function Dashboard() {
                         {t('dashboard.assetClassEquity')}
                       </p>
                       <p className="mt-2 text-2xl font-semibold text-slate-900">
-                        {formatPercent(rebalancePlan.equityWeight, { signed: false })}
+                        {formatPercent(rebalancePlan.current.equity, { signed: false })}
                       </p>
                       <div className="mt-3 space-y-1 text-sm text-slate-600">
                         <p>
                           {t('dashboard.rebalanceCurrentLabel')}{' '}
                           {formatCurrencyWithCode(
-                            rebalancePlan.totalMarketValue * rebalancePlan.equityWeight,
+                            rebalancePlan.marketValueByAssetClass.equity,
                             locale,
                             displayCurrency,
                           )}
@@ -962,17 +936,17 @@ export default function Dashboard() {
                           {t('dashboard.rebalanceGapLabel')}{' '}
                           <span
                             className={
-                              rebalancePlan.equityGap >= 0 ? 'text-emerald-700' : 'text-amber-700'
+                              rebalancePlan.gaps.equity >= 0 ? 'text-emerald-700' : 'text-amber-700'
                             }
                           >
-                            {formatPercentPoints(rebalancePlan.equityGap)}
+                            {formatPercentPoints(rebalancePlan.gaps.equity)}
                           </span>
                         </p>
                         <p>
                           {t('dashboard.rebalanceBuyMoreLabel')}{' '}
-                          {rebalancePlan.buyEquityAmount > 0
+                          {rebalancePlan.recommendedBuyAmountByAssetClass.equity > 0
                             ? formatCurrencyWithCode(
-                                rebalancePlan.buyEquityAmount,
+                                rebalancePlan.recommendedBuyAmountByAssetClass.equity,
                                 locale,
                                 displayCurrency,
                               )
@@ -986,13 +960,13 @@ export default function Dashboard() {
                         {t('dashboard.assetClassBond')}
                       </p>
                       <p className="mt-2 text-2xl font-semibold text-slate-900">
-                        {formatPercent(rebalancePlan.bondWeight, { signed: false })}
+                        {formatPercent(rebalancePlan.current.bond, { signed: false })}
                       </p>
                       <div className="mt-3 space-y-1 text-sm text-slate-600">
                         <p>
                           {t('dashboard.rebalanceCurrentLabel')}{' '}
                           {formatCurrencyWithCode(
-                            rebalancePlan.totalMarketValue * rebalancePlan.bondWeight,
+                            rebalancePlan.marketValueByAssetClass.bond,
                             locale,
                             displayCurrency,
                           )}
@@ -1001,17 +975,17 @@ export default function Dashboard() {
                           {t('dashboard.rebalanceGapLabel')}{' '}
                           <span
                             className={
-                              rebalancePlan.bondGap >= 0 ? 'text-emerald-700' : 'text-amber-700'
+                              rebalancePlan.gaps.bond >= 0 ? 'text-emerald-700' : 'text-amber-700'
                             }
                           >
-                            {formatPercentPoints(rebalancePlan.bondGap)}
+                            {formatPercentPoints(rebalancePlan.gaps.bond)}
                           </span>
                         </p>
                         <p>
                           {t('dashboard.rebalanceBuyMoreLabel')}{' '}
-                          {rebalancePlan.buyBondAmount > 0
+                          {rebalancePlan.recommendedBuyAmountByAssetClass.bond > 0
                             ? formatCurrencyWithCode(
-                                rebalancePlan.buyBondAmount,
+                                rebalancePlan.recommendedBuyAmountByAssetClass.bond,
                                 locale,
                                 displayCurrency,
                               )
@@ -1055,9 +1029,11 @@ export default function Dashboard() {
                       <p className="text-[11px] font-medium uppercase tracking-[0.18em] text-slate-500">
                         {t('dashboard.rebalanceFootnoteLabel')}
                       </p>
-                      <p className="mt-2 text-sm leading-6 text-slate-600">
-                        {t('dashboard.rebalanceFootnote')}
-                      </p>
+                      <div className="mt-2 space-y-1 text-sm leading-6 text-slate-600">
+                        {rebalancePlan.notes.map((note) => (
+                          <p key={note}>{note}</p>
+                        ))}
+                      </div>
                     </div>
                   </div>
                 </div>

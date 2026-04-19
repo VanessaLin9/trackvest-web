@@ -69,6 +69,31 @@ export type PortfolioTrendResponse = {
   points: PortfolioTrendPoint[]
 }
 
+export type PortfolioRebalanceAllocation = {
+  equity: number
+  bond: number
+}
+
+export type PortfolioRebalanceMarketValue = {
+  equity: number
+  bond: number
+}
+
+export type PortfolioRebalanceResponse = {
+  asOf: string
+  displayCurrencyMode: 'portfolio-default' | 'preferred-base'
+  requestedDisplayCurrency: string | null
+  effectiveDisplayCurrency: string | null
+  baseCurrency: string | null
+  targets: PortfolioRebalanceAllocation
+  current: PortfolioRebalanceAllocation
+  gaps: PortfolioRebalanceAllocation
+  marketValueByAssetClass: PortfolioRebalanceMarketValue
+  recommendedBuyAmountByAssetClass: PortfolioRebalanceMarketValue
+  trackedMarketValue: number
+  notes: string[]
+}
+
 export type PortfolioHoldingTrendPoint = {
   label: string
   date: string
@@ -88,10 +113,23 @@ type PortfolioDisplayCurrencyQuery = {
   preferredBaseCurrency?: string
 }
 
+type PortfolioRebalanceQuery = PortfolioDisplayCurrencyQuery & {
+  targetEquity?: number
+  targetBond?: number
+}
+
 function buildPortfolioDisplayCurrencyParams(query?: PortfolioDisplayCurrencyQuery) {
   return query?.preferredBaseCurrency
     ? { preferredBaseCurrency: query.preferredBaseCurrency }
     : undefined
+}
+
+function buildPortfolioRebalanceParams(query?: PortfolioRebalanceQuery) {
+  return {
+    ...buildPortfolioDisplayCurrencyParams(query),
+    ...(query?.targetEquity != null ? { targetEquity: query.targetEquity } : {}),
+    ...(query?.targetBond != null ? { targetBond: query.targetBond } : {}),
+  }
 }
 
 export const portfolioService = {
@@ -118,6 +156,15 @@ export const portfolioService = {
 
     const response = await api.get<PortfolioTrendResponse>('/portfolio/trend', {
       params: buildPortfolioDisplayCurrencyParams(query),
+    })
+    return response.data
+  },
+
+  async getRebalance(query?: PortfolioRebalanceQuery): Promise<PortfolioRebalanceResponse> {
+    getRequiredCurrentUserId()
+
+    const response = await api.get<PortfolioRebalanceResponse>('/portfolio/rebalance', {
+      params: buildPortfolioRebalanceParams(query),
     })
     return response.data
   },
