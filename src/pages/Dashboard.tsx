@@ -893,31 +893,16 @@ export default function Dashboard() {
             </Suspense>
 
             <section className="rounded-[2rem] border border-slate-200 bg-white p-6 shadow-sm">
-              <div className="flex flex-wrap items-start justify-between gap-4">
-                <div className="space-y-2">
-                  <p className="text-xs uppercase tracking-[0.22em] text-slate-500">
-                    {t('dashboard.rebalanceEyebrow')}
-                  </p>
-                  <h2 className="text-2xl font-semibold text-slate-900">
-                    {t('dashboard.rebalanceTitle')}
-                  </h2>
-                  <p className="max-w-2xl text-sm leading-6 text-slate-600">
-                    {t('dashboard.rebalanceDescription')}
-                  </p>
-                </div>
-
-                <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-right">
-                  <p className="text-xs uppercase tracking-[0.18em] text-slate-500">
-                    {t('dashboard.rebalanceTargetLabel')}
-                  </p>
-                  <p className="mt-2 text-lg font-semibold text-slate-900">
-                    {`${formatPercent(rebalancePlan?.targets.equity ?? rebalanceTargetEquity, {
-                      signed: false,
-                    })} / ${formatPercent(rebalancePlan?.targets.bond ?? rebalanceTargetBond, {
-                      signed: false,
-                    })}`}
-                  </p>
-                </div>
+              <div className="space-y-2">
+                <p className="text-xs uppercase tracking-[0.22em] text-slate-500">
+                  {t('dashboard.rebalanceEyebrow')}
+                </p>
+                <h2 className="text-2xl font-semibold text-slate-900">
+                  {t('dashboard.rebalanceTitle')}
+                </h2>
+                <p className="max-w-2xl text-sm leading-6 text-slate-600">
+                  {t('dashboard.rebalanceDescription')}
+                </p>
               </div>
 
               {rebalanceQuery.isLoading ? (
@@ -931,53 +916,44 @@ export default function Dashboard() {
               ) : rebalancePlan ? (
                 <div className="mt-6 space-y-4">
                   <div className="rounded-3xl border border-slate-200 bg-slate-50 p-5">
-                    <div className="flex flex-wrap items-center justify-between gap-3">
-                      <div>
-                        <p className="text-xs uppercase tracking-[0.18em] text-slate-500">
-                          {t('dashboard.rebalanceTargetAdjustLabel')}
-                        </p>
-                        <p className="mt-2 text-sm leading-6 text-slate-600">
-                          {t('dashboard.rebalanceTargetAdjustHint')}
-                        </p>
-                      </div>
-                      <div className="rounded-2xl border border-slate-200 bg-white px-4 py-3 text-right">
-                        <p className="text-[11px] uppercase tracking-[0.16em] text-slate-500">
-                          {t('dashboard.rebalanceTargetLiveLabel')}
-                        </p>
-                        <p className="mt-1 text-sm font-semibold text-slate-900">
-                          {`${deferredRebalanceTargetEquityPercent}% ${t('dashboard.assetClassEquity')} / ${deferredRebalanceTargetBondPercent}% ${t('dashboard.assetClassBond')}`}
-                        </p>
-                      </div>
+                    <div>
+                      <p className="text-xs uppercase tracking-[0.18em] text-slate-500">
+                        {t('dashboard.rebalanceTargetLabel')}
+                      </p>
+                      <p className="mt-2 text-sm leading-6 text-slate-600">
+                        {t('dashboard.rebalanceTargetAdjustHint')}
+                      </p>
                     </div>
-                    <div className="mt-4 grid gap-3 md:grid-cols-[1fr_auto] md:items-center">
-                      <div>
-                        <label
-                          htmlFor="rebalance-target-equity"
-                          className="mb-2 block text-sm font-medium text-slate-700"
-                        >
-                          {t('dashboard.rebalanceTargetEquityLabel')}
-                        </label>
-                        <input
-                          id="rebalance-target-equity"
-                          type="range"
-                          min="0"
-                          max="100"
-                          step="1"
-                          value={rebalanceTargetEquityPercent}
-                          onChange={(event) =>
-                            setRebalanceTargetEquityPercent(Number(event.target.value))
-                          }
-                          className="h-2 w-full cursor-pointer appearance-none rounded-full bg-slate-200 accent-slate-900"
-                        />
+                    <div className="mt-4 space-y-3">
+                      <div className="flex items-center justify-between text-sm font-semibold">
+                        <span className="text-blue-700">
+                          {`${deferredRebalanceTargetEquityPercent}% ${t('dashboard.assetClassEquity')}`}
+                        </span>
+                        <span className="text-teal-700">
+                          {`${deferredRebalanceTargetBondPercent}% ${t('dashboard.assetClassBond')}`}
+                        </span>
                       </div>
-                      <div className="text-right text-sm leading-6 text-slate-600">
-                        <p>
-                          {t('dashboard.assetClassEquity')}: {rebalanceTargetEquityPercent}%
-                        </p>
-                        <p>
-                          {t('dashboard.assetClassBond')}: {100 - rebalanceTargetEquityPercent}%
-                        </p>
-                      </div>
+                      <label
+                        htmlFor="rebalance-target-equity"
+                        className="sr-only"
+                      >
+                        {t('dashboard.rebalanceTargetEquityLabel')}
+                      </label>
+                      <input
+                        id="rebalance-target-equity"
+                        type="range"
+                        min="0"
+                        max="100"
+                        step="1"
+                        value={rebalanceTargetEquityPercent}
+                        onChange={(event) =>
+                          setRebalanceTargetEquityPercent(Number(event.target.value))
+                        }
+                        className="h-3 w-full cursor-pointer appearance-none rounded-full bg-transparent accent-slate-900"
+                        style={{
+                          background: `linear-gradient(to right, #2563eb 0%, #2563eb ${rebalanceTargetEquityPercent}%, #14b8a6 ${rebalanceTargetEquityPercent}%, #14b8a6 100%)`,
+                        }}
+                      />
                     </div>
                   </div>
 
