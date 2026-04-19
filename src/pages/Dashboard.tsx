@@ -320,6 +320,25 @@ function LockIcon({ unlocked = false }: { unlocked?: boolean }) {
   )
 }
 
+function InfoIcon() {
+  return (
+    <svg
+      aria-hidden="true"
+      viewBox="0 0 20 20"
+      className="h-4 w-4"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.8"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <circle cx="10" cy="10" r="7" />
+      <path d="M10 8v5" />
+      <path d="M10 5.75h.01" />
+    </svg>
+  )
+}
+
 export default function Dashboard() {
   const currentUserId = useCurrentUserId()
   const { t, locale } = useI18n()
@@ -1032,82 +1051,121 @@ export default function Dashboard() {
                     </div>
                   </div>
 
-                  <div className="grid gap-4 md:grid-cols-2">
-                    <div className="rounded-2xl border border-blue-100 bg-blue-50/70 p-4">
-                      <p className="text-xs uppercase tracking-[0.18em] text-blue-700">
-                        {t('dashboard.assetClassEquity')}
-                      </p>
-                      <p className="mt-2 text-2xl font-semibold text-slate-900">
-                        {formatPercent(rebalancePlan.current.equity, { signed: false })}
-                      </p>
-                      <div className="mt-3 space-y-1 text-sm text-slate-600">
-                        <p>
-                          {t('dashboard.rebalanceCurrentLabel')}{' '}
-                          {formatCurrencyWithCode(
-                            rebalancePlan.marketValueByAssetClass.equity,
-                            locale,
-                            displayCurrency,
-                          )}
-                        </p>
-                        <p>
-                          {t('dashboard.rebalanceGapLabel')}{' '}
-                          <span
-                            className={
-                              rebalancePlan.gaps.equity >= 0 ? 'text-emerald-700' : 'text-amber-700'
-                            }
+                  <div className="rounded-3xl border border-slate-200 bg-slate-50 p-5">
+                    <div className="flex items-center justify-center">
+                      <div className="relative flex h-64 w-64 items-center justify-center">
+                        <div
+                          className="absolute inset-0 rounded-full"
+                          style={{
+                            background: `conic-gradient(#2563eb 0% ${rebalancePlan.current.equity * 100}%, #14b8a6 ${rebalancePlan.current.equity * 100}% 100%)`,
+                          }}
+                        />
+                        <div className="absolute inset-[20px] rounded-full bg-white" />
+                        <div
+                          className="absolute inset-[48px] rounded-full"
+                          style={{
+                            background: `conic-gradient(#93c5fd 0% ${rebalancePlan.targets.equity * 100}%, #99f6e4 ${rebalancePlan.targets.equity * 100}% 100%)`,
+                          }}
+                        />
+                        <div className="absolute inset-[68px] rounded-full bg-white" />
+                        <div className="group relative z-10 text-center">
+                          <p className="text-[11px] font-medium uppercase tracking-[0.18em] text-slate-500">
+                            {t('dashboard.rebalanceGapLabel')}
+                          </p>
+                          <p
+                            className={`mt-2 text-3xl font-semibold ${
+                              rebalancePlan.gaps.equity >= 0
+                                ? 'text-emerald-700'
+                                : 'text-amber-700'
+                            }`}
                           >
                             {formatPercentPoints(rebalancePlan.gaps.equity)}
-                          </span>
-                        </p>
-                        <p>
-                          {t('dashboard.rebalanceBuyMoreLabel')}{' '}
-                          {rebalancePlan.recommendedBuyAmountByAssetClass.equity > 0
-                            ? formatCurrencyWithCode(
-                                rebalancePlan.recommendedBuyAmountByAssetClass.equity,
-                                locale,
-                                displayCurrency,
-                              )
-                            : t('dashboard.rebalanceAtOrAboveTarget')}
-                        </p>
+                          </p>
+                          <div className="mt-2 inline-flex items-center justify-center text-slate-400">
+                            <InfoIcon />
+                          </div>
+                          <div className="pointer-events-none absolute left-1/2 top-full z-20 mt-3 hidden w-56 -translate-x-1/2 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-left text-xs leading-5 text-slate-600 shadow-lg group-hover:block">
+                            <p>
+                              {t('dashboard.rebalanceCurrentLabel')}{' '}
+                              {`${formatPercent(rebalancePlan.current.equity, { signed: false })} / ${formatPercent(rebalancePlan.current.bond, { signed: false })}`}
+                            </p>
+                            <p className="mt-1">
+                              {t('dashboard.rebalanceTargetLabel')}{' '}
+                              {`${formatPercent(rebalancePlan.targets.equity, { signed: false })} / ${formatPercent(rebalancePlan.targets.bond, { signed: false })}`}
+                            </p>
+                          </div>
+                        </div>
                       </div>
                     </div>
 
-                    <div className="rounded-2xl border border-teal-100 bg-teal-50/70 p-4">
-                      <p className="text-xs uppercase tracking-[0.18em] text-teal-700">
-                        {t('dashboard.assetClassBond')}
-                      </p>
-                      <p className="mt-2 text-2xl font-semibold text-slate-900">
-                        {formatPercent(rebalancePlan.current.bond, { signed: false })}
-                      </p>
-                      <div className="mt-3 space-y-1 text-sm text-slate-600">
-                        <p>
-                          {t('dashboard.rebalanceCurrentLabel')}{' '}
-                          {formatCurrencyWithCode(
-                            rebalancePlan.marketValueByAssetClass.bond,
-                            locale,
-                            displayCurrency,
-                          )}
+                    <div className="mt-5 flex flex-wrap items-start justify-between gap-3">
+                      <div className="rounded-2xl border border-slate-200 bg-white px-4 py-3">
+                        <p className="text-[11px] font-medium uppercase tracking-[0.16em] text-slate-500">
+                          {t('dashboard.rebalanceTargetLabel')}
                         </p>
-                        <p>
-                          {t('dashboard.rebalanceGapLabel')}{' '}
-                          <span
-                            className={
-                              rebalancePlan.gaps.bond >= 0 ? 'text-emerald-700' : 'text-amber-700'
-                            }
+                        <p className="mt-2 text-sm font-semibold text-slate-900">
+                          {`${rebalanceDraftEquityPercent}% ${t('dashboard.assetClassEquity')} / ${rebalanceDraftBondPercent}% ${t('dashboard.assetClassBond')}`}
+                        </p>
+                      </div>
+
+                      <div className="relative min-w-[18rem] flex-1 rounded-2xl border border-slate-200 bg-white px-4 py-3">
+                        <div className="flex items-center gap-3">
+                          <label
+                            htmlFor="rebalance-target-equity"
+                            className="sr-only"
                           >
-                            {formatPercentPoints(rebalancePlan.gaps.bond)}
-                          </span>
-                        </p>
-                        <p>
-                          {t('dashboard.rebalanceBuyMoreLabel')}{' '}
-                          {rebalancePlan.recommendedBuyAmountByAssetClass.bond > 0
-                            ? formatCurrencyWithCode(
-                                rebalancePlan.recommendedBuyAmountByAssetClass.bond,
-                                locale,
-                                displayCurrency,
-                              )
-                            : t('dashboard.rebalanceAtOrAboveTarget')}
-                        </p>
+                            {t('dashboard.rebalanceTargetEquityLabel')}
+                          </label>
+                          <input
+                            id="rebalance-target-equity"
+                            type="range"
+                            min="0"
+                            max="100"
+                            step="1"
+                            value={rebalanceDraftEquityPercent}
+                            onChange={(event) =>
+                              setRebalanceDraftEquityPercent(Number(event.target.value))
+                            }
+                            disabled={!isRebalanceTargetUnlocked}
+                            className={`h-3 w-full appearance-none rounded-full bg-transparent accent-slate-900 ${
+                              isRebalanceTargetUnlocked ? 'cursor-pointer' : 'cursor-not-allowed opacity-75'
+                            }`}
+                            style={{
+                              background: `linear-gradient(to right, #2563eb 0%, #2563eb ${rebalanceDraftEquityPercent}%, #14b8a6 ${rebalanceDraftEquityPercent}%, #14b8a6 100%)`,
+                            }}
+                          />
+                          <button
+                            type="button"
+                            onClick={handleRebalanceTargetLockToggle}
+                            aria-label={
+                              isRebalanceTargetUnlocked
+                                ? t('dashboard.rebalanceLockApplyLabel')
+                                : t('dashboard.rebalanceLockEditLabel')
+                            }
+                            title={
+                              isRebalanceTargetUnlocked
+                                ? t('dashboard.rebalanceLockApplyLabel')
+                                : t('dashboard.rebalanceLockEditLabel')
+                            }
+                            className={`inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full border transition ${
+                              isRebalanceTargetUnlocked
+                                ? 'border-amber-300 bg-amber-50 text-amber-700 hover:bg-amber-100'
+                                : 'border-slate-200 bg-white text-slate-600 hover:bg-slate-50'
+                            }`}
+                          >
+                            <LockIcon unlocked={isRebalanceTargetUnlocked} />
+                          </button>
+                        </div>
+                        {isRebalanceTargetUnlocked ? (
+                          <div className="absolute right-0 top-full z-20 mt-3 w-64 rounded-2xl border border-slate-200 bg-white p-4 shadow-lg">
+                            <p className="text-[11px] font-medium uppercase tracking-[0.16em] text-slate-500">
+                              {t('dashboard.rebalanceTargetLabel')}
+                            </p>
+                            <p className="mt-2 text-sm font-semibold text-slate-900">
+                              {`${rebalanceDraftEquityPercent}% ${t('dashboard.assetClassEquity')} / ${rebalanceDraftBondPercent}% ${t('dashboard.assetClassBond')}`}
+                            </p>
+                          </div>
+                        ) : null}
                       </div>
                     </div>
                   </div>
