@@ -102,7 +102,7 @@ export const messages = {
       rebalanceEyebrow: 'Rebalance',
       rebalanceTitle: 'Bring the portfolio back toward target',
       rebalanceDescription:
-        'This first pass reads the dedicated rebalance API and keeps the card intentionally compact so we can validate the workflow before expanding into richer allocation planning.',
+        'Compare the current stock-bond mix with the target, then decide how much to top up.',
       rebalanceTargetLabel: 'Target mix',
       rebalanceTargetValue: '80% Equity / 20% Bond',
       rebalanceTargetAdjustLabel: 'Adjust target',
@@ -624,7 +624,7 @@ export const messages = {
       rebalanceEyebrow: '再平衡',
       rebalanceTitle: '把投組慢慢拉回目標配置',
       rebalanceDescription:
-        '第一版已經直接讀取專用 rebalance API，這張卡刻意先做成 compact 版，方便我們先把流程驗證順再擴大成更完整的配置規劃。',
+        '直接看目前股債比和目標差多少，再決定這一輪要補多少。',
       rebalanceTargetLabel: '目標配置',
       rebalanceTargetValue: '80% 股票 / 20% 債券',
       rebalanceTargetAdjustLabel: '調整目標',
