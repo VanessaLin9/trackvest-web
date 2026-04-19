@@ -1,5 +1,5 @@
 import { useQuery } from '@tanstack/react-query'
-import { lazy, Suspense, useEffect, useMemo, useState } from 'react'
+import { lazy, Suspense, useDeferredValue, useEffect, useMemo, useState } from 'react'
 import { useCurrentUserId } from '../app/current-user'
 import type {
   AllocationChartItem,
@@ -286,6 +286,7 @@ export default function Dashboard() {
   const currentUserId = useCurrentUserId()
   const { t, locale } = useI18n()
   const [selectedHoldingId, setSelectedHoldingId] = useState<string | null>(null)
+  const [rebalanceTargetEquityPercent, setRebalanceTargetEquityPercent] = useState(80)
   const {
     displayCurrencyMode,
     preferredBaseCurrency,
@@ -296,6 +297,10 @@ export default function Dashboard() {
   } = usePreferencesStore()
   const requestedDisplayCurrency =
     displayCurrencyMode === 'base' ? preferredBaseCurrency : undefined
+  const deferredRebalanceTargetEquityPercent = useDeferredValue(rebalanceTargetEquityPercent)
+  const deferredRebalanceTargetBondPercent = 100 - deferredRebalanceTargetEquityPercent
+  const rebalanceTargetEquity = deferredRebalanceTargetEquityPercent / 100
+  const rebalanceTargetBond = deferredRebalanceTargetBondPercent / 100
 
   const summaryQuery = useQuery({
     queryKey: ['portfolio', 'summary', currentUserId, requestedDisplayCurrency ?? 'default'],
@@ -337,12 +342,22 @@ export default function Dashboard() {
   })
 
   const rebalanceQuery = useQuery({
-    queryKey: ['portfolio', 'rebalance', currentUserId, requestedDisplayCurrency ?? 'default'],
+    queryKey: [
+      'portfolio',
+      'rebalance',
+      currentUserId,
+      requestedDisplayCurrency ?? 'default',
+      deferredRebalanceTargetEquityPercent,
+    ],
     queryFn: () =>
       portfolioService.getRebalance(
-        requestedDisplayCurrency
-          ? { preferredBaseCurrency: requestedDisplayCurrency }
-          : undefined,
+        {
+          ...(requestedDisplayCurrency
+            ? { preferredBaseCurrency: requestedDisplayCurrency }
+            : {}),
+          targetEquity: rebalanceTargetEquity,
+          targetBond: rebalanceTargetBond,
+        },
       ),
     enabled: Boolean(currentUserId),
   })
@@ -896,9 +911,9 @@ export default function Dashboard() {
                     {t('dashboard.rebalanceTargetLabel')}
                   </p>
                   <p className="mt-2 text-lg font-semibold text-slate-900">
-                    {`${formatPercent(rebalancePlan?.targets.equity ?? 0.8, {
+                    {`${formatPercent(rebalancePlan?.targets.equity ?? rebalanceTargetEquity, {
                       signed: false,
-                    })} / ${formatPercent(rebalancePlan?.targets.bond ?? 0.2, {
+                    })} / ${formatPercent(rebalancePlan?.targets.bond ?? rebalanceTargetBond, {
                       signed: false,
                     })}`}
                   </p>
@@ -915,6 +930,57 @@ export default function Dashboard() {
                 </div>
               ) : rebalancePlan ? (
                 <div className="mt-6 space-y-4">
+                  <div className="rounded-3xl border border-slate-200 bg-slate-50 p-5">
+                    <div className="flex flex-wrap items-center justify-between gap-3">
+                      <div>
+                        <p className="text-xs uppercase tracking-[0.18em] text-slate-500">
+                          {t('dashboard.rebalanceTargetAdjustLabel')}
+                        </p>
+                        <p className="mt-2 text-sm leading-6 text-slate-600">
+                          {t('dashboard.rebalanceTargetAdjustHint')}
+                        </p>
+                      </div>
+                      <div className="rounded-2xl border border-slate-200 bg-white px-4 py-3 text-right">
+                        <p className="text-[11px] uppercase tracking-[0.16em] text-slate-500">
+                          {t('dashboard.rebalanceTargetLiveLabel')}
+                        </p>
+                        <p className="mt-1 text-sm font-semibold text-slate-900">
+                          {`${deferredRebalanceTargetEquityPercent}% ${t('dashboard.assetClassEquity')} / ${deferredRebalanceTargetBondPercent}% ${t('dashboard.assetClassBond')}`}
+                        </p>
+                      </div>
+                    </div>
+                    <div className="mt-4 grid gap-3 md:grid-cols-[1fr_auto] md:items-center">
+                      <div>
+                        <label
+                          htmlFor="rebalance-target-equity"
+                          className="mb-2 block text-sm font-medium text-slate-700"
+                        >
+                          {t('dashboard.rebalanceTargetEquityLabel')}
+                        </label>
+                        <input
+                          id="rebalance-target-equity"
+                          type="range"
+                          min="0"
+                          max="100"
+                          step="1"
+                          value={rebalanceTargetEquityPercent}
+                          onChange={(event) =>
+                            setRebalanceTargetEquityPercent(Number(event.target.value))
+                          }
+                          className="h-2 w-full cursor-pointer appearance-none rounded-full bg-slate-200 accent-slate-900"
+                        />
+                      </div>
+                      <div className="text-right text-sm leading-6 text-slate-600">
+                        <p>
+                          {t('dashboard.assetClassEquity')}: {rebalanceTargetEquityPercent}%
+                        </p>
+                        <p>
+                          {t('dashboard.assetClassBond')}: {100 - rebalanceTargetEquityPercent}%
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+
                   <div className="grid gap-4 md:grid-cols-2">
                     <div className="rounded-2xl border border-blue-100 bg-blue-50/70 p-4">
                       <p className="text-xs uppercase tracking-[0.18em] text-blue-700">

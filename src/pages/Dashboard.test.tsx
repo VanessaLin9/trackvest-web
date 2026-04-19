@@ -11,11 +11,13 @@ const {
   getSummary,
   getHoldings,
   getTrend,
+  getRebalance,
   getHoldingTrend,
 } = vi.hoisted(() => ({
   getSummary: vi.fn(),
   getHoldings: vi.fn(),
   getTrend: vi.fn(),
+  getRebalance: vi.fn(),
   getHoldingTrend: vi.fn(),
 }))
 
@@ -24,6 +26,7 @@ vi.mock('../lib/portfolio.service', () => ({
     getSummary,
     getHoldings,
     getTrend,
+    getRebalance,
     getHoldingTrend,
   },
 }))
@@ -287,6 +290,32 @@ describe('Dashboard smoke tests', () => {
     ],
   }
 
+  const twdRebalance = {
+    asOf: '2026-03-27T09:00:00.000Z',
+    displayCurrencyMode: 'portfolio-default' as const,
+    requestedDisplayCurrency: null,
+    effectiveDisplayCurrency: 'TWD',
+    baseCurrency: 'TWD',
+    targets: { equity: 0.8, bond: 0.2 },
+    current: { equity: 0.7554672, bond: 0.2445328 },
+    gaps: { equity: 0.0445328, bond: -0.0445328 },
+    marketValueByAssetClass: { equity: 19000, bond: 6150 },
+    recommendedBuyAmountByAssetClass: { equity: 3440.23, bond: 0 },
+    trackedMarketValue: 25150,
+    notes: ['Recommended buy amounts assume a buy-only rebalance and do not suggest selling.'],
+  }
+
+  const usdRebalance = {
+    ...twdRebalance,
+    displayCurrencyMode: 'preferred-base' as const,
+    requestedDisplayCurrency: 'USD',
+    effectiveDisplayCurrency: 'USD',
+    baseCurrency: 'USD',
+    marketValueByAssetClass: { equity: 593.56, bond: 192.126 },
+    recommendedBuyAmountByAssetClass: { equity: 107.438, bond: 0 },
+    trackedMarketValue: 785.686,
+  }
+
   beforeEach(() => {
     setCurrentUserId('user-1')
     usePreferencesStore.setState({
@@ -298,6 +327,7 @@ describe('Dashboard smoke tests', () => {
     getSummary.mockResolvedValue(twdSummary)
     getHoldings.mockResolvedValue(twdHoldings)
     getTrend.mockResolvedValue(twdTrend)
+    getRebalance.mockResolvedValue(twdRebalance)
     getHoldingTrend.mockResolvedValue(twdHoldingTrend)
   })
 
@@ -337,6 +367,7 @@ describe('Dashboard smoke tests', () => {
       expect(getSummary).toHaveBeenCalledTimes(1)
       expect(getHoldings).toHaveBeenCalledTimes(1)
       expect(getTrend).toHaveBeenCalledTimes(1)
+      expect(getRebalance).toHaveBeenCalledTimes(1)
       expect(screen.getByText('Portfolio overview')).toBeTruthy()
       expect(screen.getByText('Tracked assets')).toBeTruthy()
       expect(screen.getByText('23,726 TWD')).toBeTruthy()
@@ -376,6 +407,7 @@ describe('Dashboard smoke tests', () => {
       ],
     })
     getTrend.mockResolvedValue(usdTrend)
+    getRebalance.mockResolvedValue(usdRebalance)
     getHoldingTrend.mockResolvedValue(usdHoldingTrend)
     usePreferencesStore.setState({
       displayCurrencyMode: 'base',
@@ -389,6 +421,11 @@ describe('Dashboard smoke tests', () => {
       expect(getSummary).toHaveBeenCalledWith({ preferredBaseCurrency: 'USD' })
       expect(getHoldings).toHaveBeenCalledWith({ preferredBaseCurrency: 'USD' })
       expect(getTrend).toHaveBeenCalledWith({ preferredBaseCurrency: 'USD' })
+      expect(getRebalance).toHaveBeenCalledWith({
+        preferredBaseCurrency: 'USD',
+        targetEquity: 0.8,
+        targetBond: 0.2,
+      })
       expect(getHoldingTrend).toHaveBeenCalledWith('asset-2330', {
         preferredBaseCurrency: 'USD',
       })
@@ -406,6 +443,10 @@ describe('Dashboard smoke tests', () => {
     )
     getTrend.mockImplementation(async (query?: { preferredBaseCurrency?: string }) =>
       query?.preferredBaseCurrency === 'USD' ? usdTrend : twdTrend,
+    )
+    getRebalance.mockImplementation(
+      async (query?: { preferredBaseCurrency?: string; targetEquity?: number; targetBond?: number }) =>
+        query?.preferredBaseCurrency === 'USD' ? usdRebalance : twdRebalance,
     )
     getHoldingTrend.mockImplementation(
       async (_assetId: string, query?: { preferredBaseCurrency?: string }) =>
@@ -431,6 +472,11 @@ describe('Dashboard smoke tests', () => {
       expect(getSummary).toHaveBeenLastCalledWith({ preferredBaseCurrency: 'USD' })
       expect(getHoldings).toHaveBeenLastCalledWith({ preferredBaseCurrency: 'USD' })
       expect(getTrend).toHaveBeenLastCalledWith({ preferredBaseCurrency: 'USD' })
+      expect(getRebalance).toHaveBeenLastCalledWith({
+        preferredBaseCurrency: 'USD',
+        targetEquity: 0.8,
+        targetBond: 0.2,
+      })
       expect(getHoldingTrend).toHaveBeenLastCalledWith('asset-2330', {
         preferredBaseCurrency: 'USD',
       })
@@ -450,6 +496,30 @@ describe('Dashboard smoke tests', () => {
 
     await waitFor(() => {
       expect(screen.getByText('Equity, ETF')).toBeTruthy()
+    })
+  })
+
+  it('updates rebalance target query when the equity slider changes', async () => {
+    renderPage()
+
+    await waitFor(() => {
+      expect(screen.getByLabelText('Equity target')).toBeTruthy()
+      expect(getRebalance).toHaveBeenCalledWith({
+        targetEquity: 0.8,
+        targetBond: 0.2,
+      })
+    })
+
+    fireEvent.change(screen.getByLabelText('Equity target'), {
+      target: { value: '70' },
+    })
+
+    await waitFor(() => {
+      expect(getRebalance).toHaveBeenLastCalledWith({
+        targetEquity: 0.7,
+        targetBond: 0.3,
+      })
+      expect(screen.getByText('70% Equity / 30% Bond')).toBeTruthy()
     })
   })
 })
