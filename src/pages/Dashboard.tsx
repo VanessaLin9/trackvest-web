@@ -320,25 +320,6 @@ function LockIcon({ unlocked = false }: { unlocked?: boolean }) {
   )
 }
 
-function InfoIcon() {
-  return (
-    <svg
-      aria-hidden="true"
-      viewBox="0 0 20 20"
-      className="h-4 w-4"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="1.8"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    >
-      <circle cx="10" cy="10" r="7" />
-      <path d="M10 8v5" />
-      <path d="M10 5.75h.01" />
-    </svg>
-  )
-}
-
 export default function Dashboard() {
   const currentUserId = useCurrentUserId()
   const { t, locale } = useI18n()
@@ -988,21 +969,79 @@ export default function Dashboard() {
                   <div className="rounded-3xl border border-slate-200 bg-slate-50 p-5">
                     <div className="flex items-center justify-center">
                       <div className="relative flex h-64 w-64 items-center justify-center">
-                        <div
-                          className="absolute inset-0 rounded-full"
-                          style={{
-                            background: `conic-gradient(#2563eb 0% ${rebalancePlan.current.equity * 100}%, #14b8a6 ${rebalancePlan.current.equity * 100}% 100%)`,
-                          }}
-                        />
-                        <div className="absolute inset-[20px] rounded-full bg-white" />
-                        <div
-                          className="absolute inset-[48px] rounded-full"
-                          style={{
-                            background: `conic-gradient(#93c5fd 0% ${rebalancePlan.targets.equity * 100}%, #99f6e4 ${rebalancePlan.targets.equity * 100}% 100%)`,
-                          }}
-                        />
-                        <div className="absolute inset-[68px] rounded-full bg-white" />
-                        <div className="group relative z-10 text-center">
+                        <svg
+                          aria-hidden="true"
+                          viewBox="0 0 220 220"
+                          className="absolute inset-0 h-full w-full -rotate-90"
+                        >
+                          <circle
+                            cx="110"
+                            cy="110"
+                            r="94"
+                            fill="none"
+                            stroke="#2563eb"
+                            strokeWidth="30"
+                            strokeDasharray={`${rebalancePlan.current.equity * 100} ${100 - rebalancePlan.current.equity * 100}`}
+                            pathLength="100"
+                          >
+                            <title>
+                              {`${t('dashboard.rebalanceCurrentLabel')} ${t('dashboard.assetClassEquity')} ${formatPercent(rebalancePlan.current.equity, {
+                                signed: false,
+                              })}`}
+                            </title>
+                          </circle>
+                          <circle
+                            cx="110"
+                            cy="110"
+                            r="94"
+                            fill="none"
+                            stroke="#14b8a6"
+                            strokeWidth="30"
+                            strokeDasharray={`${(1 - rebalancePlan.current.equity) * 100} ${rebalancePlan.current.equity * 100}`}
+                            strokeDashoffset={-rebalancePlan.current.equity * 100}
+                            pathLength="100"
+                          >
+                            <title>
+                              {`${t('dashboard.rebalanceCurrentLabel')} ${t('dashboard.assetClassBond')} ${formatPercent(rebalancePlan.current.bond, {
+                                signed: false,
+                              })}`}
+                            </title>
+                          </circle>
+                          <circle
+                            cx="110"
+                            cy="110"
+                            r="62"
+                            fill="none"
+                            stroke="#93c5fd"
+                            strokeWidth="26"
+                            strokeDasharray={`${rebalancePlan.targets.equity * 100} ${100 - rebalancePlan.targets.equity * 100}`}
+                            pathLength="100"
+                          >
+                            <title>
+                              {`${t('dashboard.rebalanceTargetLabel')} ${t('dashboard.assetClassEquity')} ${formatPercent(rebalancePlan.targets.equity, {
+                                signed: false,
+                              })}`}
+                            </title>
+                          </circle>
+                          <circle
+                            cx="110"
+                            cy="110"
+                            r="62"
+                            fill="none"
+                            stroke="#99f6e4"
+                            strokeWidth="26"
+                            strokeDasharray={`${(1 - rebalancePlan.targets.equity) * 100} ${rebalancePlan.targets.equity * 100}`}
+                            strokeDashoffset={-rebalancePlan.targets.equity * 100}
+                            pathLength="100"
+                          >
+                            <title>
+                              {`${t('dashboard.rebalanceTargetLabel')} ${t('dashboard.assetClassBond')} ${formatPercent(rebalancePlan.targets.bond, {
+                                signed: false,
+                              })}`}
+                            </title>
+                          </circle>
+                        </svg>
+                        <div className="relative z-10 text-center">
                           <p className="text-[11px] font-medium uppercase tracking-[0.18em] text-slate-500">
                             {t('dashboard.rebalanceGapLabel')}
                           </p>
@@ -1015,19 +1054,6 @@ export default function Dashboard() {
                           >
                             {formatPercentPoints(rebalancePlan.gaps.equity)}
                           </p>
-                          <div className="mt-2 inline-flex items-center justify-center text-slate-400">
-                            <InfoIcon />
-                          </div>
-                          <div className="pointer-events-none absolute left-1/2 top-full z-20 mt-3 hidden w-56 -translate-x-1/2 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-left text-xs leading-5 text-slate-600 shadow-lg group-hover:block">
-                            <p>
-                              {t('dashboard.rebalanceCurrentLabel')}{' '}
-                              {`${formatPercent(rebalancePlan.current.equity, { signed: false })} / ${formatPercent(rebalancePlan.current.bond, { signed: false })}`}
-                            </p>
-                            <p className="mt-1">
-                              {t('dashboard.rebalanceTargetLabel')}{' '}
-                              {`${formatPercent(rebalancePlan.targets.equity, { signed: false })} / ${formatPercent(rebalancePlan.targets.bond, { signed: false })}`}
-                            </p>
-                          </div>
                         </div>
                       </div>
                     </div>
