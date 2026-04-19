@@ -499,7 +499,7 @@ describe('Dashboard smoke tests', () => {
     })
   })
 
-  it('updates rebalance target query when the equity slider changes', async () => {
+  it('updates rebalance target query only after the target lock is re-applied', async () => {
     renderPage()
 
     await waitFor(() => {
@@ -510,16 +510,27 @@ describe('Dashboard smoke tests', () => {
       })
     })
 
+    const slider = screen.getByLabelText('Equity target') as HTMLInputElement
+    expect(slider.disabled).toBe(true)
+
+    fireEvent.click(screen.getByRole('button', { name: 'Unlock target adjustment' }))
+    expect(slider.disabled).toBe(false)
+
     fireEvent.change(screen.getByLabelText('Equity target'), {
       target: { value: '70' },
     })
+
+    expect(getRebalance).toHaveBeenCalledTimes(1)
+    expect(screen.getByText('70% Equity')).toBeTruthy()
+    expect(screen.getByText('30% Bond')).toBeTruthy()
+
+    fireEvent.click(screen.getByRole('button', { name: 'Lock target and apply changes' }))
 
     await waitFor(() => {
       expect(getRebalance).toHaveBeenLastCalledWith({
         targetEquity: 0.7,
         targetBond: 0.3,
       })
-      expect(screen.getByText('70% Equity / 30% Bond')).toBeTruthy()
     })
   })
 })

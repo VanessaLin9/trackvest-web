@@ -1,5 +1,5 @@
 import { useQuery } from '@tanstack/react-query'
-import { lazy, Suspense, useDeferredValue, useEffect, useMemo, useState } from 'react'
+import { lazy, Suspense, useEffect, useMemo, useState } from 'react'
 import { useCurrentUserId } from '../app/current-user'
 import type {
   AllocationChartItem,
@@ -282,11 +282,51 @@ function DashboardLoadingState() {
   )
 }
 
+function LockIcon({ unlocked = false }: { unlocked?: boolean }) {
+  if (unlocked) {
+    return (
+      <svg
+        aria-hidden="true"
+        viewBox="0 0 20 20"
+        className="h-4 w-4"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="1.8"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      >
+        <path d="M6.5 8V6.5a3.5 3.5 0 1 1 7 0" />
+        <path d="M10 11v2.5" />
+        <rect x="4.5" y="8" width="11" height="8" rx="2" />
+      </svg>
+    )
+  }
+
+  return (
+    <svg
+      aria-hidden="true"
+      viewBox="0 0 20 20"
+      className="h-4 w-4"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.8"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <path d="M6.5 8V6.5a3.5 3.5 0 1 1 7 0V8" />
+      <path d="M10 11v2.5" />
+      <rect x="4.5" y="8" width="11" height="8" rx="2" />
+    </svg>
+  )
+}
+
 export default function Dashboard() {
   const currentUserId = useCurrentUserId()
   const { t, locale } = useI18n()
   const [selectedHoldingId, setSelectedHoldingId] = useState<string | null>(null)
   const [rebalanceTargetEquityPercent, setRebalanceTargetEquityPercent] = useState(80)
+  const [rebalanceDraftEquityPercent, setRebalanceDraftEquityPercent] = useState(80)
+  const [isRebalanceTargetUnlocked, setIsRebalanceTargetUnlocked] = useState(false)
   const {
     displayCurrencyMode,
     preferredBaseCurrency,
@@ -297,10 +337,10 @@ export default function Dashboard() {
   } = usePreferencesStore()
   const requestedDisplayCurrency =
     displayCurrencyMode === 'base' ? preferredBaseCurrency : undefined
-  const deferredRebalanceTargetEquityPercent = useDeferredValue(rebalanceTargetEquityPercent)
-  const deferredRebalanceTargetBondPercent = 100 - deferredRebalanceTargetEquityPercent
-  const rebalanceTargetEquity = deferredRebalanceTargetEquityPercent / 100
-  const rebalanceTargetBond = deferredRebalanceTargetBondPercent / 100
+  const rebalanceTargetBondPercent = 100 - rebalanceTargetEquityPercent
+  const rebalanceDraftBondPercent = 100 - rebalanceDraftEquityPercent
+  const rebalanceTargetEquity = rebalanceTargetEquityPercent / 100
+  const rebalanceTargetBond = rebalanceTargetBondPercent / 100
 
   const summaryQuery = useQuery({
     queryKey: ['portfolio', 'summary', currentUserId, requestedDisplayCurrency ?? 'default'],
@@ -347,7 +387,7 @@ export default function Dashboard() {
       'rebalance',
       currentUserId,
       requestedDisplayCurrency ?? 'default',
-      deferredRebalanceTargetEquityPercent,
+      rebalanceTargetEquityPercent,
     ],
     queryFn: () =>
       portfolioService.getRebalance(
@@ -381,6 +421,16 @@ export default function Dashboard() {
         : holdings[0]?.assetId ?? null,
     )
   }, [holdings])
+
+  useEffect(() => {
+    if (!rebalanceQuery.data || isRebalanceTargetUnlocked) {
+      return
+    }
+
+    const nextTargetEquityPercent = Math.round(rebalanceQuery.data.targets.equity * 100)
+    setRebalanceTargetEquityPercent(nextTargetEquityPercent)
+    setRebalanceDraftEquityPercent(nextTargetEquityPercent)
+  }, [isRebalanceTargetUnlocked, rebalanceQuery.data])
 
   const selectedHolding = useMemo(
     () => holdings.find((holding) => holding.assetId === selectedHoldingId) ?? null,
@@ -476,6 +526,17 @@ export default function Dashboard() {
       dominantRecommendation,
     }
   }, [rebalanceQuery.data])
+
+  const handleRebalanceTargetLockToggle = () => {
+    if (isRebalanceTargetUnlocked) {
+      setRebalanceTargetEquityPercent(rebalanceDraftEquityPercent)
+      setIsRebalanceTargetUnlocked(false)
+      return
+    }
+
+    setRebalanceDraftEquityPercent(rebalanceTargetEquityPercent)
+    setIsRebalanceTargetUnlocked(true)
+  }
 
   const portfolioTrendData = useMemo<TrendPoint[]>(
     () =>
@@ -920,40 +981,64 @@ export default function Dashboard() {
                       <p className="text-xs uppercase tracking-[0.18em] text-slate-500">
                         {t('dashboard.rebalanceTargetLabel')}
                       </p>
-                      <p className="mt-2 text-sm leading-6 text-slate-600">
-                        {t('dashboard.rebalanceTargetAdjustHint')}
-                      </p>
                     </div>
                     <div className="mt-4 space-y-3">
-                      <div className="flex items-center justify-between text-sm font-semibold">
+                      <div className="flex items-center gap-3 text-sm font-semibold">
                         <span className="text-blue-700">
-                          {`${deferredRebalanceTargetEquityPercent}% ${t('dashboard.assetClassEquity')}`}
+                          {`${rebalanceDraftEquityPercent}% ${t('dashboard.assetClassEquity')}`}
                         </span>
+                        <span className="text-slate-400">/</span>
                         <span className="text-teal-700">
-                          {`${deferredRebalanceTargetBondPercent}% ${t('dashboard.assetClassBond')}`}
+                          {`${rebalanceDraftBondPercent}% ${t('dashboard.assetClassBond')}`}
                         </span>
                       </div>
-                      <label
-                        htmlFor="rebalance-target-equity"
-                        className="sr-only"
-                      >
-                        {t('dashboard.rebalanceTargetEquityLabel')}
-                      </label>
-                      <input
-                        id="rebalance-target-equity"
-                        type="range"
-                        min="0"
-                        max="100"
-                        step="1"
-                        value={rebalanceTargetEquityPercent}
-                        onChange={(event) =>
-                          setRebalanceTargetEquityPercent(Number(event.target.value))
-                        }
-                        className="h-3 w-full cursor-pointer appearance-none rounded-full bg-transparent accent-slate-900"
-                        style={{
-                          background: `linear-gradient(to right, #2563eb 0%, #2563eb ${rebalanceTargetEquityPercent}%, #14b8a6 ${rebalanceTargetEquityPercent}%, #14b8a6 100%)`,
-                        }}
-                      />
+                      <div className="flex items-center gap-3">
+                        <label
+                          htmlFor="rebalance-target-equity"
+                          className="sr-only"
+                        >
+                          {t('dashboard.rebalanceTargetEquityLabel')}
+                        </label>
+                        <input
+                          id="rebalance-target-equity"
+                          type="range"
+                          min="0"
+                          max="100"
+                          step="1"
+                          value={rebalanceDraftEquityPercent}
+                          onChange={(event) =>
+                            setRebalanceDraftEquityPercent(Number(event.target.value))
+                          }
+                          disabled={!isRebalanceTargetUnlocked}
+                          className={`h-3 w-full appearance-none rounded-full bg-transparent accent-slate-900 ${
+                            isRebalanceTargetUnlocked ? 'cursor-pointer' : 'cursor-not-allowed opacity-75'
+                          }`}
+                          style={{
+                            background: `linear-gradient(to right, #2563eb 0%, #2563eb ${rebalanceDraftEquityPercent}%, #14b8a6 ${rebalanceDraftEquityPercent}%, #14b8a6 100%)`,
+                          }}
+                        />
+                        <button
+                          type="button"
+                          onClick={handleRebalanceTargetLockToggle}
+                          aria-label={
+                            isRebalanceTargetUnlocked
+                              ? t('dashboard.rebalanceLockApplyLabel')
+                              : t('dashboard.rebalanceLockEditLabel')
+                          }
+                          title={
+                            isRebalanceTargetUnlocked
+                              ? t('dashboard.rebalanceLockApplyLabel')
+                              : t('dashboard.rebalanceLockEditLabel')
+                          }
+                          className={`inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full border transition ${
+                            isRebalanceTargetUnlocked
+                              ? 'border-amber-300 bg-amber-50 text-amber-700 hover:bg-amber-100'
+                              : 'border-slate-200 bg-white text-slate-600 hover:bg-slate-50'
+                          }`}
+                        >
+                          <LockIcon unlocked={isRebalanceTargetUnlocked} />
+                        </button>
+                      </div>
                     </div>
                   </div>
 
