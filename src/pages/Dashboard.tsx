@@ -327,6 +327,7 @@ export default function Dashboard() {
   const [rebalanceTargetEquityPercent, setRebalanceTargetEquityPercent] = useState(80)
   const [rebalanceDraftEquityPercent, setRebalanceDraftEquityPercent] = useState(80)
   const [isRebalanceTargetUnlocked, setIsRebalanceTargetUnlocked] = useState(false)
+  const [rebalanceHoverLabel, setRebalanceHoverLabel] = useState<string | null>(null)
   const {
     displayCurrencyMode,
     preferredBaseCurrency,
@@ -983,6 +984,15 @@ export default function Dashboard() {
                             strokeWidth="30"
                             strokeDasharray={`${rebalancePlan.current.equity * 100} ${100 - rebalancePlan.current.equity * 100}`}
                             pathLength="100"
+                            className="cursor-help"
+                            onMouseEnter={() =>
+                              setRebalanceHoverLabel(
+                                `${t('dashboard.rebalanceCurrentLabel')} ${t('dashboard.assetClassEquity')} ${formatPercent(rebalancePlan.current.equity, {
+                                  signed: false,
+                                })}`,
+                              )
+                            }
+                            onMouseLeave={() => setRebalanceHoverLabel(null)}
                           >
                             <title>
                               {`${t('dashboard.rebalanceCurrentLabel')} ${t('dashboard.assetClassEquity')} ${formatPercent(rebalancePlan.current.equity, {
@@ -1000,6 +1010,15 @@ export default function Dashboard() {
                             strokeDasharray={`${(1 - rebalancePlan.current.equity) * 100} ${rebalancePlan.current.equity * 100}`}
                             strokeDashoffset={-rebalancePlan.current.equity * 100}
                             pathLength="100"
+                            className="cursor-help"
+                            onMouseEnter={() =>
+                              setRebalanceHoverLabel(
+                                `${t('dashboard.rebalanceCurrentLabel')} ${t('dashboard.assetClassBond')} ${formatPercent(rebalancePlan.current.bond, {
+                                  signed: false,
+                                })}`,
+                              )
+                            }
+                            onMouseLeave={() => setRebalanceHoverLabel(null)}
                           >
                             <title>
                               {`${t('dashboard.rebalanceCurrentLabel')} ${t('dashboard.assetClassBond')} ${formatPercent(rebalancePlan.current.bond, {
@@ -1016,6 +1035,15 @@ export default function Dashboard() {
                             strokeWidth="26"
                             strokeDasharray={`${rebalancePlan.targets.equity * 100} ${100 - rebalancePlan.targets.equity * 100}`}
                             pathLength="100"
+                            className="cursor-help"
+                            onMouseEnter={() =>
+                              setRebalanceHoverLabel(
+                                `${t('dashboard.rebalanceTargetLabel')} ${t('dashboard.assetClassEquity')} ${formatPercent(rebalancePlan.targets.equity, {
+                                  signed: false,
+                                })}`,
+                              )
+                            }
+                            onMouseLeave={() => setRebalanceHoverLabel(null)}
                           >
                             <title>
                               {`${t('dashboard.rebalanceTargetLabel')} ${t('dashboard.assetClassEquity')} ${formatPercent(rebalancePlan.targets.equity, {
@@ -1033,6 +1061,15 @@ export default function Dashboard() {
                             strokeDasharray={`${(1 - rebalancePlan.targets.equity) * 100} ${rebalancePlan.targets.equity * 100}`}
                             strokeDashoffset={-rebalancePlan.targets.equity * 100}
                             pathLength="100"
+                            className="cursor-help"
+                            onMouseEnter={() =>
+                              setRebalanceHoverLabel(
+                                `${t('dashboard.rebalanceTargetLabel')} ${t('dashboard.assetClassBond')} ${formatPercent(rebalancePlan.targets.bond, {
+                                  signed: false,
+                                })}`,
+                              )
+                            }
+                            onMouseLeave={() => setRebalanceHoverLabel(null)}
                           >
                             <title>
                               {`${t('dashboard.rebalanceTargetLabel')} ${t('dashboard.assetClassBond')} ${formatPercent(rebalancePlan.targets.bond, {
@@ -1057,6 +1094,11 @@ export default function Dashboard() {
                         </div>
                       </div>
                     </div>
+                    {rebalanceHoverLabel ? (
+                      <div className="mt-3 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-600 shadow-sm">
+                        {rebalanceHoverLabel}
+                      </div>
+                    ) : null}
 
                     <div className="mt-5 flex flex-wrap items-start justify-between gap-3">
                       <div className="rounded-2xl border border-slate-200 bg-white px-4 py-3">
