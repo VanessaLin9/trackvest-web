@@ -320,6 +320,23 @@ function LockIcon({ unlocked = false }: { unlocked?: boolean }) {
   )
 }
 
+function ApplyIcon() {
+  return (
+    <svg
+      aria-hidden="true"
+      viewBox="0 0 20 20"
+      className="h-4 w-4"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <path d="M5 10.5 8.2 13.7 15 7" />
+    </svg>
+  )
+}
+
 export default function Dashboard() {
   const currentUserId = useCurrentUserId()
   const { t, locale } = useI18n()
@@ -1100,18 +1117,62 @@ export default function Dashboard() {
                       </div>
                     ) : null}
 
-                    <div className="mt-5 flex flex-wrap items-start justify-between gap-3">
-                      <div className="rounded-2xl border border-slate-200 bg-white px-4 py-3">
+                    <div className="mt-5 flex items-stretch gap-3">
+                      <div
+                        className={`overflow-hidden rounded-2xl border border-slate-200 bg-white px-4 py-3 transition-all duration-300 ${
+                          isRebalanceTargetUnlocked
+                            ? 'pointer-events-none max-w-0 flex-[0_0_0%] -translate-x-2 opacity-0'
+                            : 'flex-1 opacity-100'
+                        }`}
+                      >
                         <p className="text-[11px] font-medium uppercase tracking-[0.16em] text-slate-500">
-                          {t('dashboard.rebalanceTargetLabel')}
+                          {t('dashboard.rebalanceCurrentLabel')}
                         </p>
                         <p className="mt-2 text-sm font-semibold text-slate-900">
-                          {`${rebalanceDraftEquityPercent}% ${t('dashboard.assetClassEquity')} / ${rebalanceDraftBondPercent}% ${t('dashboard.assetClassBond')}`}
+                          {`${formatPercent(rebalancePlan.current.equity, { signed: false })} ${t('dashboard.assetClassEquity')} / ${formatPercent(rebalancePlan.current.bond, { signed: false })} ${t('dashboard.assetClassBond')}`}
                         </p>
                       </div>
 
-                      <div className="relative min-w-[18rem] flex-1 rounded-2xl border border-slate-200 bg-white px-4 py-3">
-                        <div className="flex items-center gap-3">
+                      <div className="flex-1 rounded-2xl border border-slate-200 bg-white px-4 py-3">
+                        <div className="flex items-start justify-between gap-3">
+                          <div>
+                            <p className="text-[11px] font-medium uppercase tracking-[0.16em] text-slate-500">
+                              {t('dashboard.rebalanceTargetLabel')}
+                            </p>
+                            <p className="mt-2 text-sm font-semibold text-slate-900">
+                              {`${rebalanceDraftEquityPercent}% ${t('dashboard.assetClassEquity')} / ${rebalanceDraftBondPercent}% ${t('dashboard.assetClassBond')}`}
+                            </p>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={handleRebalanceTargetLockToggle}
+                            aria-label={
+                              isRebalanceTargetUnlocked
+                                ? t('dashboard.rebalanceLockApplyLabel')
+                                : t('dashboard.rebalanceLockEditLabel')
+                            }
+                            title={
+                              isRebalanceTargetUnlocked
+                                ? t('dashboard.rebalanceLockApplyLabel')
+                                : t('dashboard.rebalanceLockEditLabel')
+                            }
+                            className={`inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full border transition ${
+                              isRebalanceTargetUnlocked
+                                ? 'border-emerald-300 bg-emerald-50 text-emerald-700 hover:bg-emerald-100'
+                                : 'border-slate-200 bg-white text-slate-600 hover:bg-slate-50'
+                            }`}
+                          >
+                            {isRebalanceTargetUnlocked ? <ApplyIcon /> : <LockIcon />}
+                          </button>
+                        </div>
+
+                        <div
+                          className={`overflow-hidden transition-all duration-300 ${
+                            isRebalanceTargetUnlocked
+                              ? 'mt-4 max-h-24 translate-x-0 opacity-100'
+                              : 'max-h-0 translate-x-4 opacity-0'
+                          }`}
+                        >
                           <label
                             htmlFor="rebalance-target-equity"
                             className="sr-only"
@@ -1136,38 +1197,7 @@ export default function Dashboard() {
                               background: `linear-gradient(to right, #2563eb 0%, #2563eb ${rebalanceDraftEquityPercent}%, #14b8a6 ${rebalanceDraftEquityPercent}%, #14b8a6 100%)`,
                             }}
                           />
-                          <button
-                            type="button"
-                            onClick={handleRebalanceTargetLockToggle}
-                            aria-label={
-                              isRebalanceTargetUnlocked
-                                ? t('dashboard.rebalanceLockApplyLabel')
-                                : t('dashboard.rebalanceLockEditLabel')
-                            }
-                            title={
-                              isRebalanceTargetUnlocked
-                                ? t('dashboard.rebalanceLockApplyLabel')
-                                : t('dashboard.rebalanceLockEditLabel')
-                            }
-                            className={`inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full border transition ${
-                              isRebalanceTargetUnlocked
-                                ? 'border-amber-300 bg-amber-50 text-amber-700 hover:bg-amber-100'
-                                : 'border-slate-200 bg-white text-slate-600 hover:bg-slate-50'
-                            }`}
-                          >
-                            <LockIcon unlocked={isRebalanceTargetUnlocked} />
-                          </button>
                         </div>
-                        {isRebalanceTargetUnlocked ? (
-                          <div className="absolute right-0 top-full z-20 mt-3 w-64 rounded-2xl border border-slate-200 bg-white p-4 shadow-lg">
-                            <p className="text-[11px] font-medium uppercase tracking-[0.16em] text-slate-500">
-                              {t('dashboard.rebalanceTargetLabel')}
-                            </p>
-                            <p className="mt-2 text-sm font-semibold text-slate-900">
-                              {`${rebalanceDraftEquityPercent}% ${t('dashboard.assetClassEquity')} / ${rebalanceDraftBondPercent}% ${t('dashboard.assetClassBond')}`}
-                            </p>
-                          </div>
-                        ) : null}
                       </div>
                     </div>
                   </div>
