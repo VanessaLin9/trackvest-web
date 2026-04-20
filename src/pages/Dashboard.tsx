@@ -9,13 +9,12 @@ import type {
 import { ChartCardFallback } from '../components/dashboard/ChartCardFallback'
 import { DashboardHero } from '../components/dashboard/DashboardHero'
 import { DashboardLoadingState } from '../components/dashboard/DashboardLoadingState'
+import { HoldingsTable } from '../components/dashboard/HoldingsTable'
 import { ApplyIcon, LockIcon } from '../components/dashboard/icons'
 import { KpiCards } from '../components/dashboard/KpiCards'
+import { SelectedHoldingAside } from '../components/dashboard/SelectedHoldingAside'
 import { formatAllocationLabel } from '../components/dashboard/allocation-label'
-import {
-  getHoldingLatestPriceCurrency,
-  renderTooltipValue,
-} from '../components/dashboard/chart-helpers'
+import { renderTooltipValue } from '../components/dashboard/chart-helpers'
 import { useI18n } from '../i18n'
 import {
   portfolioService,
@@ -27,19 +26,15 @@ import {
   type AllocationViewMode,
 } from '../store/preferences'
 import { fxService } from '../lib/fx.service'
-import { Card } from '../components/ui/Card'
 import { SegmentedControl } from '../components/ui/SegmentedControl'
 import { getApiErrorMessage } from '../lib/errors'
 import {
   formatCompactCurrencyAxis,
-  formatCurrency,
   formatCurrencyWithCode,
-  formatSignedCurrency,
   formatPercent,
   formatPercentPoints,
   roundTo,
 } from '../lib/formatters'
-import { formatAssetType, formatAssetClass } from '../lib/labels'
 import {
   chartColors,
   PORTFOLIO_PALETTE,
@@ -60,11 +55,6 @@ const PerformanceChartCard = lazy(() =>
 const PortfolioTrendChartCard = lazy(() =>
   import('../components/dashboard/PortfolioCharts').then((module) => ({
     default: module.PortfolioTrendChartCard,
-  })),
-)
-const HoldingTrendChartCard = lazy(() =>
-  import('../components/dashboard/PortfolioCharts').then((module) => ({
-    default: module.HoldingTrendChartCard,
   })),
 )
 function getRebalancePriceDisplay(
@@ -1164,241 +1154,21 @@ export default function Dashboard() {
           </Suspense>
 
           <section className="grid gap-6 xl:grid-cols-[1.1fr_0.9fr]">
-            <Card>
-              <div className="mb-4">
-                <h2 className="text-xl font-semibold">{t('dashboard.holdingsTitle')}</h2>
-                <p className="text-sm text-gray-500">
-                  {t('dashboard.holdingsDescription')}
-                </p>
-              </div>
-
-              <div className="overflow-x-auto">
-                <table className="w-full border-collapse text-sm">
-                  <thead>
-                    <tr className="border-b border-gray-200 text-left">
-                      <th className="px-3 py-3 font-medium text-gray-600">
-                        {t('dashboard.asset')}
-                      </th>
-                      <th className="px-3 py-3 font-medium text-gray-600">
-                        {t('dashboard.weight')}
-                      </th>
-                      <th className="px-3 py-3 font-medium text-gray-600">
-                        {t('dashboard.marketValue')}
-                      </th>
-                      <th className="px-3 py-3 font-medium text-gray-600">
-                        {t('dashboard.totalPnl')}
-                      </th>
-                      <th className="px-3 py-3 font-medium text-gray-600">
-                        {t('dashboard.totalReturn')}
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {holdings.map((holding) => {
-                      const isSelected = holding.assetId === selectedHolding?.assetId
-
-                      return (
-                        <tr
-                          key={holding.assetId}
-                          onClick={() => setSelectedHoldingId(holding.assetId)}
-                          className={`border-b border-gray-100 transition ${
-                            isSelected ? 'bg-blue-50' : 'cursor-pointer hover:bg-gray-50'
-                          }`}
-                        >
-                          <td className="px-3 py-3">
-                            <div className="font-medium text-gray-900">{holding.symbol}</div>
-                            <div className="text-xs text-gray-500">{holding.name}</div>
-                          </td>
-                          <td className="px-3 py-3 text-gray-600">
-                            {formatPercent(holding.weight, { signed: false })}
-                          </td>
-                          <td className="px-3 py-3 font-mono text-gray-700">
-                            {formatCurrencyWithCode(
-                              holding.marketValue,
-                              locale,
-                              displayCurrency,
-                            )}
-                          </td>
-                          <td
-                            className={`px-3 py-3 font-mono ${
-                              holding.pnl >= 0 ? 'text-emerald-700' : 'text-red-600'
-                            }`}
-                          >
-                            {formatSignedCurrency(holding.pnl, locale, displayCurrency)}
-                          </td>
-                          <td
-                            className={`px-3 py-3 font-medium ${
-                              holding.returnRate >= 0 ? 'text-emerald-700' : 'text-red-600'
-                            }`}
-                          >
-                            {formatPercent(holding.returnRate)}
-                          </td>
-                        </tr>
-                      )
-                    })}
-                  </tbody>
-                </table>
-              </div>
-            </Card>
+            <HoldingsTable
+              holdings={holdings}
+              selectedHoldingId={selectedHolding?.assetId ?? null}
+              onSelectHolding={setSelectedHoldingId}
+              displayCurrency={displayCurrency}
+            />
 
             {selectedHolding ? (
-              <aside className="space-y-6">
-                <Card as="section">
-                  <div className="flex items-start justify-between gap-4">
-                    <div>
-                      <p className="text-xs uppercase tracking-[0.22em] text-gray-500">
-                        {formatAssetType(selectedHolding.type, t)}
-                      </p>
-                      <h2 className="mt-2 text-3xl font-semibold text-gray-950">
-                        {selectedHolding.symbol}
-                      </h2>
-                      <p className="mt-1 text-sm text-gray-500">{selectedHolding.name}</p>
-                    </div>
-                    <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-medium text-slate-700">
-                      {formatPercent(selectedHolding.weight, { signed: false })}
-                    </span>
-                  </div>
-
-                  <div className="mt-5 grid gap-3 sm:grid-cols-2">
-                    <div className="rounded-2xl bg-gray-50 px-4 py-3">
-                      <p className="text-xs uppercase tracking-[0.2em] text-gray-500">
-                        {t('dashboard.quantity')}
-                      </p>
-                      <p className="mt-2 text-xl font-semibold text-gray-900">
-                        {formatCurrency(selectedHolding.quantity, locale)}
-                      </p>
-                    </div>
-                    <div className="rounded-2xl bg-gray-50 px-4 py-3">
-                      <p className="text-xs uppercase tracking-[0.2em] text-gray-500">
-                        {t('dashboard.avgCost')}
-                      </p>
-                      <p className="mt-2 text-xl font-semibold text-gray-900">
-                        {formatCurrencyWithCode(
-                          selectedHolding.avgCost,
-                          locale,
-                          displayCurrency,
-                        )}
-                      </p>
-                    </div>
-                    <div className="rounded-2xl bg-gray-50 px-4 py-3">
-                      <p className="text-xs uppercase tracking-[0.2em] text-gray-500">
-                        {t('dashboard.latestPrice')}
-                      </p>
-                      <p className="mt-2 text-xl font-semibold text-gray-900">
-                        {selectedHolding.latestPrice == null
-                          ? t('common.notAvailable')
-                          : formatCurrencyWithCode(
-                              selectedHolding.latestPrice,
-                              locale,
-                              getHoldingLatestPriceCurrency(selectedHolding),
-                            )}
-                      </p>
-                      <p className="mt-2 text-xs text-gray-500">
-                        {t('dashboard.latestPriceHint')}
-                      </p>
-                    </div>
-                    <div className="rounded-2xl bg-gray-50 px-4 py-3">
-                      <p className="text-xs uppercase tracking-[0.2em] text-gray-500">
-                        {t('dashboard.assetClassLabel')}
-                      </p>
-                      <p className="mt-2 text-sm font-medium text-gray-900">
-                        {formatAssetClass(selectedHolding.assetClass, t)}
-                      </p>
-                    </div>
-                    <div className="rounded-2xl bg-gray-50 px-4 py-3">
-                      <p className="text-xs uppercase tracking-[0.2em] text-gray-500">
-                        {t('dashboard.lastActivity')}
-                      </p>
-                      <p className="mt-2 text-sm font-medium text-gray-900">
-                        {selectedHolding.lastActivitySummary ?? t('dashboard.noRecentActivity')}
-                      </p>
-                    </div>
-                  </div>
-                </Card>
-
-                {selectedTrendErrorMessage ? (
-                  <div className="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
-                    {selectedTrendErrorMessage}
-                  </div>
-                ) : null}
-
-                <Suspense
-                  fallback={
-                    <ChartCardFallback
-                      title={t('dashboard.selectedTrendTitle')}
-                      description={t('dashboard.selectedTrendDescription')}
-                      heightClass="h-56"
-                    />
-                  }
-                >
-                  <HoldingTrendChartCard
-                    title={t('dashboard.selectedTrendTitle')}
-                    description={t('dashboard.selectedTrendDescription')}
-                    data={selectedHoldingTrendData}
-                    valueFormatter={(value) =>
-                      renderTooltipValue(value, locale, displayCurrency)
-                    }
-                  />
-                </Suspense>
-
-                <Card as="section">
-                  <div className="grid gap-3 sm:grid-cols-2">
-                    <div className="rounded-2xl border border-gray-200 bg-gray-50 px-4 py-3">
-                      <p className="text-xs uppercase tracking-[0.2em] text-gray-500">
-                        {t('dashboard.investedAmount')}
-                      </p>
-                      <p className="mt-2 text-xl font-semibold text-gray-900">
-                        {formatCurrencyWithCode(
-                          selectedHolding.investedAmount,
-                          locale,
-                          displayCurrency,
-                        )}
-                      </p>
-                    </div>
-                    <div className="rounded-2xl border border-gray-200 bg-gray-50 px-4 py-3">
-                      <p className="text-xs uppercase tracking-[0.2em] text-gray-500">
-                        {t('dashboard.marketValue')}
-                      </p>
-                      <p className="mt-2 text-xl font-semibold text-gray-900">
-                        {formatCurrencyWithCode(
-                          selectedHolding.marketValue,
-                          locale,
-                          displayCurrency,
-                        )}
-                      </p>
-                    </div>
-                  </div>
-                </Card>
-
-                <Card as="section">
-                  <div className="mb-4">
-                    <h2 className="text-lg font-semibold">{t('dashboard.allocationTitle')}</h2>
-                    <p className="text-sm text-gray-500">
-                      {t('dashboard.selectedTrendDescription')}
-                    </p>
-                  </div>
-
-                  <div className="grid gap-3">
-                    {selectedHoldingAllocation.map((item) => (
-                      <div
-                        key={item.id}
-                        className="flex items-center justify-between rounded-2xl border border-gray-200 bg-gray-50 px-4 py-3"
-                      >
-                        <div className="flex items-center gap-3">
-                          <span
-                            className="h-3 w-3 rounded-full"
-                            style={{ backgroundColor: item.color }}
-                          />
-                          <span className="font-medium text-gray-800">{item.label}</span>
-                        </div>
-                        <span className="text-sm text-gray-600">
-                          {formatCurrencyWithCode(item.value, locale, displayCurrency)}
-                        </span>
-                      </div>
-                    ))}
-                  </div>
-                </Card>
-              </aside>
+              <SelectedHoldingAside
+                holding={selectedHolding}
+                displayCurrency={displayCurrency}
+                trendData={selectedHoldingTrendData}
+                allocation={selectedHoldingAllocation}
+                trendErrorMessage={selectedTrendErrorMessage}
+              />
             ) : null}
           </section>
         </>
