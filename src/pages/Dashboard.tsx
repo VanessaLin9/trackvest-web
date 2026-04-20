@@ -1194,7 +1194,7 @@ export default function Dashboard() {
 
                     <div className="mt-5 flex items-stretch gap-3">
                       <div
-                        className={`overflow-hidden rounded-2xl border border-slate-200 bg-white px-4 py-3 transition-all duration-300 ${
+                        className={`h-20 overflow-hidden rounded-2xl border border-slate-200 bg-white px-4 py-3 transition-all duration-300 ${
                           isRebalanceTargetUnlocked
                             ? 'pointer-events-none max-w-0 flex-[0_0_0%] -translate-x-2 opacity-0'
                             : 'flex-1 opacity-100'
@@ -1208,7 +1208,7 @@ export default function Dashboard() {
                         </p>
                       </div>
 
-                      <div className="flex-1 rounded-2xl border border-slate-200 bg-white px-4 py-3">
+                      <div className="relative h-20 flex-1 rounded-2xl border border-slate-200 bg-white px-4 py-3">
                         <div className="flex items-start justify-between gap-3">
                           <div>
                             <p className="text-[11px] font-medium uppercase tracking-[0.16em] text-slate-500">
@@ -1242,9 +1242,9 @@ export default function Dashboard() {
                         </div>
 
                         <div
-                          className={`overflow-hidden transition-all duration-300 ${
+                          className={`absolute inset-x-4 bottom-3 overflow-hidden transition-all duration-300 ${
                             isRebalanceTargetUnlocked
-                              ? 'mt-4 max-h-24 translate-x-0 opacity-100'
+                              ? 'max-h-16 translate-x-0 opacity-100'
                               : 'max-h-0 translate-x-4 opacity-0'
                           }`}
                         >
