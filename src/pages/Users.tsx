@@ -28,9 +28,6 @@ export default function Users() {
           },
         ]}
         title={t('users.usersList')}
-        onRowClick={(row) => {
-          console.log('Selected user:', row)
-        }}
       />
 
       <div className="mt-8">
