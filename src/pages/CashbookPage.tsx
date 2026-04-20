@@ -1,21 +1,48 @@
 import { useEffect, useMemo, useState } from 'react'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import {
   cashbookService,
-  type GlAccount,
-  type GlEntry,
+  type PostExpensePayload,
+  type PostIncomePayload,
+  type PostTransferPayload,
 } from '../lib/cashbook.service'
 import { useCurrentUserId } from '../app/current-user'
 import { useI18n } from '../i18n'
 import { Card } from '../components/ui/Card'
 import { getApiErrorMessage } from '../lib/errors'
+import { queryKeys } from '../lib/query-keys'
 
 type FormMode = 'expense' | 'income' | 'transfer'
 
+type PostEntryVariables =
+  | { mode: 'expense'; payload: PostExpensePayload }
+  | { mode: 'income'; payload: PostIncomePayload }
+  | { mode: 'transfer'; payload: PostTransferPayload }
+
 export default function CashbookPage() {
   const currentUserId = useCurrentUserId()
+  const queryClient = useQueryClient()
   const { t, locale } = useI18n()
-  const [accounts, setAccounts] = useState<GlAccount[]>([])
-  const [entries, setEntries] = useState<GlEntry[]>([])
+
+  const glAccountsQuery = useQuery({
+    queryKey: queryKeys.cashbook.glAccounts(currentUserId),
+    queryFn: async () => {
+      const [expense, income, asset] = await Promise.all([
+        cashbookService.getGlAccounts('expense'),
+        cashbookService.getGlAccounts('income'),
+        cashbookService.getGlAccounts('asset'),
+      ])
+      return [...expense, ...income, ...asset]
+    },
+    enabled: Boolean(currentUserId),
+  })
+
+  const accounts = useMemo(
+    () => glAccountsQuery.data ?? [],
+    [glAccountsQuery.data],
+  )
+  const loadingAccounts = glAccountsQuery.isLoading
+
   const [mode, setMode] = useState<FormMode>('expense')
   const [cashAccountId, setCashAccountId] = useState('')
   const [categoryId, setCategoryId] = useState('')
@@ -24,11 +51,38 @@ export default function CashbookPage() {
   const [amount, setAmount] = useState('')
   const [date, setDate] = useState(() => new Date().toISOString().slice(0, 10))
   const [memo, setMemo] = useState('')
-  const [loadingAccounts, setLoadingAccounts] = useState(false)
-  const [loadingEntries, setLoadingEntries] = useState(false)
-  const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [successMessage, setSuccessMessage] = useState<string | null>(null)
+
+  const glEntriesQuery = useQuery({
+    queryKey: queryKeys.cashbook.glEntries.list(
+      currentUserId,
+      entryFilterAccountId,
+    ),
+    queryFn: () => cashbookService.getGlEntries(entryFilterAccountId),
+    enabled: Boolean(currentUserId),
+  })
+  const entries = glEntriesQuery.data ?? []
+  const loadingEntries = glEntriesQuery.isLoading
+
+  // Surface query load failures in the existing error banner; resolved
+  // automatically once the query retries successfully.
+  const loadErrorMessage = useMemo(() => {
+    if (glAccountsQuery.error) {
+      return getApiErrorMessage(
+        glAccountsQuery.error,
+        t('cashbook.failedToLoadAccounts'),
+      )
+    }
+    if (glEntriesQuery.error) {
+      return getApiErrorMessage(
+        glEntriesQuery.error,
+        t('cashbook.failedToLoadEntries'),
+      )
+    }
+    return null
+  }, [glAccountsQuery.error, glEntriesQuery.error, t])
+  const displayedError = error ?? loadErrorMessage
 
   const assetAccounts = useMemo(
     () => accounts.filter((account) => account.type === 'asset'),
@@ -77,58 +131,18 @@ export default function CashbookPage() {
     return map
   }, [accounts])
 
-  async function loadEntries(accountId: string) {
-    if (!currentUserId) {
-      return
-    }
-
-    setLoadingEntries(true)
-    try {
-      const loadedEntries = await cashbookService.getGlEntries(accountId)
-      setEntries(loadedEntries)
-    } catch (err: unknown) {
-      setError(getApiErrorMessage(err, t('cashbook.failedToLoadEntries')))
-    } finally {
-      setLoadingEntries(false)
-    }
-  }
-
+  // Default the cash account selection to the first asset account once the
+  // account list loads; keep whatever the user picked thereafter.
   useEffect(() => {
-    if (!currentUserId) {
+    if (cashAccountId) {
       return
     }
 
-    async function loadAccounts() {
-      try {
-        setLoadingAccounts(true)
-        setError(null)
-        const [loadedExpenseAccounts, loadedIncomeAccounts, loadedAssetAccounts] =
-          await Promise.all([
-            cashbookService.getGlAccounts('expense'),
-            cashbookService.getGlAccounts('income'),
-            cashbookService.getGlAccounts('asset'),
-          ])
-
-        const loadedAccounts = [
-          ...loadedExpenseAccounts,
-          ...loadedIncomeAccounts,
-          ...loadedAssetAccounts,
-        ]
-
-        setAccounts(loadedAccounts)
-
-        if (loadedAssetAccounts.length > 0) {
-          setCashAccountId((current) => current || loadedAssetAccounts[0].id)
-        }
-      } catch (err: unknown) {
-        setError(getApiErrorMessage(err, t('cashbook.failedToLoadAccounts')))
-      } finally {
-        setLoadingAccounts(false)
-      }
+    const firstAssetAccount = accounts.find((account) => account.type === 'asset')
+    if (firstAssetAccount) {
+      setCashAccountId(firstAssetAccount.id)
     }
-
-    loadAccounts().catch(console.error)
-  }, [currentUserId])
+  }, [accounts, cashAccountId])
 
   useEffect(() => {
     if (mode === 'transfer') {
@@ -153,11 +167,38 @@ export default function CashbookPage() {
     })
   }, [categoryOptions, mode, transferTargetOptions])
 
-  useEffect(() => {
-    loadEntries(entryFilterAccountId).catch(console.error)
-  }, [currentUserId, entryFilterAccountId])
+  const postEntryMutation = useMutation({
+    mutationFn: async (variables: PostEntryVariables) => {
+      if (variables.mode === 'expense') {
+        await cashbookService.postExpense(variables.payload)
+      } else if (variables.mode === 'income') {
+        await cashbookService.postIncome(variables.payload)
+      } else {
+        await cashbookService.postTransfer(variables.payload)
+      }
+      return variables.mode
+    },
+    onSuccess: async (postedMode) => {
+      setError(null)
+      setSuccessMessage(
+        postedMode === 'expense'
+          ? t('cashbook.expenseSaved')
+          : postedMode === 'income'
+          ? t('cashbook.incomeSaved')
+          : t('cashbook.transferSaved'),
+      )
+      setAmount('')
+      setMemo('')
+      await queryClient.invalidateQueries({
+        queryKey: queryKeys.cashbook.glEntries.all(currentUserId),
+      })
+    },
+    onError: (err: unknown) => {
+      setError(getApiErrorMessage(err, t('cashbook.failedToSaveEntry')))
+    },
+  })
 
-  const handleSubmit = async (event: React.FormEvent) => {
+  const handleSubmit = (event: React.FormEvent) => {
     event.preventDefault()
 
     if (!currentUserId || !selectedCashAccount) {
@@ -188,48 +229,43 @@ export default function CashbookPage() {
       return
     }
 
-    try {
-      setSubmitting(true)
-      setError(null)
-      setSuccessMessage(null)
+    setError(null)
+    setSuccessMessage(null)
 
-      const payloadBase = {
-        amount: numericAmount,
-        currency: selectedCashAccount.currency,
-        date: new Date(date).toISOString(),
-        memo: memo || undefined,
-      }
+    const payloadBase = {
+      amount: numericAmount,
+      currency: selectedCashAccount.currency,
+      date: new Date(date).toISOString(),
+      memo: memo || undefined,
+    }
 
-      if (mode === 'expense') {
-        await cashbookService.postExpense({
+    if (mode === 'expense') {
+      postEntryMutation.mutate({
+        mode: 'expense',
+        payload: {
           ...payloadBase,
           payFromGlAccountId: selectedCashAccount.id,
           expenseGlAccountId: categoryId,
-        })
-        setSuccessMessage(t('cashbook.expenseSaved'))
-      } else if (mode === 'income') {
-        await cashbookService.postIncome({
+        },
+      })
+    } else if (mode === 'income') {
+      postEntryMutation.mutate({
+        mode: 'income',
+        payload: {
           ...payloadBase,
           receiveToGlAccountId: selectedCashAccount.id,
           incomeGlAccountId: categoryId,
-        })
-        setSuccessMessage(t('cashbook.incomeSaved'))
-      } else {
-        await cashbookService.postTransfer({
+        },
+      })
+    } else {
+      postEntryMutation.mutate({
+        mode: 'transfer',
+        payload: {
           ...payloadBase,
           fromGlAccountId: selectedCashAccount.id,
           toGlAccountId: transferToAccountId,
-        })
-        setSuccessMessage(t('cashbook.transferSaved'))
-      }
-
-      setAmount('')
-      setMemo('')
-      await loadEntries(entryFilterAccountId)
-    } catch (err: unknown) {
-      setError(getApiErrorMessage(err, t('cashbook.failedToSaveEntry')))
-    } finally {
-      setSubmitting(false)
+        },
+      })
     }
   }
 
@@ -253,9 +289,9 @@ export default function CashbookPage() {
         </p>
       </header>
 
-      {error && (
+      {displayedError && (
         <div className="rounded border border-red-200 bg-red-50 px-4 py-3 text-red-800">
-          <strong>{t('common.error')}:</strong> {error}
+          <strong>{t('common.error')}:</strong> {displayedError}
         </div>
       )}
 
@@ -431,9 +467,9 @@ export default function CashbookPage() {
               </div>
               <button
                 type="submit"
-                disabled={submitting || !selectedCashAccount}
+                disabled={postEntryMutation.isPending || !selectedCashAccount}
                 className={`rounded px-4 py-2 text-sm font-medium text-white ${
-                  submitting || !selectedCashAccount
+                  postEntryMutation.isPending || !selectedCashAccount
                     ? 'cursor-not-allowed bg-gray-400'
                     : mode === 'expense'
                     ? 'bg-red-600 hover:bg-red-700'
@@ -442,7 +478,7 @@ export default function CashbookPage() {
                     : 'bg-slate-700 hover:bg-slate-800'
                 }`}
               >
-                {submitting
+                {postEntryMutation.isPending
                   ? t('common.saving')
                   : mode === 'expense'
                   ? t('cashbook.saveExpense')

@@ -50,7 +50,10 @@ export default function Accounts() {
     enabled: Boolean(currentUserId),
   })
 
-  const accounts = accountsQuery.data ?? []
+  const accounts = useMemo(
+    () => accountsQuery.data ?? [],
+    [accountsQuery.data],
+  )
 
   const selectedAccount = useMemo(
     () => accounts.find((account) => account.id === selectedAccountId) ?? null,

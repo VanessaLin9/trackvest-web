@@ -101,7 +101,10 @@ export default function Dashboard() {
     enabled: Boolean(currentUserId),
   })
 
-  const holdings = holdingsQuery.data?.items ?? []
+  const holdings = useMemo(
+    () => holdingsQuery.data?.items ?? [],
+    [holdingsQuery.data],
+  )
   const summary = summaryQuery.data
   const displayCurrency =
     summary?.effectiveDisplayCurrency ??

@@ -31,7 +31,7 @@ export type GlEntry = {
   lines?: GlLine[]
 }
 
-type PostExpensePayload = {
+export type PostExpensePayload = {
   amount: number
   currency: string
   date: string
@@ -40,7 +40,7 @@ type PostExpensePayload = {
   expenseGlAccountId: string
 }
 
-type PostIncomePayload = {
+export type PostIncomePayload = {
   amount: number
   currency: string
   date: string
@@ -49,7 +49,7 @@ type PostIncomePayload = {
   incomeGlAccountId: string
 }
 
-type PostTransferPayload = {
+export type PostTransferPayload = {
   amount: number
   currency: string
   date: string

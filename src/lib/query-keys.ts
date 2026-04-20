@@ -39,6 +39,17 @@ export const queryKeys = {
       ['transactions', userId, accountFilter] as const,
   },
 
+  cashbook: {
+    /** GL account definitions (expense/income/asset) — rarely change. */
+    glAccounts: (userId: string) => ['cashbook', 'gl-accounts', userId] as const,
+    glEntries: {
+      /** Scope root — invalidate every GL entries list regardless of filter. */
+      all: (userId: string) => ['cashbook', 'gl-entries', userId] as const,
+      list: (userId: string, accountFilter: string) =>
+        ['cashbook', 'gl-entries', userId, accountFilter] as const,
+    },
+  },
+
   fx: {
     todayRate: (base: string, quote: string) =>
       ['fx', 'today-rate', base, quote] as const,
