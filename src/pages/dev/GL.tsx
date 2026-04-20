@@ -1,6 +1,6 @@
-import EndpointTester from '../components/EndpointTester'
-import { useCurrentUserId } from '../app/current-user'
-import { useI18n } from '../i18n'
+import EndpointTester from '../../components/dev/EndpointTester'
+import { useCurrentUserId } from '../../app/current-user'
+import { useI18n } from '../../i18n'
 
 export default function GL() {
   const currentUserId = useCurrentUserId()

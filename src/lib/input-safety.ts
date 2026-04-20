@@ -1,7 +1,10 @@
+// Intentionally matches ASCII control characters and DEL so we can strip
+// them from user-supplied text before sending it to the API.
+// eslint-disable-next-line no-control-regex
 const CONTROL_CHAR_REGEX = /[\u0000-\u001F\u007F]/g
 const MULTIPLE_WHITESPACE_REGEX = /\s+/g
 const ASSET_SYMBOL_SAFE_REGEX = /^[A-Z0-9._:/-]+$/
-const ASSET_NAME_SAFE_REGEX = /^[\p{L}\p{N} .,&()'"\/:+_-]+$/u
+const ASSET_NAME_SAFE_REGEX = /^[\p{L}\p{N} .,&()'"/:+_-]+$/u
 
 export const ASSET_SYMBOL_MAX_LENGTH = 20
 export const ASSET_NAME_MAX_LENGTH = 100

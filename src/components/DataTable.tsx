@@ -5,12 +5,14 @@ interface DataTableProps<T> {
   columns: {
     key: keyof T | string
     label: string
-    render?: (value: any, row: T) => React.ReactNode
+    render?: (value: unknown, row: T) => React.ReactNode
   }[]
   onRowClick?: (row: T) => void
 }
 
-export default function DataTable<T extends Record<string, any>>({
+export default function DataTable<
+  T extends Record<string, unknown> = Record<string, unknown>,
+>({
   data,
   columns,
   onRowClick,
@@ -50,9 +52,10 @@ export default function DataTable<T extends Record<string, any>>({
               }`}
             >
               {columns.map((col) => {
-                const value = col.render
-                  ? col.render(row[col.key as keyof T], row)
-                  : row[col.key as keyof T]
+                const rawValue = row[col.key as keyof T]
+                const value: React.ReactNode = col.render
+                  ? col.render(rawValue, row)
+                  : (rawValue as React.ReactNode)
                 return (
                   <td
                     key={String(col.key)}

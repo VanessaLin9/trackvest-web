@@ -1,6 +1,14 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
+import {
+  keepPreviousData,
+  useMutation,
+  useQuery,
+  useQueryClient,
+} from '@tanstack/react-query'
 import { useI18n } from '../i18n'
+import { useCurrentUserId } from '../app/current-user'
+import { queryKeys } from '../lib/query-keys'
 import {
   assetsService,
   ASSET_CLASS_OPTIONS,
@@ -10,6 +18,7 @@ import {
   type AssetClass,
   type AssetType,
   type GetAssetsParams,
+  type SaveAssetPayload,
 } from '../lib/assets.service'
 import {
   ASSET_NAME_MAX_LENGTH,
@@ -22,6 +31,10 @@ import {
   sanitizeStrictTextInput,
   sanitizeLightweightTextInput,
 } from '../lib/input-safety'
+import { Button } from '../components/ui/Button'
+import { Card } from '../components/ui/Card'
+import { getApiErrorMessage } from '../lib/errors'
+import { formatAssetType, formatAssetClass } from '../lib/labels'
 
 type AssetFormState = {
   symbol: string
@@ -30,6 +43,10 @@ type AssetFormState = {
   assetClass: AssetClass
   baseCurrency: string
 }
+
+type SaveAssetVariables =
+  | { kind: 'create'; payload: SaveAssetPayload }
+  | { kind: 'update'; id: string; payload: SaveAssetPayload }
 
 const PAGE_SIZE = 10
 const ALL_FILTER_VALUE = 'all'
@@ -68,67 +85,6 @@ function toAssetFormState(asset: Asset): AssetFormState {
   }
 }
 
-function getErrorMessage(err: unknown, fallback: string) {
-  if (err && typeof err === 'object' && 'response' in err) {
-    return (
-      (err.response as { data?: { message?: string } })?.data?.message ??
-      fallback
-    )
-  }
-
-  if (err instanceof Error) {
-    return err.message
-  }
-
-  return fallback
-}
-
-function formatTypeLabel(
-  type: string | null | undefined,
-  t: (key: string) => string,
-) {
-  if (!type) {
-    return t('assets.unknownType')
-  }
-
-  switch (type) {
-    case 'equity':
-      return t('assets.typeEquity')
-    case 'etf':
-      return t('assets.typeEtf')
-    case 'crypto':
-      return t('assets.typeCrypto')
-    case 'cash':
-      return t('assets.typeCash')
-    default:
-      return type.toUpperCase()
-  }
-}
-
-function formatAssetClassLabel(
-  assetClass: string | null | undefined,
-  t: (key: string) => string,
-) {
-  if (!assetClass) {
-    return t('assets.unknownAssetClass')
-  }
-
-  switch (assetClass) {
-    case 'equity':
-      return t('assets.assetClassEquity')
-    case 'bond':
-      return t('assets.assetClassBond')
-    case 'cash':
-      return t('assets.assetClassCash')
-    case 'crypto':
-      return t('assets.assetClassCrypto')
-    case 'precious_metal':
-      return t('assets.assetClassPreciousMetal')
-    default:
-      return assetClass.toUpperCase()
-  }
-}
-
 function FilterChevronIcon() {
   return (
     <svg
@@ -150,8 +106,9 @@ function FilterChevronIcon() {
 
 export default function Assets() {
   const { t } = useI18n()
-  const [assets, setAssets] = useState<Asset[]>([])
-  const [totalAssetsCount, setTotalAssetsCount] = useState(0)
+  const currentUserId = useCurrentUserId()
+  const queryClient = useQueryClient()
+
   const [selectedAssetId, setSelectedAssetId] = useState<string | null>(null)
   const [form, setForm] = useState<AssetFormState>(DEFAULT_FORM)
   const [searchQuery, setSearchQuery] = useState('')
@@ -160,12 +117,13 @@ export default function Assets() {
   const [currencyFilter, setCurrencyFilter] = useState<string>(ALL_FILTER_VALUE)
   const [currentPage, setCurrentPage] = useState(1)
   const [isEditing, setIsEditing] = useState(false)
-  const [loadingAssets, setLoadingAssets] = useState(false)
-  const [submitting, setSubmitting] = useState(false)
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
   const [successMessage, setSuccessMessage] = useState<string | null>(null)
-  const loadRequestIdRef = useRef(0)
   const [debouncedSearchQuery, setDebouncedSearchQuery] = useState('')
+  // Remembered across the invalidate/refetch boundary: when a mutation
+  // succeeds we want to keep the saved asset selected once the refreshed
+  // list arrives, even if it's not on the currently-visible page yet.
+  const preferredSelectedAssetIdRef = useRef<string | null>(null)
 
   const normalizedSearchQuery = useMemo(
     () =>
@@ -191,6 +149,61 @@ export default function Assets() {
     typeFilter !== ALL_FILTER_VALUE ||
     currencyFilter !== ALL_FILTER_VALUE
 
+  const listParams = useMemo(
+    () => ({
+      page: currentPage,
+      q: debouncedSearchQuery,
+      type: typeFilter,
+      assetClass: assetClassFilter,
+      baseCurrency: currencyFilter,
+    }),
+    [
+      currentPage,
+      debouncedSearchQuery,
+      typeFilter,
+      assetClassFilter,
+      currencyFilter,
+    ],
+  )
+
+  const assetsQuery = useQuery({
+    queryKey: queryKeys.assets.list(currentUserId, listParams),
+    queryFn: () => {
+      const apiParams: GetAssetsParams = {
+        page: listParams.page,
+        take: PAGE_SIZE,
+      }
+      if (listParams.q) apiParams.q = listParams.q
+      if (listParams.type !== ALL_FILTER_VALUE) {
+        apiParams.type = listParams.type as AssetType
+      }
+      if (listParams.assetClass !== ALL_FILTER_VALUE) {
+        apiParams.assetClass = listParams.assetClass as AssetClass
+      }
+      if (listParams.baseCurrency !== ALL_FILTER_VALUE) {
+        apiParams.baseCurrency = listParams.baseCurrency
+      }
+      return assetsService.getAssets(apiParams)
+    },
+    // Keep the previous page/filter response visible while the next one
+    // loads. This prevents `totalAssetsCount` from briefly collapsing to
+    // `0` during a refetch, which would otherwise trigger the pagination
+    // clamp below and fight the user's page change.
+    placeholderData: keepPreviousData,
+  })
+
+  const assets = useMemo(
+    () => assetsQuery.data?.items ?? [],
+    [assetsQuery.data],
+  )
+  const totalAssetsCount = assetsQuery.data?.total ?? 0
+  const loadingAssets = assetsQuery.isLoading
+
+  const loadErrorMessage = assetsQuery.error
+    ? getApiErrorMessage(assetsQuery.error, t('assets.failedToLoad'))
+    : null
+  const displayedError = errorMessage ?? loadErrorMessage
+
   const totalPages = useMemo(
     () => Math.max(1, Math.ceil(totalAssetsCount / PAGE_SIZE)),
     [totalAssetsCount],
@@ -200,64 +213,6 @@ export default function Assets() {
     () => assets.find((asset) => asset.id === selectedAssetId) ?? null,
     [assets, selectedAssetId],
   )
-
-  async function loadAssets(preferredSelectedAssetId?: string) {
-    const requestId = ++loadRequestIdRef.current
-
-    try {
-      setLoadingAssets(true)
-      setErrorMessage(null)
-      const query: GetAssetsParams = {
-        page: currentPage,
-        take: PAGE_SIZE,
-      }
-
-      if (debouncedSearchQuery) {
-        query.q = debouncedSearchQuery
-      }
-
-      if (typeFilter !== ALL_FILTER_VALUE) {
-        query.type = typeFilter as AssetType
-      }
-
-      if (assetClassFilter !== ALL_FILTER_VALUE) {
-        query.assetClass = assetClassFilter as AssetClass
-      }
-
-      if (currencyFilter !== ALL_FILTER_VALUE) {
-        query.baseCurrency = currencyFilter
-      }
-
-      const response = await assetsService.getAssets(query)
-
-      if (requestId !== loadRequestIdRef.current) {
-        return
-      }
-
-      setAssets(response.items)
-      setTotalAssetsCount(response.total)
-      setSelectedAssetId((current) =>
-        preferredSelectedAssetId &&
-        response.items.some((asset) => asset.id === preferredSelectedAssetId)
-          ? preferredSelectedAssetId
-          : current && response.items.some((asset) => asset.id === current)
-            ? current
-          : response.items[0]?.id ?? null,
-      )
-    } catch (err: unknown) {
-      if (requestId === loadRequestIdRef.current) {
-        setErrorMessage(getErrorMessage(err, t('assets.failedToLoad')))
-      }
-    } finally {
-      if (requestId === loadRequestIdRef.current) {
-        setLoadingAssets(false)
-      }
-    }
-  }
-
-  useEffect(() => {
-    loadAssets().catch(console.error)
-  }, [assetClassFilter, currentPage, currencyFilter, debouncedSearchQuery, typeFilter])
 
   useEffect(() => {
     if (currentPage > totalPages) {
@@ -270,11 +225,16 @@ export default function Assets() {
       return
     }
 
-    setSelectedAssetId((current) =>
-      current && assets.some((asset) => asset.id === current)
+    setSelectedAssetId((current) => {
+      const preferred = preferredSelectedAssetIdRef.current
+      if (preferred && assets.some((asset) => asset.id === preferred)) {
+        preferredSelectedAssetIdRef.current = null
+        return preferred
+      }
+      return current && assets.some((asset) => asset.id === current)
         ? current
-        : assets[0]?.id ?? null,
-    )
+        : assets[0]?.id ?? null
+    })
   }, [assets, isEditing])
 
   useEffect(() => {
@@ -289,6 +249,54 @@ export default function Assets() {
     setIsEditing(false)
     setForm(DEFAULT_FORM)
   }
+
+  const saveAssetMutation = useMutation({
+    mutationFn: (variables: SaveAssetVariables) => {
+      if (variables.kind === 'update') {
+        return assetsService.updateAsset(variables.id, variables.payload)
+      }
+      return assetsService.createAsset(variables.payload)
+    },
+    onMutate: () => {
+      setErrorMessage(null)
+      setSuccessMessage(null)
+    },
+    onSuccess: (savedAsset, variables) => {
+      preferredSelectedAssetIdRef.current = savedAsset.id
+      if (variables.kind === 'update') {
+        setSuccessMessage(
+          t('assets.assetUpdated', { symbol: savedAsset.symbol }),
+        )
+        resetToCreateMode()
+      } else {
+        setSuccessMessage(
+          t('assets.assetCreated', { symbol: savedAsset.symbol }),
+        )
+        setForm({
+          ...DEFAULT_FORM,
+          baseCurrency: variables.payload.baseCurrency,
+        })
+      }
+      void queryClient.invalidateQueries({
+        queryKey: queryKeys.assets.all(currentUserId),
+      })
+      // Holdings/portfolio valuations reference asset metadata, so keep
+      // them in sync after any create/update.
+      void queryClient.invalidateQueries({
+        queryKey: queryKeys.portfolio.all(),
+      })
+    },
+    onError: (err, variables) => {
+      setErrorMessage(
+        getApiErrorMessage(
+          err,
+          variables.kind === 'update'
+            ? t('assets.failedToUpdate')
+            : t('assets.failedToCreate'),
+        ),
+      )
+    },
+  })
 
   const startEditingSelectedAsset = () => {
     if (!selectedAsset) {
@@ -357,7 +365,7 @@ export default function Assets() {
 
   const isCatalogLocked = isEditing
 
-  const handleSubmit = async (event: React.FormEvent) => {
+  const handleSubmit = (event: React.FormEvent) => {
     event.preventDefault()
 
     const symbol = normalizeAssetSymbolInput(form.symbol)
@@ -401,43 +409,19 @@ export default function Assets() {
       return
     }
 
-    try {
-      setSubmitting(true)
-      setErrorMessage(null)
-      setSuccessMessage(null)
-
-      const payload = {
-        symbol,
-        name,
-        type: form.type,
-        assetClass: form.assetClass,
-        baseCurrency,
-      }
-
-      if (isEditing && selectedAsset) {
-        const updatedAsset = await assetsService.updateAsset(selectedAsset.id, payload)
-        setSuccessMessage(t('assets.assetUpdated', { symbol: updatedAsset.symbol }))
-        await loadAssets(updatedAsset.id)
-        resetToCreateMode()
-      } else {
-        const createdAsset = await assetsService.createAsset(payload)
-        setSuccessMessage(t('assets.assetCreated', { symbol: createdAsset.symbol }))
-        setForm({
-          ...DEFAULT_FORM,
-          baseCurrency,
-        })
-        await loadAssets(createdAsset.id)
-      }
-    } catch (err: unknown) {
-      setErrorMessage(
-        getErrorMessage(
-          err,
-          isEditing ? t('assets.failedToUpdate') : t('assets.failedToCreate'),
-        ),
-      )
-    } finally {
-      setSubmitting(false)
+    const payload: SaveAssetPayload = {
+      symbol,
+      name,
+      type: form.type,
+      assetClass: form.assetClass,
+      baseCurrency,
     }
+
+    saveAssetMutation.mutate(
+      isEditing && selectedAsset
+        ? { kind: 'update', id: selectedAsset.id, payload }
+        : { kind: 'create', payload },
+    )
   }
 
   return (
@@ -449,9 +433,9 @@ export default function Assets() {
         </p>
       </header>
 
-      {errorMessage && (
+      {displayedError && (
         <div className="rounded border border-red-200 bg-red-50 px-4 py-3 text-red-800">
-          <strong>{t('common.error')}:</strong> {errorMessage}
+          <strong>{t('common.error')}:</strong> {displayedError}
         </div>
       )}
 
@@ -462,7 +446,7 @@ export default function Assets() {
       )}
 
       <section className="grid gap-6 lg:grid-cols-[1.05fr_0.95fr]">
-        <div className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm">
+        <Card>
           <div className="mb-4 space-y-1">
             <h2 className="text-lg font-semibold">
               {isEditing ? t('assets.editTitle') : t('assets.createTitle')}
@@ -575,7 +559,7 @@ export default function Assets() {
               >
                 {ASSET_TYPE_OPTIONS.map((type) => (
                   <option key={type} value={type}>
-                    {formatTypeLabel(type, t)}
+                    {formatAssetType(type, t)}
                   </option>
                 ))}
               </select>
@@ -598,7 +582,7 @@ export default function Assets() {
               >
                 {ASSET_CLASS_OPTIONS.map((assetClass) => (
                   <option key={assetClass} value={assetClass}>
-                    {formatAssetClassLabel(assetClass, t)}
+                    {formatAssetClass(assetClass, t)}
                   </option>
                 ))}
               </select>
@@ -615,31 +599,21 @@ export default function Assets() {
               </p>
               <div className="flex items-center gap-2">
                 {isEditing && (
-                  <button
-                    type="button"
-                    onClick={resetToCreateMode}
-                    className="rounded border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100"
-                  >
+                  <Button variant="secondary" onClick={resetToCreateMode}>
                     {t('common.cancel')}
-                  </button>
+                  </Button>
                 )}
-                <button
-                  type="submit"
-                  disabled={submitting}
-                  className={`rounded px-4 py-2 text-sm font-medium text-white ${
-                    submitting ? 'cursor-not-allowed bg-gray-400' : 'bg-blue-600 hover:bg-blue-700'
-                  }`}
-                >
-                  {submitting
+                <Button type="submit" disabled={saveAssetMutation.isPending}>
+                  {saveAssetMutation.isPending
                     ? t('common.saving')
                     : isEditing
                       ? t('common.saveChanges')
                       : t('assets.createAction')}
-                </button>
+                </Button>
               </div>
             </div>
           </form>
-        </div>
+        </Card>
 
         <aside className="rounded-xl border border-gray-200 bg-gray-50 p-5 shadow-sm">
           <h2 className="mb-3 text-lg font-semibold">{t('assets.selectedTitle')}</h2>
@@ -647,7 +621,7 @@ export default function Assets() {
             <div className="space-y-3 text-sm text-gray-700">
               <div className="rounded-lg border border-gray-200 bg-white p-4">
                 <div className="text-xs uppercase tracking-[0.2em] text-gray-500">
-                  {formatTypeLabel(selectedAsset.type, t)}
+                  {formatAssetType(selectedAsset.type, t)}
                 </div>
                 <div className="mt-2 text-2xl font-semibold text-gray-900">
                   {selectedAsset.symbol}
@@ -657,18 +631,19 @@ export default function Assets() {
                   {t('assets.baseCurrency')}: {selectedAsset.baseCurrency}
                 </div>
                 <div className="mt-1 text-sm text-gray-500">
-                  {t('assets.assetClass')}: {formatAssetClassLabel(selectedAsset.assetClass, t)}
+                  {t('assets.assetClass')}: {formatAssetClass(selectedAsset.assetClass, t)}
                 </div>
               </div>
               <div className="flex items-center justify-between gap-3">
                 <p>{t('assets.selectedDescription')}</p>
-                <button
-                  type="button"
+                <Button
+                  variant="secondary"
+                  size="sm"
                   onClick={startEditingSelectedAsset}
-                  className="shrink-0 rounded border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100"
+                  className="shrink-0"
                 >
                   {t('assets.editAction')}
-                </button>
+                </Button>
               </div>
             </div>
           ) : (
@@ -687,7 +662,7 @@ export default function Assets() {
         </aside>
       </section>
 
-      <section className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm">
+      <Card as="section">
         <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
           <div>
             <h2 className="text-lg font-semibold">{t('assets.catalogTitle')}</h2>
@@ -746,7 +721,7 @@ export default function Assets() {
                       <option value={ALL_FILTER_VALUE}>{t('assets.allTypes')}</option>
                       {ASSET_TYPE_OPTIONS.map((type) => (
                         <option key={type} value={type}>
-                          {formatTypeLabel(type, t)}
+                          {formatAssetType(type, t)}
                         </option>
                       ))}
                     </select>
@@ -775,7 +750,7 @@ export default function Assets() {
                       <option value={ALL_FILTER_VALUE}>{t('assets.allAssetClasses')}</option>
                       {ASSET_CLASS_OPTIONS.map((assetClass) => (
                         <option key={assetClass} value={assetClass}>
-                          {formatAssetClassLabel(assetClass, t)}
+                          {formatAssetClass(assetClass, t)}
                         </option>
                       ))}
                     </select>
@@ -863,10 +838,10 @@ export default function Assets() {
                         </td>
                         <td className="px-3 py-3 text-gray-700">{asset.name}</td>
                         <td className="px-3 py-3 capitalize text-gray-600">
-                          {formatTypeLabel(asset.type, t)}
+                          {formatAssetType(asset.type, t)}
                         </td>
                         <td className="px-3 py-3 text-gray-600">
-                          {formatAssetClassLabel(asset.assetClass, t)}
+                          {formatAssetClass(asset.assetClass, t)}
                         </td>
                         <td className="px-3 py-3 text-gray-600">
                           {asset.baseCurrency}
@@ -885,28 +860,28 @@ export default function Assets() {
                 <span>{t('assets.pageSizeFixed', { count: PAGE_SIZE })}</span>
               </div>
               <div className="flex items-center gap-2">
-                <button
-                  type="button"
+                <Button
+                  variant="secondary"
+                  size="sm"
                   onClick={() => handlePageChange(Math.max(1, currentPage - 1))}
                   disabled={isCatalogLocked || currentPage === 1}
-                  className="rounded border border-gray-300 px-3 py-2 text-sm font-medium text-gray-700 disabled:cursor-not-allowed disabled:border-gray-200 disabled:bg-gray-100 disabled:text-gray-400"
                 >
                   {t('assets.previousPage')}
-                </button>
-                <button
-                  type="button"
+                </Button>
+                <Button
+                  variant="secondary"
+                  size="sm"
                   onClick={() => handlePageChange(Math.min(totalPages, currentPage + 1))}
                   disabled={isCatalogLocked || currentPage === totalPages}
-                  className="rounded border border-gray-300 px-3 py-2 text-sm font-medium text-gray-700 disabled:cursor-not-allowed disabled:border-gray-200 disabled:bg-gray-100 disabled:text-gray-400"
                 >
                   {t('assets.nextPage')}
-                </button>
+                </Button>
               </div>
             </div>
             </>
           )}
         </div>
-      </section>
+      </Card>
     </div>
   )
 }

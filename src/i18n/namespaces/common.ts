@@ -1,0 +1,43 @@
+// Auto-split from messages.ts during Phase 6e; edit translations here per feature.
+export const common = {
+  en: {
+    loading: 'Loading...',
+    saving: 'Saving...',
+    saveChanges: 'Save changes',
+    cancel: 'Cancel',
+    refresh: 'Refresh',
+    sendRequest: 'Send Request',
+    noDataAvailable: 'No data available',
+    error: 'Error',
+    status: 'Status',
+    itemCount_one: 'Found {{count}} item',
+    itemCount_other: 'Found {{count}} items',
+    notAvailable: 'N/A',
+    yes: 'Yes',
+    no: 'No',
+    notSet: 'Not set',
+    envDemoUserMissing:
+      'VITE_DEMO_USER_ID is not set. Please set it in your .env file.',
+    unsupportedLanguage: 'Language',
+  },
+  'zh-TW': {
+    loading: '載入中...',
+    saving: '儲存中...',
+    saveChanges: '儲存變更',
+    cancel: '取消',
+    refresh: '重新整理',
+    sendRequest: '送出請求',
+    noDataAvailable: '目前沒有資料',
+    error: '錯誤',
+    status: '狀態',
+    itemCount_one: '共找到 {{count}} 筆資料',
+    itemCount_other: '共找到 {{count}} 筆資料',
+    notAvailable: 'N/A',
+    yes: '是',
+    no: '否',
+    notSet: '未設定',
+    envDemoUserMissing:
+      '尚未設定 VITE_DEMO_USER_ID，請先在 .env 檔案中設定。',
+    unsupportedLanguage: '語言',
+  },
+} as const

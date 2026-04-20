@@ -1,7 +1,8 @@
 import { useState } from 'react'
-import EndpointTester from '../components/EndpointTester'
-import DataDisplay from '../components/DataDisplay'
-import { useI18n } from '../i18n'
+import EndpointTester from '../../components/dev/EndpointTester'
+import DataDisplay from '../../components/dev/DataDisplay'
+import { useI18n } from '../../i18n'
+import { queryKeys } from '../../lib/query-keys'
 
 export default function Users() {
   const { t, locale } = useI18n()
@@ -15,7 +16,7 @@ export default function Users() {
       <DataDisplay
         key={refreshKey}
         endpoint="/users"
-        queryKey={['users']}
+        queryKey={[...queryKeys.users()]}
         columns={[
           { key: 'id', label: t('users.id') },
           { key: 'email', label: t('users.email') },
@@ -24,13 +25,12 @@ export default function Users() {
             key: 'createdAt',
             label: t('users.createdAt'),
             render: (value) =>
-              value ? new Date(value).toLocaleString(locale) : '-',
+              typeof value === 'string' || typeof value === 'number'
+                ? new Date(value).toLocaleString(locale)
+                : '-',
           },
         ]}
         title={t('users.usersList')}
-        onRowClick={(row) => {
-          console.log('Selected user:', row)
-        }}
       />
 
       <div className="mt-8">

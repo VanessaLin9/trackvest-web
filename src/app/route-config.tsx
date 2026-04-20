@@ -1,11 +1,11 @@
 import type React from 'react'
 import Dashboard from '../pages/Dashboard'
-import Health from '../pages/Health'
-import Users from '../pages/Users'
+import Health from '../pages/dev/Health'
+import Users from '../pages/dev/Users'
 import Accounts from '../pages/Accounts'
 import Assets from '../pages/Assets'
 import Transactions from '../pages/Transactions'
-import GL from '../pages/GL'
+import GL from '../pages/dev/GL'
 import CashbookPage from '../pages/CashbookPage'
 
 export interface RouteConfig {

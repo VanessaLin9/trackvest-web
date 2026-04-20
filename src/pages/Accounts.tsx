@@ -15,6 +15,11 @@ import {
   type Currency,
   type SaveAccountPayload,
 } from '../lib/accounts.service'
+import { Button } from '../components/ui/Button'
+import { Card } from '../components/ui/Card'
+import { getApiErrorMessage } from '../lib/errors'
+import { formatAccountType, formatBroker } from '../lib/labels'
+import { queryKeys } from '../lib/query-keys'
 
 type AccountFormState = {
   name: string
@@ -30,38 +35,6 @@ const DEFAULT_FORM: AccountFormState = {
   broker: '',
 }
 
-function formatBrokerLabel(
-  broker: string | null | undefined,
-  t: (key: string) => string,
-) {
-  if (!broker) {
-    return '-'
-  }
-
-  if (broker === 'cathay') {
-    return t('accounts.brokerOptionCathay')
-  }
-
-  const option = BROKER_OPTIONS.find((item) => item.value === broker)
-  return option?.label ?? broker
-}
-
-function formatAccountTypeLabel(
-  type: AccountType,
-  t: (key: string) => string,
-) {
-  switch (type) {
-    case 'broker':
-      return t('accounts.typeBroker')
-    case 'bank':
-      return t('accounts.typeBank')
-    case 'cash':
-      return t('accounts.typeCash')
-    default:
-      return type
-  }
-}
-
 export default function Accounts() {
   const currentUserId = useCurrentUserId()
   const queryClient = useQueryClient()
@@ -72,12 +45,15 @@ export default function Accounts() {
   const [successMessage, setSuccessMessage] = useState<string | null>(null)
 
   const accountsQuery = useQuery({
-    queryKey: ['accounts', currentUserId],
+    queryKey: queryKeys.accounts.all(currentUserId),
     queryFn: () => accountsService.getAccounts(),
     enabled: Boolean(currentUserId),
   })
 
-  const accounts = accountsQuery.data ?? []
+  const accounts = useMemo(
+    () => accountsQuery.data ?? [],
+    [accountsQuery.data],
+  )
 
   const selectedAccount = useMemo(
     () => accounts.find((account) => account.id === selectedAccountId) ?? null,
@@ -127,7 +103,9 @@ export default function Accounts() {
         ? accountsService.updateAccount(selectedAccountId, payload)
         : accountsService.createAccount(payload),
     onSuccess: async (savedAccount) => {
-      await queryClient.invalidateQueries({ queryKey: ['accounts', currentUserId] })
+      await queryClient.invalidateQueries({
+        queryKey: queryKeys.accounts.all(currentUserId),
+      })
       setSelectedAccountId(savedAccount.id)
       setForm({
         name: savedAccount.name,
@@ -145,13 +123,7 @@ export default function Accounts() {
       )
     },
     onError: (error: unknown) => {
-      if (error && typeof error === 'object' && 'response' in error) {
-        const message = (error.response as { data?: { message?: string } })?.data?.message
-        setErrorMessage(message ?? t('accounts.failedToSave'))
-        return
-      }
-
-      setErrorMessage(error instanceof Error ? error.message : t('accounts.failedToSave'))
+      setErrorMessage(getApiErrorMessage(error, t('accounts.failedToSave')))
     },
   })
 
@@ -235,7 +207,7 @@ export default function Accounts() {
       )}
 
       <section className="grid gap-6 lg:grid-cols-[0.95fr_1.05fr]">
-        <div className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm">
+        <Card>
           <div className="mb-4 flex items-start justify-between gap-3">
             <div>
               <h2 className="text-lg font-semibold">
@@ -246,13 +218,9 @@ export default function Accounts() {
               </p>
             </div>
             {isEditing && (
-              <button
-                type="button"
-                onClick={handleCreateNew}
-                className="rounded border border-gray-300 px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
-              >
+              <Button variant="secondary" size="sm" onClick={handleCreateNew}>
                 {t('accounts.createNew')}
-              </button>
+              </Button>
             )}
           </div>
 
@@ -285,7 +253,7 @@ export default function Accounts() {
               >
                 {ACCOUNT_TYPE_OPTIONS.map((type) => (
                   <option key={type} value={type}>
-                    {formatAccountTypeLabel(type, t)}
+                    {formatAccountType(type, t)}
                   </option>
                 ))}
               </select>
@@ -362,27 +330,19 @@ export default function Accounts() {
                   ? t('accounts.editingAccount', { name: selectedAccount.name })
                   : t('accounts.creatingNewAccount')}
               </div>
-              <button
-                type="submit"
-                disabled={saveMutation.isPending}
-                className={`rounded bg-blue-600 px-4 py-2 text-sm font-medium text-white ${
-                  saveMutation.isPending
-                    ? 'cursor-not-allowed bg-gray-400'
-                    : 'hover:bg-blue-700'
-                }`}
-              >
+              <Button type="submit" disabled={saveMutation.isPending}>
                 {saveMutation.isPending
                   ? t('common.saving')
                   : isEditing
                   ? t('common.saveChanges')
                   : t('accounts.createAction')}
-              </button>
+              </Button>
             </div>
           </form>
-        </div>
+        </Card>
 
         <aside className="space-y-4">
-          <section className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm">
+          <Card as="section">
             <div className="mb-4 flex items-start justify-between gap-3">
               <div>
                 <h2 className="text-lg font-semibold">{t('accounts.accountsList')}</h2>
@@ -390,20 +350,18 @@ export default function Accounts() {
                   {t('accounts.accountsListDescription')}
                 </p>
               </div>
-              <button
-                type="button"
+              <Button
+                variant="secondary"
+                size="sm"
                 onClick={() =>
-                  queryClient.invalidateQueries({ queryKey: ['accounts', currentUserId] })
+                  queryClient.invalidateQueries({
+                    queryKey: queryKeys.accounts.all(currentUserId),
+                  })
                 }
                 disabled={accountsQuery.isFetching}
-                className={`rounded border border-gray-300 px-3 py-2 text-sm font-medium text-gray-700 ${
-                  accountsQuery.isFetching
-                    ? 'cursor-not-allowed opacity-60'
-                    : 'hover:bg-gray-50'
-                }`}
               >
                 {t('common.refresh')}
-              </button>
+              </Button>
             </div>
 
             {accountsQuery.isLoading ? (
@@ -422,13 +380,14 @@ export default function Accounts() {
                   {
                     key: 'type',
                     label: t('accounts.type'),
-                    render: (value) => formatAccountTypeLabel(value, t),
+                    render: (value) => formatAccountType(value as AccountType, t),
                   },
                   { key: 'currency', label: t('accounts.currency') },
                   {
                     key: 'broker',
                     label: t('accounts.broker'),
-                    render: (value) => formatBrokerLabel(value, t),
+                    render: (value) =>
+                      formatBroker(value as string | null | undefined, t),
                   },
                   {
                     key: 'csvImport',
@@ -442,7 +401,7 @@ export default function Accounts() {
                 onRowClick={handleSelectAccount}
               />
             )}
-          </section>
+          </Card>
 
           <section className="rounded-xl border border-gray-200 bg-gray-50 p-5 shadow-sm">
             <h2 className="mb-3 text-lg font-semibold">{t('accounts.importReadiness')}</h2>
@@ -459,7 +418,7 @@ export default function Accounts() {
                       key={account.id}
                       className="rounded border border-gray-200 bg-white px-3 py-2"
                     >
-                      <strong>{account.name}</strong> · {formatBrokerLabel(account.broker, t)} ·{' '}
+                      <strong>{account.name}</strong> · {formatBroker(account.broker, t)} ·{' '}
                       {account.currency}
                     </li>
                   ))}

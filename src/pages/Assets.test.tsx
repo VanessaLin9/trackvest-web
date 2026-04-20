@@ -1,5 +1,6 @@
 import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { MemoryRouter } from 'react-router-dom'
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { I18nProvider } from '../i18n'
 import Assets from './Assets'
@@ -77,12 +78,20 @@ describe('Assets page edit mode', () => {
   })
 
   function renderPage() {
+    const queryClient = new QueryClient({
+      defaultOptions: {
+        queries: { retry: false },
+        mutations: { retry: false },
+      },
+    })
     return render(
-      <I18nProvider>
-        <MemoryRouter>
-          <Assets />
-        </MemoryRouter>
-      </I18nProvider>,
+      <QueryClientProvider client={queryClient}>
+        <I18nProvider>
+          <MemoryRouter>
+            <Assets />
+          </MemoryRouter>
+        </I18nProvider>
+      </QueryClientProvider>,
     )
   }
 
@@ -155,6 +164,7 @@ describe('Assets page edit mode', () => {
 
     await waitFor(() => {
       expect(getAssets).toHaveBeenCalledTimes(1)
+      expect(screen.getByRole('button', { name: 'Edit' })).toBeTruthy()
     })
 
     fireEvent.click(screen.getByRole('button', { name: 'Edit' }))

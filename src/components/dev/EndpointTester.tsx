@@ -1,14 +1,25 @@
 import { useState } from 'react'
-import { api } from '../lib/api'
-import { useI18n } from '../i18n'
+import { api } from '../../lib/api'
+import { useI18n } from '../../i18n'
+import { Button } from '../ui/Button'
 
 interface EndpointTesterProps {
   method: 'GET' | 'POST' | 'PATCH' | 'DELETE'
   endpoint: string
-  defaultBody?: Record<string, any>
+  defaultBody?: Record<string, unknown>
   queryParams?: Record<string, string>
   children?: React.ReactNode
   defaultHeaders?: Record<string, string>
+}
+
+interface ApiResponseView {
+  status: number
+  data: unknown
+}
+
+type AxiosLikeError = {
+  response?: { status: number; data?: { message?: string } | unknown }
+  message?: string
 }
 
 export default function EndpointTester({
@@ -22,7 +33,7 @@ export default function EndpointTester({
   const { t } = useI18n()
   const [body, setBody] = useState(JSON.stringify(defaultBody, null, 2))
   const [params, setParams] = useState<Record<string, string>>(queryParams)
-  const [response, setResponse] = useState<any>(null)
+  const [response, setResponse] = useState<ApiResponseView | null>(null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const headers = {
@@ -36,13 +47,13 @@ export default function EndpointTester({
     setResponse(null)
 
     try {
-      let parsedBody = {}
+      let parsedBody: unknown = {}
       if (method !== 'GET' && body.trim()) {
         parsedBody = JSON.parse(body)
       }
 
       const queryString = Object.entries(params)
-        .filter(([_, v]) => v.trim())
+        .filter(([, v]) => v.trim())
         .map(([k, v]) => `${k}=${encodeURIComponent(v)}`)
         .join('&')
       const url = queryString ? `${endpoint}?${queryString}` : endpoint
@@ -50,16 +61,16 @@ export default function EndpointTester({
       let result
       switch (method) {
         case 'GET':
-          result = await api.get(url, { headers })
+          result = await api.get<unknown>(url, { headers })
           break
         case 'POST':
-          result = await api.post(url, parsedBody, { headers })
+          result = await api.post<unknown>(url, parsedBody, { headers })
           break
         case 'PATCH':
-          result = await api.patch(url, parsedBody, { headers })
+          result = await api.patch<unknown>(url, parsedBody, { headers })
           break
         case 'DELETE':
-          result = await api.delete(url, { headers })
+          result = await api.delete<unknown>(url, { headers })
           break
       }
 
@@ -67,16 +78,25 @@ export default function EndpointTester({
         status: result.status,
         data: result.data,
       })
-    } catch (err: any) {
+    } catch (err) {
+      const axiosErr = err as AxiosLikeError
+      const responseData = axiosErr.response?.data
+      const responseMessage =
+        responseData &&
+        typeof responseData === 'object' &&
+        'message' in responseData &&
+        typeof (responseData as { message?: unknown }).message === 'string'
+          ? (responseData as { message: string }).message
+          : undefined
       setError(
-        err.response?.data?.message ||
-          err.message ||
+        responseMessage ||
+          axiosErr.message ||
           t('endpointTester.requestFailed'),
       )
-      if (err.response) {
+      if (axiosErr.response) {
         setResponse({
-          status: err.response.status,
-          data: err.response.data,
+          status: axiosErr.response.status,
+          data: axiosErr.response.data,
         })
       }
     } finally {
@@ -138,17 +158,9 @@ export default function EndpointTester({
         </div>
       )}
 
-      <button
-        onClick={handleSubmit}
-        disabled={loading}
-        className={`px-5 py-2.5 bg-blue-600 text-white border-none rounded transition-opacity ${
-          loading
-            ? 'opacity-60 cursor-not-allowed'
-            : 'cursor-pointer hover:bg-blue-700'
-        }`}
-      >
+      <Button onClick={handleSubmit} disabled={loading}>
         {loading ? t('common.loading') : t('common.sendRequest')}
-      </button>
+      </Button>
 
       {error && (
         <div className="mt-4 p-2.5 bg-red-100 text-red-800 rounded">

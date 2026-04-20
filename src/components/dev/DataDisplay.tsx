@@ -1,7 +1,10 @@
 import { useQuery } from '@tanstack/react-query'
-import { api } from '../lib/api'
-import { useI18n } from '../i18n'
-import DataTable from './DataTable'
+import { api } from '../../lib/api'
+import { useI18n } from '../../i18n'
+import DataTable from '../DataTable'
+import { Button } from '../ui/Button'
+
+type DataRow = Record<string, unknown>
 
 interface DataDisplayProps {
   endpoint: string
@@ -10,10 +13,10 @@ interface DataDisplayProps {
   columns: {
     key: string
     label: string
-    render?: (value: any, row: any) => React.ReactNode
+    render?: (value: unknown, row: DataRow) => React.ReactNode
   }[]
   title: string
-  onRowClick?: (row: any) => void
+  onRowClick?: (row: DataRow) => void
 }
 
 export default function DataDisplay({
@@ -26,21 +29,21 @@ export default function DataDisplay({
 }: DataDisplayProps) {
   const { t, locale } = useI18n()
   const queryString = Object.entries(queryParams)
-    .filter(([_, v]) => v && v.trim())
+    .filter(([, v]) => v && v.trim())
     .map(([k, v]) => `${k}=${encodeURIComponent(v)}`)
     .join('&')
   const url = queryString ? `${endpoint}?${queryString}` : endpoint
 
-  const { data, isLoading, error, refetch } = useQuery({
+  const { data, isLoading, error, refetch } = useQuery<DataRow[]>({
     queryKey: [...queryKey, queryParams],
     queryFn: async () => {
-      const response = await api.get(url)
-      return Array.isArray(response.data) ? response.data : [response.data]
+      const response = await api.get<unknown>(url)
+      const payload = response.data
+      return (Array.isArray(payload) ? payload : [payload]) as DataRow[]
     },
   })
 
-  const formatDate = (date: string | Date | null) => {
-    if (!date) return '-'
+  const formatDate = (date: string | Date) => {
     const d = typeof date === 'string' ? new Date(date) : date
     return d.toLocaleString(locale)
   }
@@ -49,15 +52,9 @@ export default function DataDisplay({
     <div className="mb-8 border border-gray-300 rounded-lg p-5 bg-white">
       <div className="flex justify-between items-center mb-4">
         <h2 className="m-0">{title}</h2>
-        <button
-          onClick={() => refetch()}
-          disabled={isLoading}
-          className={`px-4 py-2 bg-blue-600 text-white border-none rounded cursor-pointer transition-opacity ${
-            isLoading ? 'opacity-60 cursor-not-allowed' : 'hover:bg-blue-700'
-          }`}
-        >
+        <Button onClick={() => refetch()} disabled={isLoading}>
           {isLoading ? t('common.loading') : `🔄 ${t('common.refresh')}`}
-        </button>
+        </Button>
       </div>
 
       {isLoading && (
@@ -67,7 +64,8 @@ export default function DataDisplay({
       {error && (
         <div className="p-4 bg-red-100 text-red-800 rounded">
           <strong>{t('common.error')}:</strong>{' '}
-          {(error as any)?.response?.data?.message || String(error)}
+          {(error as { response?: { data?: { message?: string } } })?.response
+            ?.data?.message || String(error)}
         </div>
       )}
 
@@ -76,18 +74,24 @@ export default function DataDisplay({
           <div className="mb-2.5 text-gray-600 text-sm">
             {t('common.itemCount', { count: data.length })}
           </div>
-          <DataTable
+          <DataTable<DataRow>
             data={data}
             columns={columns.map((col) => ({
               ...col,
-              render: col.render || ((value) => {
-                if (value === null || value === undefined) return '-'
-                if (typeof value === 'boolean') return value ? '✓' : '✗'
-                if (value instanceof Date || (typeof value === 'string' && value.match(/^\d{4}-\d{2}-\d{2}/))) {
-                  return formatDate(value)
-                }
-                return String(value)
-              }),
+              render:
+                col.render ||
+                ((value) => {
+                  if (value === null || value === undefined) return '-'
+                  if (typeof value === 'boolean') return value ? '✓' : '✗'
+                  if (value instanceof Date) return formatDate(value)
+                  if (
+                    typeof value === 'string' &&
+                    /^\d{4}-\d{2}-\d{2}/.test(value)
+                  ) {
+                    return formatDate(value)
+                  }
+                  return String(value)
+                }),
             }))}
             onRowClick={onRowClick}
           />

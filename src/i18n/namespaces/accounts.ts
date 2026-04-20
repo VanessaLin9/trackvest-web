@@ -1,0 +1,103 @@
+// Auto-split from messages.ts during Phase 6e; edit translations here per feature.
+export const accounts = {
+  en: {
+    title: 'Accounts',
+    titleApiFallback: 'Accounts API',
+    subtitle:
+      'Configure cash, bank, and broker accounts. CSV import currently works only with a Cathay broker account. Broker accounts can also stay manual-only.',
+    currentUser: 'Current user: {{userId}}',
+    accountUpdated: 'Account updated.',
+    accountCreated: 'Account created.',
+    failedToSave: 'Failed to save account',
+    accountNameRequired: 'Account name is required',
+    createTitle: 'Create account',
+    editTitle: 'Edit account',
+    editorDescription:
+      'Broker accounts can stay manual-only, or use Cathay to unlock CSV import.',
+    createNew: 'Create new',
+    accountName: 'Account name',
+    accountNamePlaceholder: 'e.g. Cathay Brokerage TWD',
+    type: 'Type',
+    currency: 'Currency',
+    broker: 'Broker',
+    brokerHint:
+      '`None` keeps this as a manual-only broker account. Cathay unlocks CSV import.',
+    brokerImportReady:
+      'This account will be available in Investments CSV import after saving.',
+    brokerManualOnly:
+      'This broker account will be manual-only until a supported import broker is selected.',
+    nonBrokerImportHint:
+      'Non-broker accounts will not appear in the CSV import account selector.',
+    editingAccount: 'Editing {{name}}',
+    creatingNewAccount: 'Creating a new account',
+    createAction: 'Create account',
+    accountsList: 'Accounts list',
+    accountsListDescription: 'Click a row to edit an existing account.',
+    loadingAccounts: 'Loading accounts...',
+    failedToLoadAccounts: 'Failed to load accounts.',
+    name: 'Name',
+    csvImport: 'CSV import',
+    ready: 'Ready',
+    notReady: 'Not ready',
+    importReadiness: 'Import readiness',
+    importReadyCount_one: '{{count}} account is ready for CSV import.',
+    importReadyCount_other: '{{count}} accounts are ready for CSV import.',
+    noImportReadyAccounts:
+      'No broker account configured for CSV import yet. Create a broker account with Cathay to unlock brokerage CSV import in Investments.',
+    brokerOptionNone: 'None (manual only)',
+    brokerOptionCathay: 'Cathay',
+    typeBroker: 'Broker',
+    typeBank: 'Bank',
+    typeCash: 'Cash',
+  },
+  'zh-TW': {
+    title: '帳戶',
+    titleApiFallback: '帳戶 API',
+    subtitle:
+      '設定現金、銀行與券商帳戶。目前 CSV 匯入只支援國泰券商帳戶，券商帳戶也可以先維持手動模式。',
+    currentUser: '目前使用者：{{userId}}',
+    accountUpdated: '帳戶已更新。',
+    accountCreated: '帳戶已建立。',
+    failedToSave: '儲存帳戶失敗',
+    accountNameRequired: '帳戶名稱為必填',
+    createTitle: '建立帳戶',
+    editTitle: '編輯帳戶',
+    editorDescription:
+      '券商帳戶可以先維持手動模式，或設定為國泰以開啟 CSV 匯入。',
+    createNew: '建立新帳戶',
+    accountName: '帳戶名稱',
+    accountNamePlaceholder: '例如：國泰證券台幣帳戶',
+    type: '類型',
+    currency: '幣別',
+    broker: '券商',
+    brokerHint:
+      '`None` 代表此券商帳戶僅手動使用。選擇國泰後即可開啟 CSV 匯入。',
+    brokerImportReady:
+      '這個帳戶儲存後就會出現在 Investments 的 CSV 匯入清單中。',
+    brokerManualOnly:
+      '在選到支援匯入的券商前，這個券商帳戶會維持手動模式。',
+    nonBrokerImportHint:
+      '非券商帳戶不會出現在 CSV 匯入帳戶選單中。',
+    editingAccount: '正在編輯 {{name}}',
+    creatingNewAccount: '正在建立新帳戶',
+    createAction: '建立帳戶',
+    accountsList: '帳戶清單',
+    accountsListDescription: '點選任一列即可編輯既有帳戶。',
+    loadingAccounts: '帳戶載入中...',
+    failedToLoadAccounts: '載入帳戶失敗。',
+    name: '名稱',
+    csvImport: 'CSV 匯入',
+    ready: '可用',
+    notReady: '未就緒',
+    importReadiness: '匯入準備狀態',
+    importReadyCount_one: '{{count}} 個帳戶可用於 CSV 匯入。',
+    importReadyCount_other: '{{count}} 個帳戶可用於 CSV 匯入。',
+    noImportReadyAccounts:
+      '目前還沒有可用於 CSV 匯入的券商帳戶。建立一個國泰券商帳戶後，就能在 Investments 啟用券商 CSV 匯入。',
+    brokerOptionNone: 'None（僅手動）',
+    brokerOptionCathay: '國泰',
+    typeBroker: '券商',
+    typeBank: '銀行',
+    typeCash: '現金',
+  },
+} as const
