@@ -302,6 +302,34 @@ describe('Dashboard smoke tests', () => {
     marketValueByAssetClass: { equity: 19000, bond: 6150 },
     recommendedBuyAmountByAssetClass: { equity: 3440.23, bond: 0 },
     trackedMarketValue: 25150,
+    candidates: [
+      {
+        assetClass: 'equity' as const,
+        assetId: 'asset-2330',
+        symbol: '2330',
+        name: 'TSMC',
+        currentMarketValue: 19000,
+        currentWeightWithinAssetClass: 1,
+        latestPrice: 950,
+        latestPriceCurrency: 'TWD',
+        assetBaseCurrency: 'TWD',
+        lotSize: null,
+        minTradeUnit: null,
+      },
+      {
+        assetClass: 'bond' as const,
+        assetId: 'asset-0050',
+        symbol: '0050',
+        name: 'Taiwan 50 ETF',
+        currentMarketValue: 6150,
+        currentWeightWithinAssetClass: 1,
+        latestPrice: 205,
+        latestPriceCurrency: 'TWD',
+        assetBaseCurrency: 'TWD',
+        lotSize: null,
+        minTradeUnit: null,
+      },
+    ],
     suggestions: [
       {
         assetClass: 'equity' as const,
@@ -313,18 +341,6 @@ describe('Dashboard smoke tests', () => {
         suggestedBuyAmount: 2500,
         estimatedQuantity: 2.63,
         latestPrice: 950,
-        latestPriceCurrency: 'TWD',
-      },
-      {
-        assetClass: 'bond' as const,
-        assetId: 'asset-0050',
-        symbol: '0050',
-        name: 'Taiwan 50 ETF',
-        currentMarketValue: 6150,
-        currentWeightWithinAssetClass: 1,
-        suggestedBuyAmount: 940.23,
-        estimatedQuantity: 4.59,
-        latestPrice: 205,
         latestPriceCurrency: 'TWD',
       },
     ],
@@ -411,7 +427,7 @@ describe('Dashboard smoke tests', () => {
       expect(screen.getByText('台積電股利入帳')).toBeTruthy()
     })
 
-    fireEvent.click(screen.getAllByText('Taiwan 50 ETF')[1])
+    fireEvent.click(screen.getByText('Taiwan 50 ETF'))
 
     await waitFor(() => {
       expect(screen.getByRole('heading', { name: '0050' })).toBeTruthy()
@@ -547,8 +563,7 @@ describe('Dashboard smoke tests', () => {
     })
 
     expect(getRebalance).toHaveBeenCalledTimes(1)
-    expect(screen.getByText('70% Equity')).toBeTruthy()
-    expect(screen.getByText('30% Bond')).toBeTruthy()
+    expect(screen.getByText('70% Equity / 30% Bond')).toBeTruthy()
 
     fireEvent.click(screen.getByRole('button', { name: 'Lock target and apply changes' }))
 
@@ -558,5 +573,16 @@ describe('Dashboard smoke tests', () => {
         targetBond: 0.3,
       })
     })
+  })
+
+  it('prefers frontend-computed rebalance suggestions when candidates are available', async () => {
+    renderPage()
+
+    await waitFor(() => {
+      expect(screen.getAllByText('3,440.23 TWD').length).toBeGreaterThan(0)
+      expect(screen.getByText('Buy about 3.62 shares')).toBeTruthy()
+    })
+
+    expect(screen.queryByText('Buy about 2.63 shares')).toBeNull()
   })
 })

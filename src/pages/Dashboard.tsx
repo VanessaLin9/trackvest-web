@@ -10,6 +10,8 @@ import type {
 import { useI18n } from '../i18n'
 import {
   portfolioService,
+  type PortfolioRebalanceResponse,
+  type PortfolioRebalanceSuggestion,
   type PortfolioHolding,
 } from '../lib/portfolio.service'
 import {
@@ -109,6 +111,10 @@ function formatPercent(
 function formatPercentPoints(value: number) {
   const prefix = value > 0 ? '+' : value < 0 ? '-' : ''
   return `${prefix}${Math.abs(value * 100).toFixed(2)}pp`
+}
+
+function roundTo(value: number, digits = 8) {
+  return Number(value.toFixed(digits))
 }
 
 function formatHoldingType(
@@ -220,6 +226,72 @@ function getAllocationColor(type: string) {
     default:
       return '#94a3b8'
   }
+}
+
+function buildClientRebalanceSuggestions(
+  data: PortfolioRebalanceResponse,
+): PortfolioRebalanceSuggestion[] {
+  const candidates = data.candidates ?? []
+  const suggestions: PortfolioRebalanceSuggestion[] = []
+
+  for (const assetClass of ['equity', 'bond'] as const) {
+    const classBuyAmount = Math.max(0, data.recommendedBuyAmountByAssetClass[assetClass])
+
+    if (classBuyAmount <= 1e-9) {
+      continue
+    }
+
+    const classCandidates = candidates.filter(
+      (candidate) =>
+        candidate.assetClass === assetClass &&
+        candidate.latestPrice != null &&
+        candidate.latestPrice > 0,
+    )
+
+    if (classCandidates.length === 0) {
+      continue
+    }
+
+    const totalWeight = classCandidates.reduce(
+      (sum, candidate) => sum + Math.max(candidate.currentWeightWithinAssetClass, 0),
+      0,
+    )
+    let remainingAmount = classBuyAmount
+
+    classCandidates.forEach((candidate, index) => {
+      const latestPrice = candidate.latestPrice
+
+      if (latestPrice == null || latestPrice <= 0) {
+        return
+      }
+
+      const normalizedWeight =
+        totalWeight > 0
+          ? Math.max(candidate.currentWeightWithinAssetClass, 0) / totalWeight
+          : 1 / classCandidates.length
+      const isLast = index === classCandidates.length - 1
+      const suggestedBuyAmount = isLast
+        ? remainingAmount
+        : Math.min(remainingAmount, roundTo(classBuyAmount * normalizedWeight))
+
+      remainingAmount = Math.max(0, roundTo(remainingAmount - suggestedBuyAmount))
+
+      suggestions.push({
+        assetClass,
+        assetId: candidate.assetId,
+        symbol: candidate.symbol,
+        name: candidate.name,
+        currentMarketValue: candidate.currentMarketValue,
+        currentWeightWithinAssetClass: candidate.currentWeightWithinAssetClass,
+        suggestedBuyAmount,
+        estimatedQuantity: roundTo(suggestedBuyAmount / latestPrice),
+        latestPrice,
+        latestPriceCurrency: candidate.latestPriceCurrency ?? candidate.assetBaseCurrency,
+      })
+    })
+  }
+
+  return suggestions.filter((suggestion) => suggestion.suggestedBuyAmount > 1e-9)
 }
 
 function renderTooltipValue(
@@ -528,10 +600,13 @@ export default function Dashboard() {
     const totalRecommendedBuyAmount =
       Math.max(0, data.recommendedBuyAmountByAssetClass.equity) +
       Math.max(0, data.recommendedBuyAmountByAssetClass.bond)
+    const computedSuggestions = buildClientRebalanceSuggestions(data)
 
     return {
       ...data,
       totalRecommendedBuyAmount,
+      suggestions:
+        computedSuggestions.length > 0 ? computedSuggestions : (data.suggestions ?? []),
     }
   }, [rebalanceQuery.data])
 

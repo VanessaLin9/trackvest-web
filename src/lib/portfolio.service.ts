@@ -92,6 +92,20 @@ export type PortfolioRebalanceSuggestion = {
   latestPriceCurrency: string | null
 }
 
+export type PortfolioRebalanceCandidate = {
+  assetClass: Extract<AssetClass, 'equity' | 'bond'>
+  assetId: string
+  symbol: string
+  name: string
+  currentMarketValue: number
+  currentWeightWithinAssetClass: number
+  latestPrice: number | null
+  latestPriceCurrency: string | null
+  assetBaseCurrency: string
+  lotSize: number | null
+  minTradeUnit: number | null
+}
+
 export type PortfolioRebalanceResponse = {
   asOf: string
   displayCurrencyMode: 'portfolio-default' | 'preferred-base'
@@ -104,6 +118,7 @@ export type PortfolioRebalanceResponse = {
   marketValueByAssetClass: PortfolioRebalanceMarketValue
   recommendedBuyAmountByAssetClass: PortfolioRebalanceMarketValue
   trackedMarketValue: number
+  candidates?: PortfolioRebalanceCandidate[]
   suggestions?: PortfolioRebalanceSuggestion[]
   notes: string[]
 }
