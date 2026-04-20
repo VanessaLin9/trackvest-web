@@ -23,6 +23,22 @@ export const queryKeys = {
     all: (userId: string) => ['accounts', userId] as const,
   },
 
+  assets: {
+    /**
+     * Full list of assets for dropdown/lookup usage (e.g. Transactions form).
+     * The Assets page uses its own paged query via `DataDisplay` and is
+     * intentionally not keyed through this factory yet.
+     */
+    all: (userId: string) => ['assets', userId] as const,
+  },
+
+  transactions: {
+    /** Scope root — use to invalidate every transactions list, regardless of filter. */
+    all: (userId: string) => ['transactions', userId] as const,
+    list: (userId: string, accountFilter: string) =>
+      ['transactions', userId, accountFilter] as const,
+  },
+
   fx: {
     todayRate: (base: string, quote: string) =>
       ['fx', 'today-rate', base, quote] as const,

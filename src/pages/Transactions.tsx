@@ -1,13 +1,14 @@
 import { useEffect, useMemo, useState } from 'react'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Link } from 'react-router-dom'
 import {
   investmentsService,
-  type Asset,
+  type CreateTransactionPayload,
   type ImportTransactionsResponse,
   type TransactionListItem,
 } from '../lib/investments.service'
 import { useCurrentUserId } from '../app/current-user'
-import { SUPPORTED_BROKER, type Account } from '../lib/accounts.service'
+import { SUPPORTED_BROKER } from '../lib/accounts.service'
 import { useI18n } from '../i18n'
 import { Button } from '../components/ui/Button'
 import { Card } from '../components/ui/Card'
@@ -19,6 +20,7 @@ import {
   getDefaultTradeTimeValue,
 } from '../lib/formatters'
 import { formatTransactionMode } from '../lib/labels'
+import { queryKeys } from '../lib/query-keys'
 
 const INVESTMENT_MODE_OPTIONS = ['deposit', 'buy', 'sell', 'dividend'] as const
 type InvestmentMode = (typeof INVESTMENT_MODE_OPTIONS)[number]
@@ -76,10 +78,24 @@ function isEditableTransactionType(
 
 export default function Transactions() {
   const currentUserId = useCurrentUserId()
+  const queryClient = useQueryClient()
   const { t, locale } = useI18n()
-  const [accounts, setAccounts] = useState<Account[]>([])
-  const [assets, setAssets] = useState<Asset[]>([])
-  const [transactions, setTransactions] = useState<TransactionListItem[]>([])
+
+  const accountsQuery = useQuery({
+    queryKey: queryKeys.accounts.all(currentUserId),
+    queryFn: () => investmentsService.getAccounts(),
+    enabled: Boolean(currentUserId),
+  })
+  const assetsQuery = useQuery({
+    queryKey: queryKeys.assets.all(currentUserId),
+    queryFn: () => investmentsService.getAssets(),
+    enabled: Boolean(currentUserId),
+  })
+
+  const accounts = useMemo(() => accountsQuery.data ?? [], [accountsQuery.data])
+  const assets = useMemo(() => assetsQuery.data ?? [], [assetsQuery.data])
+  const loadingMeta = accountsQuery.isLoading || assetsQuery.isLoading
+
   const [mode, setMode] = useState<InvestmentMode>('deposit')
   const [selectedTransactionId, setSelectedTransactionId] = useState<string | null>(null)
   const [accountId, setAccountId] = useState('')
@@ -93,19 +109,42 @@ export default function Transactions() {
   const [brokerOrderNo, setBrokerOrderNo] = useState('')
   const [tradeTime, setTradeTime] = useState(getDefaultTradeTimeValue)
   const [note, setNote] = useState('')
-  const [loadingMeta, setLoadingMeta] = useState(false)
-  const [loadingTransactions, setLoadingTransactions] = useState(false)
-  const [submitting, setSubmitting] = useState(false)
-  const [deletingTransactionId, setDeletingTransactionId] = useState<string | null>(
-    null,
-  )
   const [importAccountId, setImportAccountId] = useState('')
   const [importFile, setImportFile] = useState<File | null>(null)
-  const [importSubmitting, setImportSubmitting] = useState(false)
   const [importResult, setImportResult] =
     useState<ImportTransactionsResponse | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [successMessage, setSuccessMessage] = useState<string | null>(null)
+
+  const transactionsQuery = useQuery({
+    queryKey: queryKeys.transactions.list(currentUserId, listAccountId),
+    queryFn: () =>
+      investmentsService.getTransactions({
+        accountId: listAccountId !== 'All' ? listAccountId : undefined,
+        take: 20,
+      }),
+    enabled: Boolean(currentUserId),
+  })
+  const transactions = transactionsQuery.data?.items ?? []
+  const loadingTransactions = transactionsQuery.isLoading
+
+  // Surface query load failures next to the existing form/mutation error banner.
+  // Keeping load errors derived (vs. copied into `error` state) means retries
+  // automatically clear the banner once the query succeeds.
+  const loadErrorMessage = useMemo(() => {
+    const metaError = accountsQuery.error ?? assetsQuery.error
+    if (metaError) {
+      return getApiErrorMessage(metaError, t('transactions.failedToLoadData'))
+    }
+    if (transactionsQuery.error) {
+      return getApiErrorMessage(
+        transactionsQuery.error,
+        t('transactions.failedToLoadTransactions'),
+      )
+    }
+    return null
+  }, [accountsQuery.error, assetsQuery.error, transactionsQuery.error, t])
+  const displayedError = error ?? loadErrorMessage
 
   const availableAccounts = useMemo(
     () =>
@@ -160,63 +199,6 @@ export default function Transactions() {
       : gross - numericFee - numericTax
   }, [amount, fee, mode, price, quantity, requiresTradeFields, tax])
 
-  async function loadTransactions(filterAccountId: string) {
-    if (!currentUserId) {
-      return
-    }
-
-    setLoadingTransactions(true)
-    try {
-      const response = await investmentsService.getTransactions({
-        accountId: filterAccountId !== 'All' ? filterAccountId : undefined,
-        take: 20,
-      })
-      setTransactions(response.items)
-    } catch (err: unknown) {
-      setError(getApiErrorMessage(err, t('transactions.failedToLoadTransactions')))
-    } finally {
-      setLoadingTransactions(false)
-    }
-  }
-
-  useEffect(() => {
-    if (!currentUserId) {
-      return
-    }
-
-    async function loadMeta() {
-      try {
-        setLoadingMeta(true)
-        setError(null)
-
-        const [loadedAccounts, loadedAssets] = await Promise.all([
-          investmentsService.getAccounts(),
-          investmentsService.getAssets(),
-        ])
-
-        setAccounts(loadedAccounts)
-        setAssets(loadedAssets)
-
-        if (loadedAccounts.length > 0) {
-          setAccountId((current) => current || loadedAccounts[0].id)
-        }
-
-        if (loadedAssets.length > 0) {
-          const firstTradableAsset = loadedAssets.find(
-            (asset) => asset.type !== 'cash',
-          )
-          setAssetId((current) => current || firstTradableAsset?.id || '')
-        }
-      } catch (err: unknown) {
-        setError(getApiErrorMessage(err, t('transactions.failedToLoadData')))
-      } finally {
-        setLoadingMeta(false)
-      }
-    }
-
-    loadMeta().catch(console.error)
-  }, [currentUserId])
-
   useEffect(() => {
     if (availableAccounts.length === 0) {
       setAccountId('')
@@ -253,10 +235,6 @@ export default function Transactions() {
       setAssetId(availableAssets[0]?.id ?? '')
     }
   }, [assetId, availableAssets, requiresAsset])
-
-  useEffect(() => {
-    loadTransactions(listAccountId).catch(console.error)
-  }, [currentUserId, listAccountId])
 
   useEffect(() => {
     if (mode === 'deposit' || mode === 'dividend') {
@@ -369,7 +347,102 @@ export default function Transactions() {
     return null
   }
 
-  const handleSubmit = async (event: React.FormEvent) => {
+  // Any write to transactions also invalidates the portfolio scope so the
+  // Dashboard's summary/holdings/trend panels refresh to reflect the change.
+  const invalidateTransactionScopes = async () => {
+    await Promise.all([
+      queryClient.invalidateQueries({
+        queryKey: queryKeys.transactions.all(currentUserId),
+      }),
+      queryClient.invalidateQueries({
+        queryKey: queryKeys.portfolio.all(),
+      }),
+    ])
+  }
+
+  const saveTransactionMutation = useMutation({
+    mutationFn: async (payload: CreateTransactionPayload) => {
+      if (selectedTransactionId) {
+        return {
+          transaction: await investmentsService.updateTransaction(
+            selectedTransactionId,
+            payload,
+          ),
+          wasEditing: true,
+        }
+      }
+      return {
+        transaction: await investmentsService.createTransaction(payload),
+        wasEditing: false,
+      }
+    },
+    onSuccess: async ({ transaction, wasEditing }) => {
+      setError(null)
+      setSuccessMessage(
+        wasEditing
+          ? t('transactions.updated', { mode: formatTransactionMode(mode, t) })
+          : t('transactions.saved', { mode: formatTransactionMode(mode, t) }),
+      )
+      if (wasEditing) {
+        startEditingTransaction(transaction)
+      } else {
+        resetForm()
+      }
+      await invalidateTransactionScopes()
+    },
+    onError: (err: unknown) => {
+      setError(getApiErrorMessage(err, t('transactions.failedToSave')))
+    },
+  })
+
+  const deleteTransactionMutation = useMutation({
+    mutationFn: (transaction: TransactionListItem) =>
+      investmentsService
+        .removeTransaction(transaction.id)
+        .then(() => transaction),
+    onSuccess: async (transaction) => {
+      if (selectedTransactionId === transaction.id) {
+        resetForm()
+      }
+      setError(null)
+      setSuccessMessage(
+        t('transactions.deleted', {
+          type: formatTransactionMode(transaction.type, t),
+        }),
+      )
+      await invalidateTransactionScopes()
+    },
+    onError: (err: unknown) => {
+      setError(getApiErrorMessage(err, t('transactions.failedToDelete')))
+    },
+  })
+  const deletingTransactionId = deleteTransactionMutation.isPending
+    ? deleteTransactionMutation.variables?.id ?? null
+    : null
+
+  const importTransactionsMutation = useMutation({
+    mutationFn: (args: { accountId: string; csvContent: string }) =>
+      investmentsService.importTransactions(args),
+    onSuccess: async (result) => {
+      setImportResult(result)
+      if (result.successCount > 0) {
+        setError(null)
+        setSuccessMessage(
+          t('transactions.importedCount', {
+            count: result.successCount,
+          }),
+        )
+        await invalidateTransactionScopes()
+      } else {
+        setSuccessMessage(null)
+      }
+    },
+    onError: (err: unknown) => {
+      setError(getApiErrorMessage(err, t('transactions.failedToImport')))
+    },
+  })
+
+  const handleSubmit = (event: React.FormEvent) => {
     event.preventDefault()
 
     const validationError = validateForm()
@@ -378,7 +451,15 @@ export default function Transactions() {
       return
     }
 
-    const payload = {
+    if (isEditing && !selectedTransactionId) {
+      setError(t('transactions.noTransactionSelected'))
+      return
+    }
+
+    setError(null)
+    setSuccessMessage(null)
+
+    saveTransactionMutation.mutate({
       accountId,
       assetId: requiresAsset ? assetId : undefined,
       type: mode,
@@ -390,43 +471,10 @@ export default function Transactions() {
       brokerOrderNo: requiresAsset ? brokerOrderNo.trim() || undefined : undefined,
       tradeTime: new Date(tradeTime).toISOString(),
       note: note || undefined,
-    } as const
-
-    try {
-      setSubmitting(true)
-      setError(null)
-      setSuccessMessage(null)
-      let savedTransaction: TransactionListItem
-      if (isEditing) {
-        if (!selectedTransactionId) {
-          throw new Error(t('transactions.noTransactionSelected'))
-        }
-        savedTransaction = await investmentsService.updateTransaction(
-          selectedTransactionId,
-          payload,
-        )
-      } else {
-        savedTransaction = await investmentsService.createTransaction(payload)
-      }
-      setSuccessMessage(
-        isEditing
-          ? t('transactions.updated', { mode: formatTransactionMode(mode, t) })
-          : t('transactions.saved', { mode: formatTransactionMode(mode, t) }),
-      )
-      if (isEditing) {
-        startEditingTransaction(savedTransaction)
-      } else {
-        resetForm()
-      }
-      await loadTransactions(listAccountId)
-    } catch (err: unknown) {
-      setError(getApiErrorMessage(err, t('transactions.failedToSave')))
-    } finally {
-      setSubmitting(false)
-    }
+    })
   }
 
-  const handleSoftDelete = async (transaction: TransactionListItem) => {
+  const handleSoftDelete = (transaction: TransactionListItem) => {
     if (
       !window.confirm(
         t('transactions.softDeleteConfirm', {
@@ -437,25 +485,9 @@ export default function Transactions() {
       return
     }
 
-    try {
-      setDeletingTransactionId(transaction.id)
-      setError(null)
-      setSuccessMessage(null)
-      await investmentsService.removeTransaction(transaction.id)
-      if (selectedTransactionId === transaction.id) {
-        resetForm()
-      }
-      setSuccessMessage(
-        t('transactions.deleted', {
-          type: formatTransactionMode(transaction.type, t),
-        }),
-      )
-      await loadTransactions(listAccountId)
-    } catch (err: unknown) {
-      setError(getApiErrorMessage(err, t('transactions.failedToDelete')))
-    } finally {
-      setDeletingTransactionId(null)
-    }
+    setError(null)
+    setSuccessMessage(null)
+    deleteTransactionMutation.mutate(transaction)
   }
 
   const validateImport = () => {
@@ -496,37 +528,19 @@ export default function Transactions() {
       return
     }
 
-    try {
-      setImportSubmitting(true)
-      setError(null)
-      setSuccessMessage(null)
-      const csvContent = await importFile!.text()
-      if (!csvContent.trim()) {
-        setError(t('transactions.importFileEmpty'))
-        return
-      }
+    setError(null)
+    setSuccessMessage(null)
 
-      const result = await investmentsService.importTransactions({
-        accountId: importAccountId,
-        csvContent,
-      })
-
-      setImportResult(result)
-      if (result.successCount > 0) {
-        setSuccessMessage(
-          t('transactions.importedCount', {
-            count: result.successCount,
-          }),
-        )
-        await loadTransactions(listAccountId)
-      } else {
-        setSuccessMessage(null)
-      }
-    } catch (err: unknown) {
-      setError(getApiErrorMessage(err, t('transactions.failedToImport')))
-    } finally {
-      setImportSubmitting(false)
+    const csvContent = await importFile!.text()
+    if (!csvContent.trim()) {
+      setError(t('transactions.importFileEmpty'))
+      return
     }
+
+    importTransactionsMutation.mutate({
+      accountId: importAccountId,
+      csvContent,
+    })
   }
 
   if (!currentUserId) {
@@ -549,9 +563,9 @@ export default function Transactions() {
         </p>
       </header>
 
-      {error && (
+      {displayedError && (
         <div className="rounded border border-red-200 bg-red-50 px-4 py-3 text-red-800">
-          <strong>{t('common.error')}:</strong> {error}
+          <strong>{t('common.error')}:</strong> {displayedError}
         </div>
       )}
 
@@ -857,10 +871,12 @@ export default function Transactions() {
                 <Button
                   type="submit"
                   disabled={
-                    submitting || !accountId || (requiresAsset && !hasTradableAssets)
+                    saveTransactionMutation.isPending ||
+                    !accountId ||
+                    (requiresAsset && !hasTradableAssets)
                   }
                 >
-                  {submitting
+                  {saveTransactionMutation.isPending
                     ? t('common.saving')
                     : isEditing
                     ? t('common.saveChanges')
@@ -903,7 +919,10 @@ export default function Transactions() {
                   id="import-account-id"
                   value={importAccountId}
                   onChange={(event) => setImportAccountId(event.target.value)}
-                  disabled={importAccounts.length === 0 || importSubmitting}
+                  disabled={
+                    importAccounts.length === 0 ||
+                    importTransactionsMutation.isPending
+                  }
                   className="w-full rounded border border-gray-300 px-3 py-2"
                 >
                   {importAccounts.length === 0 && (
@@ -931,7 +950,7 @@ export default function Transactions() {
                   onChange={(event) =>
                     setImportFile(event.target.files?.[0] ?? null)
                   }
-                  disabled={importSubmitting}
+                  disabled={importTransactionsMutation.isPending}
                   className="block w-full rounded border border-gray-300 px-3 py-2 text-sm"
                 />
                 <p className="text-xs text-gray-500">
@@ -942,9 +961,12 @@ export default function Transactions() {
               <Button
                 variant="dark"
                 type="submit"
-                disabled={importSubmitting || importAccounts.length === 0}
+                disabled={
+                  importTransactionsMutation.isPending ||
+                  importAccounts.length === 0
+                }
               >
-                {importSubmitting
+                {importTransactionsMutation.isPending
                   ? t('transactions.importing')
                   : t('transactions.importCsv')}
               </Button>
@@ -1129,7 +1151,7 @@ export default function Transactions() {
                             type="button"
                             onClick={(event) => {
                               event.stopPropagation()
-                              handleSoftDelete(transaction).catch(console.error)
+                              handleSoftDelete(transaction)
                             }}
                             aria-label={t('transactions.deleteAria', {
                               type: formatTransactionMode(transaction.type, t),
