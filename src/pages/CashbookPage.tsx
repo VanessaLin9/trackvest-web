@@ -6,6 +6,7 @@ import {
 } from '../lib/cashbook.service'
 import { useCurrentUserId } from '../app/current-user'
 import { useI18n } from '../i18n'
+import { Card } from '../components/ui/Card'
 import { getApiErrorMessage } from '../lib/errors'
 
 type FormMode = 'expense' | 'income' | 'transfer'
@@ -265,7 +266,7 @@ export default function CashbookPage() {
       )}
 
       <section className="grid gap-6 lg:grid-cols-[1.1fr_0.9fr]">
-        <div className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm">
+        <Card>
           <div className="mb-4 flex flex-wrap gap-2">
             <button
               type="button"
@@ -451,7 +452,7 @@ export default function CashbookPage() {
               </button>
             </div>
           </form>
-        </div>
+        </Card>
 
         <aside className="rounded-xl border border-gray-200 bg-gray-50 p-5 shadow-sm">
           <h2 className="mb-3 text-lg font-semibold">{t('cashbook.pageDoesTitle')}</h2>
@@ -464,7 +465,7 @@ export default function CashbookPage() {
         </aside>
       </section>
 
-      <section className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm">
+      <Card as="section">
         <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
           <div>
             <h2 className="text-lg font-semibold">{t('cashbook.recentEntriesTitle')}</h2>
@@ -552,7 +553,7 @@ export default function CashbookPage() {
             </table>
           </div>
         )}
-      </section>
+      </Card>
     </div>
   )
 }

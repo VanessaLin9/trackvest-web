@@ -22,6 +22,7 @@ import {
   sanitizeStrictTextInput,
   sanitizeLightweightTextInput,
 } from '../lib/input-safety'
+import { Card } from '../components/ui/Card'
 import { getApiErrorMessage } from '../lib/errors'
 import { formatAssetType, formatAssetClass } from '../lib/labels'
 
@@ -403,7 +404,7 @@ export default function Assets() {
       )}
 
       <section className="grid gap-6 lg:grid-cols-[1.05fr_0.95fr]">
-        <div className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm">
+        <Card>
           <div className="mb-4 space-y-1">
             <h2 className="text-lg font-semibold">
               {isEditing ? t('assets.editTitle') : t('assets.createTitle')}
@@ -580,7 +581,7 @@ export default function Assets() {
               </div>
             </div>
           </form>
-        </div>
+        </Card>
 
         <aside className="rounded-xl border border-gray-200 bg-gray-50 p-5 shadow-sm">
           <h2 className="mb-3 text-lg font-semibold">{t('assets.selectedTitle')}</h2>
@@ -628,7 +629,7 @@ export default function Assets() {
         </aside>
       </section>
 
-      <section className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm">
+      <Card as="section">
         <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
           <div>
             <h2 className="text-lg font-semibold">{t('assets.catalogTitle')}</h2>
@@ -847,7 +848,7 @@ export default function Assets() {
             </>
           )}
         </div>
-      </section>
+      </Card>
     </div>
   )
 }

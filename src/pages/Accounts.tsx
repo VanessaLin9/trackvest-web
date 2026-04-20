@@ -15,6 +15,7 @@ import {
   type Currency,
   type SaveAccountPayload,
 } from '../lib/accounts.service'
+import { Card } from '../components/ui/Card'
 import { getApiErrorMessage } from '../lib/errors'
 import { formatAccountType, formatBroker } from '../lib/labels'
 
@@ -199,7 +200,7 @@ export default function Accounts() {
       )}
 
       <section className="grid gap-6 lg:grid-cols-[0.95fr_1.05fr]">
-        <div className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm">
+        <Card>
           <div className="mb-4 flex items-start justify-between gap-3">
             <div>
               <h2 className="text-lg font-semibold">
@@ -343,10 +344,10 @@ export default function Accounts() {
               </button>
             </div>
           </form>
-        </div>
+        </Card>
 
         <aside className="space-y-4">
-          <section className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm">
+          <Card as="section">
             <div className="mb-4 flex items-start justify-between gap-3">
               <div>
                 <h2 className="text-lg font-semibold">{t('accounts.accountsList')}</h2>
@@ -406,7 +407,7 @@ export default function Accounts() {
                 onRowClick={handleSelectAccount}
               />
             )}
-          </section>
+          </Card>
 
           <section className="rounded-xl border border-gray-200 bg-gray-50 p-5 shadow-sm">
             <h2 className="mb-3 text-lg font-semibold">{t('accounts.importReadiness')}</h2>

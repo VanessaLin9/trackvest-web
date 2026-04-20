@@ -9,6 +9,7 @@ import {
 import { useCurrentUserId } from '../app/current-user'
 import { SUPPORTED_BROKER, type Account } from '../lib/accounts.service'
 import { useI18n } from '../i18n'
+import { Card } from '../components/ui/Card'
 import { getApiErrorMessage } from '../lib/errors'
 import {
   formatFixed2Amount as formatMoney,
@@ -560,7 +561,7 @@ export default function Transactions() {
       )}
 
       <section className="grid gap-6 lg:grid-cols-[1.15fr_0.85fr]">
-        <div className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm">
+        <Card>
           <div className="mb-4 flex items-start justify-between gap-3">
             <div className="space-y-3">
               <div>
@@ -878,10 +879,10 @@ export default function Transactions() {
               </div>
             </div>
           </form>
-        </div>
+        </Card>
 
         <aside className="space-y-4">
-          <section className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm">
+          <Card as="section">
             <h2 className="mb-3 text-lg font-semibold">{t('transactions.importCsv')}</h2>
             <p className="mb-4 text-sm text-gray-600">
               {t('transactions.importCsvDescriptionBefore')}{' '}
@@ -960,7 +961,7 @@ export default function Transactions() {
                   : t('transactions.importCsv')}
               </button>
             </form>
-          </section>
+          </Card>
 
           {importResult && (
             <section className="rounded-xl border border-gray-200 bg-gray-50 p-5 shadow-sm">
@@ -1023,7 +1024,7 @@ export default function Transactions() {
         </aside>
       </section>
 
-      <section className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm">
+      <Card as="section">
         <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
           <div>
             <h2 className="text-lg font-semibold">{t('transactions.recentTransactions')}</h2>
@@ -1184,7 +1185,7 @@ export default function Transactions() {
             </table>
           </div>
         )}
-      </section>
+      </Card>
     </div>
   )
 }

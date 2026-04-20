@@ -14,6 +14,7 @@ import {
   YAxis,
 } from 'recharts'
 import { chartColors } from '../../theme/chart-tokens'
+import { Card } from '../ui/Card'
 
 export type ChartValue =
   | number
@@ -72,7 +73,7 @@ export function AllocationChartCard({
   headerRight,
 }: AllocationChartCardProps) {
   return (
-    <div className="rounded-3xl border border-gray-200 bg-white p-5 shadow-sm">
+    <Card>
       <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
         <div>
           <h2 className="text-xl font-semibold">{title}</h2>
@@ -118,7 +119,7 @@ export function AllocationChartCard({
           </div>
         ))}
       </div>
-    </div>
+    </Card>
   )
 }
 
@@ -131,7 +132,7 @@ export function PerformanceChartCard({
   yAxisTickFormatter,
 }: PerformanceChartCardProps) {
   return (
-    <div className="rounded-3xl border border-gray-200 bg-white p-5 shadow-sm">
+    <Card>
       <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
         <div>
           <h2 className="text-xl font-semibold">{title}</h2>
@@ -161,7 +162,7 @@ export function PerformanceChartCard({
           </BarChart>
         </ResponsiveContainer>
       </div>
-    </div>
+    </Card>
   )
 }
 
@@ -172,7 +173,7 @@ export function PortfolioTrendChartCard({
   valueFormatter,
 }: TrendChartCardProps) {
   return (
-    <section className="rounded-3xl border border-gray-200 bg-white p-5 shadow-sm">
+    <Card as="section">
       <div className="mb-4">
         <h2 className="text-xl font-semibold">{title}</h2>
         <p className="text-sm text-gray-500">{description}</p>
@@ -216,7 +217,7 @@ export function PortfolioTrendChartCard({
           </AreaChart>
         </ResponsiveContainer>
       </div>
-    </section>
+    </Card>
   )
 }
 
@@ -227,7 +228,7 @@ export function HoldingTrendChartCard({
   valueFormatter,
 }: TrendChartCardProps) {
   return (
-    <section className="rounded-3xl border border-gray-200 bg-white p-5 shadow-sm">
+    <Card as="section">
       <div className="mb-4">
         <h2 className="text-lg font-semibold">{title}</h2>
         <p className="text-sm text-gray-500">{description}</p>
@@ -256,6 +257,6 @@ export function HoldingTrendChartCard({
           </AreaChart>
         </ResponsiveContainer>
       </div>
-    </section>
+    </Card>
   )
 }

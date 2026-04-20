@@ -19,6 +19,7 @@ import {
   type AllocationViewMode,
 } from '../store/preferences'
 import { fxService } from '../lib/fx.service'
+import { Card } from '../components/ui/Card'
 import { getApiErrorMessage } from '../lib/errors'
 import {
   formatCompactCurrencyAxis,
@@ -256,13 +257,13 @@ function ChartCardFallback({
   heightClass?: string
 }) {
   return (
-    <div className="rounded-3xl border border-gray-200 bg-white p-5 shadow-sm">
+    <Card>
       <div className="mb-4">
         <h2 className="text-xl font-semibold">{title}</h2>
         <p className="text-sm text-gray-500">{description}</p>
       </div>
       <div className={`rounded-2xl bg-gray-50 ${heightClass} animate-pulse`} />
-    </div>
+    </Card>
   )
 }
 
@@ -1038,7 +1039,7 @@ export default function Dashboard() {
       ) : null}
 
       <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-        <div className="rounded-3xl border border-gray-200 bg-white p-5 shadow-sm">
+        <Card>
           <p className="text-sm text-gray-500">{t('dashboard.investedCapital')}</p>
           <p className="mt-3 text-3xl font-semibold text-slate-900">
             {formatCurrencyWithCode(summary?.investedCapital ?? 0, locale, displayCurrency)}
@@ -1046,31 +1047,31 @@ export default function Dashboard() {
           <p className="mt-2 text-xs text-gray-500">
             {t('dashboard.investedCapitalHint')}
           </p>
-        </div>
+        </Card>
 
-        <div className="rounded-3xl border border-gray-200 bg-white p-5 shadow-sm">
+        <Card>
           <p className="text-sm text-gray-500">{t('dashboard.marketValue')}</p>
           <p className="mt-3 text-3xl font-semibold text-blue-700">
             {formatCurrencyWithCode(summary?.marketValue ?? 0, locale, displayCurrency)}
           </p>
           <p className="mt-2 text-xs text-gray-500">{t('dashboard.marketValueHint')}</p>
-        </div>
+        </Card>
 
-        <div className="rounded-3xl border border-gray-200 bg-white p-5 shadow-sm">
+        <Card>
           <p className="text-sm text-gray-500">{t('dashboard.totalPnl')}</p>
           <p className="mt-3 text-3xl font-semibold text-emerald-700">
             {formatSignedCurrency(summary?.totalPnl ?? 0, locale, displayCurrency)}
           </p>
           <p className="mt-2 text-xs text-gray-500">{t('dashboard.pnlDescription')}</p>
-        </div>
+        </Card>
 
-        <div className="rounded-3xl border border-gray-200 bg-white p-5 shadow-sm">
+        <Card>
           <p className="text-sm text-gray-500">{t('dashboard.totalReturn')}</p>
           <p className="mt-3 text-3xl font-semibold text-emerald-700">
             {formatPercent(summary?.totalReturnRate ?? 0)}
           </p>
           <p className="mt-2 text-xs text-gray-500">{t('dashboard.returnDescription')}</p>
-        </div>
+        </Card>
       </section>
 
       {holdings.length === 0 ? (
@@ -1577,7 +1578,7 @@ export default function Dashboard() {
           </Suspense>
 
           <section className="grid gap-6 xl:grid-cols-[1.1fr_0.9fr]">
-            <div className="rounded-3xl border border-gray-200 bg-white p-5 shadow-sm">
+            <Card>
               <div className="mb-4">
                 <h2 className="text-xl font-semibold">{t('dashboard.holdingsTitle')}</h2>
                 <p className="text-sm text-gray-500">
@@ -1652,11 +1653,11 @@ export default function Dashboard() {
                   </tbody>
                 </table>
               </div>
-            </div>
+            </Card>
 
             {selectedHolding ? (
               <aside className="space-y-6">
-                <section className="rounded-3xl border border-gray-200 bg-white p-5 shadow-sm">
+                <Card as="section">
                   <div className="flex items-start justify-between gap-4">
                     <div>
                       <p className="text-xs uppercase tracking-[0.22em] text-gray-500">
@@ -1727,7 +1728,7 @@ export default function Dashboard() {
                       </p>
                     </div>
                   </div>
-                </section>
+                </Card>
 
                 {selectedTrendErrorMessage ? (
                   <div className="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
@@ -1754,7 +1755,7 @@ export default function Dashboard() {
                   />
                 </Suspense>
 
-                <section className="rounded-3xl border border-gray-200 bg-white p-5 shadow-sm">
+                <Card as="section">
                   <div className="grid gap-3 sm:grid-cols-2">
                     <div className="rounded-2xl border border-gray-200 bg-gray-50 px-4 py-3">
                       <p className="text-xs uppercase tracking-[0.2em] text-gray-500">
@@ -1781,9 +1782,9 @@ export default function Dashboard() {
                       </p>
                     </div>
                   </div>
-                </section>
+                </Card>
 
-                <section className="rounded-3xl border border-gray-200 bg-white p-5 shadow-sm">
+                <Card as="section">
                   <div className="mb-4">
                     <h2 className="text-lg font-semibold">{t('dashboard.allocationTitle')}</h2>
                     <p className="text-sm text-gray-500">
@@ -1810,7 +1811,7 @@ export default function Dashboard() {
                       </div>
                     ))}
                   </div>
-                </section>
+                </Card>
               </aside>
             ) : null}
           </section>
