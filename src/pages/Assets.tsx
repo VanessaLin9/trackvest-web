@@ -1,6 +1,14 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
+import {
+  keepPreviousData,
+  useMutation,
+  useQuery,
+  useQueryClient,
+} from '@tanstack/react-query'
 import { useI18n } from '../i18n'
+import { useCurrentUserId } from '../app/current-user'
+import { queryKeys } from '../lib/query-keys'
 import {
   assetsService,
   ASSET_CLASS_OPTIONS,
@@ -10,6 +18,7 @@ import {
   type AssetClass,
   type AssetType,
   type GetAssetsParams,
+  type SaveAssetPayload,
 } from '../lib/assets.service'
 import {
   ASSET_NAME_MAX_LENGTH,
@@ -34,6 +43,10 @@ type AssetFormState = {
   assetClass: AssetClass
   baseCurrency: string
 }
+
+type SaveAssetVariables =
+  | { kind: 'create'; payload: SaveAssetPayload }
+  | { kind: 'update'; id: string; payload: SaveAssetPayload }
 
 const PAGE_SIZE = 10
 const ALL_FILTER_VALUE = 'all'
@@ -93,8 +106,9 @@ function FilterChevronIcon() {
 
 export default function Assets() {
   const { t } = useI18n()
-  const [assets, setAssets] = useState<Asset[]>([])
-  const [totalAssetsCount, setTotalAssetsCount] = useState(0)
+  const currentUserId = useCurrentUserId()
+  const queryClient = useQueryClient()
+
   const [selectedAssetId, setSelectedAssetId] = useState<string | null>(null)
   const [form, setForm] = useState<AssetFormState>(DEFAULT_FORM)
   const [searchQuery, setSearchQuery] = useState('')
@@ -103,12 +117,13 @@ export default function Assets() {
   const [currencyFilter, setCurrencyFilter] = useState<string>(ALL_FILTER_VALUE)
   const [currentPage, setCurrentPage] = useState(1)
   const [isEditing, setIsEditing] = useState(false)
-  const [loadingAssets, setLoadingAssets] = useState(false)
-  const [submitting, setSubmitting] = useState(false)
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
   const [successMessage, setSuccessMessage] = useState<string | null>(null)
-  const loadRequestIdRef = useRef(0)
   const [debouncedSearchQuery, setDebouncedSearchQuery] = useState('')
+  // Remembered across the invalidate/refetch boundary: when a mutation
+  // succeeds we want to keep the saved asset selected once the refreshed
+  // list arrives, even if it's not on the currently-visible page yet.
+  const preferredSelectedAssetIdRef = useRef<string | null>(null)
 
   const normalizedSearchQuery = useMemo(
     () =>
@@ -134,6 +149,61 @@ export default function Assets() {
     typeFilter !== ALL_FILTER_VALUE ||
     currencyFilter !== ALL_FILTER_VALUE
 
+  const listParams = useMemo(
+    () => ({
+      page: currentPage,
+      q: debouncedSearchQuery,
+      type: typeFilter,
+      assetClass: assetClassFilter,
+      baseCurrency: currencyFilter,
+    }),
+    [
+      currentPage,
+      debouncedSearchQuery,
+      typeFilter,
+      assetClassFilter,
+      currencyFilter,
+    ],
+  )
+
+  const assetsQuery = useQuery({
+    queryKey: queryKeys.assets.list(currentUserId, listParams),
+    queryFn: () => {
+      const apiParams: GetAssetsParams = {
+        page: listParams.page,
+        take: PAGE_SIZE,
+      }
+      if (listParams.q) apiParams.q = listParams.q
+      if (listParams.type !== ALL_FILTER_VALUE) {
+        apiParams.type = listParams.type as AssetType
+      }
+      if (listParams.assetClass !== ALL_FILTER_VALUE) {
+        apiParams.assetClass = listParams.assetClass as AssetClass
+      }
+      if (listParams.baseCurrency !== ALL_FILTER_VALUE) {
+        apiParams.baseCurrency = listParams.baseCurrency
+      }
+      return assetsService.getAssets(apiParams)
+    },
+    // Keep the previous page/filter response visible while the next one
+    // loads. This prevents `totalAssetsCount` from briefly collapsing to
+    // `0` during a refetch, which would otherwise trigger the pagination
+    // clamp below and fight the user's page change.
+    placeholderData: keepPreviousData,
+  })
+
+  const assets = useMemo(
+    () => assetsQuery.data?.items ?? [],
+    [assetsQuery.data],
+  )
+  const totalAssetsCount = assetsQuery.data?.total ?? 0
+  const loadingAssets = assetsQuery.isLoading
+
+  const loadErrorMessage = assetsQuery.error
+    ? getApiErrorMessage(assetsQuery.error, t('assets.failedToLoad'))
+    : null
+  const displayedError = errorMessage ?? loadErrorMessage
+
   const totalPages = useMemo(
     () => Math.max(1, Math.ceil(totalAssetsCount / PAGE_SIZE)),
     [totalAssetsCount],
@@ -143,64 +213,6 @@ export default function Assets() {
     () => assets.find((asset) => asset.id === selectedAssetId) ?? null,
     [assets, selectedAssetId],
   )
-
-  async function loadAssets(preferredSelectedAssetId?: string) {
-    const requestId = ++loadRequestIdRef.current
-
-    try {
-      setLoadingAssets(true)
-      setErrorMessage(null)
-      const query: GetAssetsParams = {
-        page: currentPage,
-        take: PAGE_SIZE,
-      }
-
-      if (debouncedSearchQuery) {
-        query.q = debouncedSearchQuery
-      }
-
-      if (typeFilter !== ALL_FILTER_VALUE) {
-        query.type = typeFilter as AssetType
-      }
-
-      if (assetClassFilter !== ALL_FILTER_VALUE) {
-        query.assetClass = assetClassFilter as AssetClass
-      }
-
-      if (currencyFilter !== ALL_FILTER_VALUE) {
-        query.baseCurrency = currencyFilter
-      }
-
-      const response = await assetsService.getAssets(query)
-
-      if (requestId !== loadRequestIdRef.current) {
-        return
-      }
-
-      setAssets(response.items)
-      setTotalAssetsCount(response.total)
-      setSelectedAssetId((current) =>
-        preferredSelectedAssetId &&
-        response.items.some((asset) => asset.id === preferredSelectedAssetId)
-          ? preferredSelectedAssetId
-          : current && response.items.some((asset) => asset.id === current)
-            ? current
-          : response.items[0]?.id ?? null,
-      )
-    } catch (err: unknown) {
-      if (requestId === loadRequestIdRef.current) {
-        setErrorMessage(getApiErrorMessage(err, t('assets.failedToLoad')))
-      }
-    } finally {
-      if (requestId === loadRequestIdRef.current) {
-        setLoadingAssets(false)
-      }
-    }
-  }
-
-  useEffect(() => {
-    loadAssets().catch(console.error)
-  }, [assetClassFilter, currentPage, currencyFilter, debouncedSearchQuery, typeFilter])
 
   useEffect(() => {
     if (currentPage > totalPages) {
@@ -213,11 +225,16 @@ export default function Assets() {
       return
     }
 
-    setSelectedAssetId((current) =>
-      current && assets.some((asset) => asset.id === current)
+    setSelectedAssetId((current) => {
+      const preferred = preferredSelectedAssetIdRef.current
+      if (preferred && assets.some((asset) => asset.id === preferred)) {
+        preferredSelectedAssetIdRef.current = null
+        return preferred
+      }
+      return current && assets.some((asset) => asset.id === current)
         ? current
-        : assets[0]?.id ?? null,
-    )
+        : assets[0]?.id ?? null
+    })
   }, [assets, isEditing])
 
   useEffect(() => {
@@ -232,6 +249,54 @@ export default function Assets() {
     setIsEditing(false)
     setForm(DEFAULT_FORM)
   }
+
+  const saveAssetMutation = useMutation({
+    mutationFn: (variables: SaveAssetVariables) => {
+      if (variables.kind === 'update') {
+        return assetsService.updateAsset(variables.id, variables.payload)
+      }
+      return assetsService.createAsset(variables.payload)
+    },
+    onMutate: () => {
+      setErrorMessage(null)
+      setSuccessMessage(null)
+    },
+    onSuccess: (savedAsset, variables) => {
+      preferredSelectedAssetIdRef.current = savedAsset.id
+      if (variables.kind === 'update') {
+        setSuccessMessage(
+          t('assets.assetUpdated', { symbol: savedAsset.symbol }),
+        )
+        resetToCreateMode()
+      } else {
+        setSuccessMessage(
+          t('assets.assetCreated', { symbol: savedAsset.symbol }),
+        )
+        setForm({
+          ...DEFAULT_FORM,
+          baseCurrency: variables.payload.baseCurrency,
+        })
+      }
+      void queryClient.invalidateQueries({
+        queryKey: queryKeys.assets.all(currentUserId),
+      })
+      // Holdings/portfolio valuations reference asset metadata, so keep
+      // them in sync after any create/update.
+      void queryClient.invalidateQueries({
+        queryKey: queryKeys.portfolio.all(),
+      })
+    },
+    onError: (err, variables) => {
+      setErrorMessage(
+        getApiErrorMessage(
+          err,
+          variables.kind === 'update'
+            ? t('assets.failedToUpdate')
+            : t('assets.failedToCreate'),
+        ),
+      )
+    },
+  })
 
   const startEditingSelectedAsset = () => {
     if (!selectedAsset) {
@@ -300,7 +365,7 @@ export default function Assets() {
 
   const isCatalogLocked = isEditing
 
-  const handleSubmit = async (event: React.FormEvent) => {
+  const handleSubmit = (event: React.FormEvent) => {
     event.preventDefault()
 
     const symbol = normalizeAssetSymbolInput(form.symbol)
@@ -344,43 +409,19 @@ export default function Assets() {
       return
     }
 
-    try {
-      setSubmitting(true)
-      setErrorMessage(null)
-      setSuccessMessage(null)
-
-      const payload = {
-        symbol,
-        name,
-        type: form.type,
-        assetClass: form.assetClass,
-        baseCurrency,
-      }
-
-      if (isEditing && selectedAsset) {
-        const updatedAsset = await assetsService.updateAsset(selectedAsset.id, payload)
-        setSuccessMessage(t('assets.assetUpdated', { symbol: updatedAsset.symbol }))
-        await loadAssets(updatedAsset.id)
-        resetToCreateMode()
-      } else {
-        const createdAsset = await assetsService.createAsset(payload)
-        setSuccessMessage(t('assets.assetCreated', { symbol: createdAsset.symbol }))
-        setForm({
-          ...DEFAULT_FORM,
-          baseCurrency,
-        })
-        await loadAssets(createdAsset.id)
-      }
-    } catch (err: unknown) {
-      setErrorMessage(
-        getApiErrorMessage(
-          err,
-          isEditing ? t('assets.failedToUpdate') : t('assets.failedToCreate'),
-        ),
-      )
-    } finally {
-      setSubmitting(false)
+    const payload: SaveAssetPayload = {
+      symbol,
+      name,
+      type: form.type,
+      assetClass: form.assetClass,
+      baseCurrency,
     }
+
+    saveAssetMutation.mutate(
+      isEditing && selectedAsset
+        ? { kind: 'update', id: selectedAsset.id, payload }
+        : { kind: 'create', payload },
+    )
   }
 
   return (
@@ -392,9 +433,9 @@ export default function Assets() {
         </p>
       </header>
 
-      {errorMessage && (
+      {displayedError && (
         <div className="rounded border border-red-200 bg-red-50 px-4 py-3 text-red-800">
-          <strong>{t('common.error')}:</strong> {errorMessage}
+          <strong>{t('common.error')}:</strong> {displayedError}
         </div>
       )}
 
@@ -562,8 +603,8 @@ export default function Assets() {
                     {t('common.cancel')}
                   </Button>
                 )}
-                <Button type="submit" disabled={submitting}>
-                  {submitting
+                <Button type="submit" disabled={saveAssetMutation.isPending}>
+                  {saveAssetMutation.isPending
                     ? t('common.saving')
                     : isEditing
                       ? t('common.saveChanges')

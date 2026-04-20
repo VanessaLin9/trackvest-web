@@ -25,11 +25,31 @@ export const queryKeys = {
 
   assets: {
     /**
-     * Full list of assets for dropdown/lookup usage (e.g. Transactions form).
-     * The Assets page uses its own paged query via `DataDisplay` and is
-     * intentionally not keyed through this factory yet.
+     * Scope root — invalidate this key (or any prefix of it) to bust every
+     * assets query, including the lookup list and the paged catalog.
      */
     all: (userId: string) => ['assets', userId] as const,
+    /**
+     * Flat list of assets used for dropdowns/lookups (e.g. Transactions form).
+     * The API returns a capped page under the hood, but consumers treat it
+     * as a single pool.
+     */
+    lookup: (userId: string) => ['assets', userId, 'lookup'] as const,
+    /**
+     * Paged catalog with server-side filters used by the Assets management
+     * page. The `params` object participates in the key so changing any
+     * filter/page automatically scopes a new cache entry.
+     */
+    list: (
+      userId: string,
+      params: {
+        page: number
+        q: string
+        type: string
+        assetClass: string
+        baseCurrency: string
+      },
+    ) => ['assets', userId, 'list', params] as const,
   },
 
   transactions: {

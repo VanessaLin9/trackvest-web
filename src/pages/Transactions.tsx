@@ -87,7 +87,7 @@ export default function Transactions() {
     enabled: Boolean(currentUserId),
   })
   const assetsQuery = useQuery({
-    queryKey: queryKeys.assets.all(currentUserId),
+    queryKey: queryKeys.assets.lookup(currentUserId),
     queryFn: () => investmentsService.getAssets(),
     enabled: Boolean(currentUserId),
   })
