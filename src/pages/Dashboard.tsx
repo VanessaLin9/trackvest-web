@@ -1,4 +1,4 @@
-import { useQuery } from '@tanstack/react-query'
+import { useQueries, useQuery } from '@tanstack/react-query'
 import { lazy, Suspense, useEffect, useMemo, useState } from 'react'
 import { useCurrentUserId } from '../app/current-user'
 import type {
@@ -115,6 +115,74 @@ function formatPercentPoints(value: number) {
 
 function roundTo(value: number, digits = 8) {
   return Number(value.toFixed(digits))
+}
+
+function getRebalancePriceDisplay(
+  suggestion: {
+    latestPrice: number | null
+    latestPriceCurrency: string | null
+    displayPrice: number | null
+    displayPriceCurrency: string | null
+  },
+  locale: string,
+) {
+  if (suggestion.latestPrice == null) {
+    return {
+      primary: null,
+      secondary: null,
+    }
+  }
+
+  return {
+    primary: formatCurrencyWithCode(
+      suggestion.latestPrice,
+      locale,
+      suggestion.latestPriceCurrency,
+    ),
+    secondary:
+      (
+        suggestion.displayPrice != null &&
+        suggestion.displayPriceCurrency &&
+        suggestion.latestPriceCurrency &&
+        suggestion.displayPriceCurrency !== suggestion.latestPriceCurrency
+      )
+        ? formatCurrencyWithCode(
+            suggestion.displayPrice,
+            locale,
+            suggestion.displayPriceCurrency,
+          )
+        : null,
+  }
+}
+
+function RebalancePriceCell({
+  suggestion,
+  locale,
+  t,
+}: {
+  suggestion: {
+    latestPrice: number | null
+    latestPriceCurrency: string | null
+    displayPrice: number | null
+    displayPriceCurrency: string | null
+  }
+  locale: string
+  t: (key: string) => string
+}) {
+  const priceDisplay = getRebalancePriceDisplay(suggestion, locale)
+
+  if (!priceDisplay.primary) {
+    return <p className="text-sm text-slate-700">{t('common.notAvailable')}</p>
+  }
+
+  return (
+    <div className="space-y-0.5">
+      <p className="text-sm text-slate-700">{priceDisplay.primary}</p>
+      {priceDisplay.secondary ? (
+        <p className="text-xs text-slate-400">{priceDisplay.secondary}</p>
+      ) : null}
+    </div>
+  )
 }
 
 function formatHoldingType(
@@ -523,24 +591,6 @@ export default function Dashboard() {
     setRebalanceDraftEquityPercent(nextTargetEquityPercent)
   }, [isRebalanceTargetUnlocked, rebalanceQuery.data])
 
-  useEffect(() => {
-    if (!rebalanceQuery.data) {
-      return
-    }
-
-    const nextDrafts = Object.fromEntries(
-      (buildClientRebalanceSuggestions(rebalanceQuery.data).length > 0
-        ? buildClientRebalanceSuggestions(rebalanceQuery.data)
-        : (rebalanceQuery.data.suggestions ?? [])
-      ).map((suggestion) => [
-        suggestion.assetId,
-        suggestion.estimatedQuantity.toFixed(2),
-      ]),
-    )
-
-    setRebalanceQuantityDrafts(nextDrafts)
-  }, [rebalanceQuery.data])
-
   const selectedHolding = useMemo(
     () => holdings.find((holding) => holding.assetId === selectedHoldingId) ?? null,
     [holdings, selectedHoldingId],
@@ -630,23 +680,102 @@ export default function Dashboard() {
     }
   }, [rebalanceQuery.data])
 
-  const displayedRebalanceSuggestions = useMemo(() => {
+  const rebalanceFxPairs = useMemo(() => {
+    if (!rebalancePlan?.suggestions?.length || !displayCurrency) {
+      return []
+    }
+
+    return Array.from(
+      new Set(
+        rebalancePlan.suggestions
+          .filter(
+            (suggestion) =>
+              suggestion.latestPrice != null &&
+              suggestion.latestPriceCurrency &&
+              suggestion.latestPriceCurrency !== displayCurrency,
+          )
+          .map((suggestion) => `${suggestion.latestPriceCurrency}->${displayCurrency}`),
+      ),
+    ).map((pair) => {
+      const [base, quote] = pair.split('->')
+      return { base, quote }
+    })
+  }, [displayCurrency, rebalancePlan?.suggestions])
+
+  const rebalanceFxRateQueries = useQueries({
+    queries: rebalanceFxPairs.map((pair) => ({
+      queryKey: ['fx', 'today-rate', pair.base, pair.quote],
+      queryFn: () => fxService.getTodayRate({ base: pair.base, quote: pair.quote }),
+      enabled: Boolean(currentUserId),
+    })),
+  })
+
+  const rebalanceFxRates = useMemo(
+    () =>
+      Object.fromEntries(
+        rebalanceFxPairs.map((pair, index) => [
+          `${pair.base}->${pair.quote}`,
+          rebalanceFxRateQueries[index]?.data?.rate ?? null,
+        ]),
+      ),
+    [rebalanceFxPairs, rebalanceFxRateQueries],
+  )
+
+  const pricedRebalanceSuggestions = useMemo(() => {
     if (!rebalancePlan?.suggestions?.length) {
       return []
     }
 
     return rebalancePlan.suggestions.map((suggestion) => {
+      const latestPriceCurrency = suggestion.latestPriceCurrency
+      const needsFxConversion =
+        suggestion.latestPrice != null &&
+        latestPriceCurrency &&
+        displayCurrency &&
+        latestPriceCurrency !== displayCurrency
+      const conversionRate = needsFxConversion
+        ? rebalanceFxRates[`${latestPriceCurrency}->${displayCurrency}`] ?? null
+        : null
+      const displayPrice =
+        suggestion.latestPrice == null
+          ? null
+          : needsFxConversion
+            ? conversionRate != null
+              ? roundTo(suggestion.latestPrice * conversionRate)
+              : null
+            : suggestion.latestPrice
+      const initialQuantity =
+        displayPrice != null && displayPrice > 0
+          ? roundTo(suggestion.suggestedBuyAmount / displayPrice)
+          : null
+
+      return {
+        ...suggestion,
+        displayPrice,
+        displayPriceCurrency:
+          displayPrice != null ? (displayCurrency ?? latestPriceCurrency) : null,
+        initialQuantity,
+      }
+    })
+  }, [displayCurrency, rebalanceFxRates, rebalancePlan?.suggestions])
+
+  const displayedRebalanceSuggestions = useMemo(() => {
+    if (pricedRebalanceSuggestions.length === 0) {
+      return []
+    }
+
+    return pricedRebalanceSuggestions.map((suggestion) => {
       const quantityDraft = rebalanceQuantityDrafts[suggestion.assetId]
       const parsedQuantity =
         quantityDraft != null && quantityDraft.trim() !== ''
           ? Number(quantityDraft)
-          : suggestion.estimatedQuantity
-      const quantity = Number.isFinite(parsedQuantity) && parsedQuantity >= 0
+          : suggestion.initialQuantity
+      const quantity = typeof parsedQuantity === 'number' && Number.isFinite(parsedQuantity) && parsedQuantity >= 0
         ? parsedQuantity
-        : suggestion.estimatedQuantity
+        : (suggestion.initialQuantity ?? 0)
       const amount =
-        suggestion.latestPrice != null
-          ? roundTo(quantity * suggestion.latestPrice, 8)
+        suggestion.displayPrice != null
+          ? roundTo(quantity * suggestion.displayPrice, 8)
           : suggestion.suggestedBuyAmount
 
       return {
@@ -655,7 +784,35 @@ export default function Dashboard() {
         amount,
       }
     })
-  }, [rebalancePlan?.suggestions, rebalanceQuantityDrafts])
+  }, [pricedRebalanceSuggestions, rebalanceQuantityDrafts])
+
+  useEffect(() => {
+    if (pricedRebalanceSuggestions.length === 0) {
+      return
+    }
+
+    setRebalanceQuantityDrafts((current) => {
+      const nextDrafts = { ...current }
+      let didChange = false
+
+      pricedRebalanceSuggestions.forEach((suggestion) => {
+        const currentValue = current[suggestion.assetId]
+        if (currentValue != null && currentValue !== '') {
+          return
+        }
+
+        const nextValue =
+          suggestion.initialQuantity != null ? suggestion.initialQuantity.toFixed(2) : ''
+
+        if (current[suggestion.assetId] !== nextValue) {
+          nextDrafts[suggestion.assetId] = nextValue
+          didChange = true
+        }
+      })
+
+      return didChange ? nextDrafts : current
+    })
+  }, [pricedRebalanceSuggestions])
 
   const rebalanceDraftPreview = useMemo(() => {
     if (!rebalancePlan || displayedRebalanceSuggestions.length === 0) {
@@ -1419,15 +1576,11 @@ export default function Dashboard() {
                                       {suggestion.name}
                                     </p>
                                   </div>
-                                  <p className="text-sm text-slate-700">
-                                    {suggestion.latestPrice != null
-                                      ? formatCurrencyWithCode(
-                                          suggestion.latestPrice,
-                                          locale,
-                                          suggestion.latestPriceCurrency,
-                                        )
-                                      : t('common.notAvailable')}
-                                  </p>
+                                  <RebalancePriceCell
+                                    suggestion={suggestion}
+                                    locale={locale}
+                                    t={t}
+                                  />
                                   <div>
                                     <label
                                       htmlFor={`rebalance-quantity-${suggestion.assetId}`}
@@ -1450,7 +1603,7 @@ export default function Dashboard() {
                                           event.target.value,
                                         )
                                       }
-                                      disabled={suggestion.latestPrice == null}
+                                      disabled={suggestion.displayPrice == null}
                                       className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700 shadow-sm outline-none transition focus:border-slate-400 focus:ring-2 focus:ring-slate-200 disabled:cursor-not-allowed disabled:bg-slate-100 disabled:text-slate-400"
                                     />
                                   </div>

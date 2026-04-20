@@ -13,12 +13,14 @@ const {
   getTrend,
   getRebalance,
   getHoldingTrend,
+  getTodayRate,
 } = vi.hoisted(() => ({
   getSummary: vi.fn(),
   getHoldings: vi.fn(),
   getTrend: vi.fn(),
   getRebalance: vi.fn(),
   getHoldingTrend: vi.fn(),
+  getTodayRate: vi.fn(),
 }))
 
 vi.mock('../lib/portfolio.service', () => ({
@@ -28,6 +30,12 @@ vi.mock('../lib/portfolio.service', () => ({
     getTrend,
     getRebalance,
     getHoldingTrend,
+  },
+}))
+
+vi.mock('../lib/fx.service', () => ({
+  fxService: {
+    getTodayRate,
   },
 }))
 
@@ -371,6 +379,27 @@ describe('Dashboard smoke tests', () => {
     getTrend.mockResolvedValue(twdTrend)
     getRebalance.mockResolvedValue(twdRebalance)
     getHoldingTrend.mockResolvedValue(twdHoldingTrend)
+    getTodayRate.mockImplementation(
+      async ({ base, quote }: { base?: string; quote?: string } = {}) => {
+        if (base === 'TWD' && quote === 'USD') {
+          return {
+            base: 'TWD',
+            quote: 'USD',
+            rate: 1 / 31.2,
+            date: '2026-03-27',
+            provider: 'db' as const,
+          }
+        }
+
+        return {
+          base: base ?? 'USD',
+          quote: quote ?? 'TWD',
+          rate: 31.2,
+          date: '2026-03-27',
+          provider: 'db' as const,
+        }
+      },
+    )
   })
 
   afterEach(() => {
@@ -600,6 +629,41 @@ describe('Dashboard smoke tests', () => {
     await waitFor(() => {
       expect(screen.getByDisplayValue('4.5')).toBeTruthy()
       expect(screen.getAllByText('4,275 TWD').length).toBeGreaterThan(0)
+    })
+  })
+
+  it('uses today fx rates to convert mixed-currency rebalance prices before estimating quantity', async () => {
+    getSummary.mockResolvedValue(usdSummary)
+    getRebalance.mockResolvedValue({
+      ...usdRebalance,
+      suggestions: [
+        {
+          assetClass: 'equity' as const,
+          assetId: 'asset-2330',
+          symbol: '2330',
+          name: 'TSMC',
+          currentMarketValue: 593.56,
+          currentWeightWithinAssetClass: 1,
+          suggestedBuyAmount: 107.438,
+          estimatedQuantity: 0.11,
+          latestPrice: 950,
+          latestPriceCurrency: 'TWD',
+        },
+      ],
+    })
+    usePreferencesStore.setState({
+      displayCurrencyMode: 'base',
+      preferredBaseCurrency: 'USD',
+      allocationViewMode: 'assetClass',
+    })
+
+    renderPage()
+
+    await waitFor(() => {
+      expect(getTodayRate).toHaveBeenCalledWith({ base: 'TWD', quote: 'USD' })
+      expect(screen.getAllByText('950 TWD').length).toBeGreaterThan(0)
+      expect(screen.getByText('30.45 USD')).toBeTruthy()
+      expect(screen.getByDisplayValue('3.53')).toBeTruthy()
     })
   })
 })
