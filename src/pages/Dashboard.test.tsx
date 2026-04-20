@@ -580,9 +580,26 @@ describe('Dashboard smoke tests', () => {
 
     await waitFor(() => {
       expect(screen.getAllByText('3,440.23 TWD').length).toBeGreaterThan(0)
-      expect(screen.getByText('3.62')).toBeTruthy()
+      expect(screen.getByDisplayValue('3.62')).toBeTruthy()
     })
 
     expect(screen.queryByText('2.63')).toBeNull()
+  })
+
+  it('recalculates suggestion amount when the user edits quantity', async () => {
+    renderPage()
+
+    await waitFor(() => {
+      expect(screen.getByDisplayValue('3.62')).toBeTruthy()
+    })
+
+    fireEvent.change(screen.getByLabelText('Suggested quantity for 2330'), {
+      target: { value: '4.5' },
+    })
+
+    await waitFor(() => {
+      expect(screen.getByDisplayValue('4.5')).toBeTruthy()
+      expect(screen.getAllByText('4,275 TWD').length).toBeGreaterThan(0)
+    })
   })
 })

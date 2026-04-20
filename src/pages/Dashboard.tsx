@@ -417,6 +417,7 @@ export default function Dashboard() {
   const [rebalanceDraftEquityPercent, setRebalanceDraftEquityPercent] = useState(80)
   const [isRebalanceTargetUnlocked, setIsRebalanceTargetUnlocked] = useState(false)
   const [rebalanceHoverLabel, setRebalanceHoverLabel] = useState<string | null>(null)
+  const [rebalanceQuantityDrafts, setRebalanceQuantityDrafts] = useState<Record<string, string>>({})
   const {
     displayCurrencyMode,
     preferredBaseCurrency,
@@ -522,6 +523,24 @@ export default function Dashboard() {
     setRebalanceDraftEquityPercent(nextTargetEquityPercent)
   }, [isRebalanceTargetUnlocked, rebalanceQuery.data])
 
+  useEffect(() => {
+    if (!rebalanceQuery.data) {
+      return
+    }
+
+    const nextDrafts = Object.fromEntries(
+      (buildClientRebalanceSuggestions(rebalanceQuery.data).length > 0
+        ? buildClientRebalanceSuggestions(rebalanceQuery.data)
+        : (rebalanceQuery.data.suggestions ?? [])
+      ).map((suggestion) => [
+        suggestion.assetId,
+        suggestion.estimatedQuantity.toFixed(2),
+      ]),
+    )
+
+    setRebalanceQuantityDrafts(nextDrafts)
+  }, [rebalanceQuery.data])
+
   const selectedHolding = useMemo(
     () => holdings.find((holding) => holding.assetId === selectedHoldingId) ?? null,
     [holdings, selectedHoldingId],
@@ -601,14 +620,47 @@ export default function Dashboard() {
       Math.max(0, data.recommendedBuyAmountByAssetClass.equity) +
       Math.max(0, data.recommendedBuyAmountByAssetClass.bond)
     const computedSuggestions = buildClientRebalanceSuggestions(data)
+    const suggestions =
+      computedSuggestions.length > 0 ? computedSuggestions : (data.suggestions ?? [])
 
     return {
       ...data,
       totalRecommendedBuyAmount,
-      suggestions:
-        computedSuggestions.length > 0 ? computedSuggestions : (data.suggestions ?? []),
+      suggestions,
     }
   }, [rebalanceQuery.data])
+
+  const displayedRebalanceSuggestions = useMemo(() => {
+    if (!rebalancePlan?.suggestions?.length) {
+      return []
+    }
+
+    return rebalancePlan.suggestions.map((suggestion) => {
+      const quantityDraft = rebalanceQuantityDrafts[suggestion.assetId]
+      const parsedQuantity =
+        quantityDraft != null && quantityDraft.trim() !== ''
+          ? Number(quantityDraft)
+          : suggestion.estimatedQuantity
+      const quantity = Number.isFinite(parsedQuantity) && parsedQuantity >= 0
+        ? parsedQuantity
+        : suggestion.estimatedQuantity
+      const amount =
+        suggestion.latestPrice != null
+          ? roundTo(quantity * suggestion.latestPrice, 8)
+          : suggestion.suggestedBuyAmount
+
+      return {
+        ...suggestion,
+        quantity,
+        amount,
+      }
+    })
+  }, [rebalancePlan?.suggestions, rebalanceQuantityDrafts])
+
+  const displayedRebalanceTotal = useMemo(
+    () => displayedRebalanceSuggestions.reduce((sum, suggestion) => sum + suggestion.amount, 0),
+    [displayedRebalanceSuggestions],
+  )
 
   const handleRebalanceTargetLockToggle = () => {
     if (isRebalanceTargetUnlocked) {
@@ -619,6 +671,13 @@ export default function Dashboard() {
 
     setRebalanceDraftEquityPercent(rebalanceTargetEquityPercent)
     setIsRebalanceTargetUnlocked(true)
+  }
+
+  const handleRebalanceQuantityChange = (assetId: string, value: string) => {
+    setRebalanceQuantityDrafts((current) => ({
+      ...current,
+      [assetId]: value,
+    }))
   }
 
   const portfolioTrendData = useMemo<TrendPoint[]>(
@@ -1285,7 +1344,7 @@ export default function Dashboard() {
                       <>
                         <p className="mt-3 text-2xl font-semibold text-slate-900">
                           {formatCurrencyWithCode(
-                            rebalancePlan.totalRecommendedBuyAmount,
+                            displayedRebalanceTotal,
                             locale,
                             displayCurrency,
                           )}
@@ -1293,13 +1352,13 @@ export default function Dashboard() {
                         <p className="mt-2 text-sm leading-6 text-slate-600">
                           {t('dashboard.rebalanceActionDescription', {
                             amount: formatCurrencyWithCode(
-                              rebalancePlan.totalRecommendedBuyAmount,
+                              displayedRebalanceTotal,
                               locale,
                               displayCurrency,
                             ),
                           })}
                         </p>
-                        {rebalancePlan.suggestions?.length ? (
+                        {displayedRebalanceSuggestions.length ? (
                           <div className="mt-5 overflow-hidden rounded-2xl border border-slate-200 bg-white">
                             <div className="grid grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)_minmax(0,1fr)_minmax(0,1fr)] gap-3 border-b border-slate-200 px-4 py-3 text-[11px] font-medium uppercase tracking-[0.16em] text-slate-500">
                               <p>{t('dashboard.rebalanceSuggestionAsset')}</p>
@@ -1308,7 +1367,7 @@ export default function Dashboard() {
                               <p>{t('dashboard.rebalanceSuggestionAmountLabel')}</p>
                             </div>
                             <div className="divide-y divide-slate-200">
-                              {rebalancePlan.suggestions.map((suggestion) => (
+                              {displayedRebalanceSuggestions.map((suggestion) => (
                                 <div
                                   key={suggestion.assetId}
                                   className="grid grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)_minmax(0,1fr)_minmax(0,1fr)] gap-3 px-4 py-3"
@@ -1330,12 +1389,35 @@ export default function Dashboard() {
                                         )
                                       : t('common.notAvailable')}
                                   </p>
-                                  <p className="text-sm text-slate-700">
-                                    {suggestion.estimatedQuantity.toFixed(2)}
-                                  </p>
+                                  <div>
+                                    <label
+                                      htmlFor={`rebalance-quantity-${suggestion.assetId}`}
+                                      className="sr-only"
+                                    >
+                                      {t('dashboard.rebalanceSuggestionQuantityInputLabel', {
+                                        symbol: suggestion.symbol,
+                                      })}
+                                    </label>
+                                    <input
+                                      id={`rebalance-quantity-${suggestion.assetId}`}
+                                      type="number"
+                                      inputMode="decimal"
+                                      min="0"
+                                      step="0.01"
+                                      value={rebalanceQuantityDrafts[suggestion.assetId] ?? suggestion.quantity.toFixed(2)}
+                                      onChange={(event) =>
+                                        handleRebalanceQuantityChange(
+                                          suggestion.assetId,
+                                          event.target.value,
+                                        )
+                                      }
+                                      disabled={suggestion.latestPrice == null}
+                                      className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700 shadow-sm outline-none transition focus:border-slate-400 focus:ring-2 focus:ring-slate-200 disabled:cursor-not-allowed disabled:bg-slate-100 disabled:text-slate-400"
+                                    />
+                                  </div>
                                   <p className="text-sm font-medium text-slate-900">
                                     {formatCurrencyWithCode(
-                                      suggestion.suggestedBuyAmount,
+                                      suggestion.amount,
                                       locale,
                                       displayCurrency,
                                     )}

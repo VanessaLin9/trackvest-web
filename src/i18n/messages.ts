@@ -124,6 +124,7 @@ export const messages = {
       rebalanceNoActionNeeded:
         'Current equity and bond weights are already close to the target mix.',
       rebalanceSuggestionQuantity: 'Buy about {{quantity}} shares',
+      rebalanceSuggestionQuantityInputLabel: 'Suggested quantity for {{symbol}}',
       rebalanceSuggestionPrice: 'Latest price {{price}}',
       rebalanceSuggestionAsset: 'Asset',
       rebalanceSuggestionPriceLabel: 'Price',
@@ -650,6 +651,7 @@ export const messages = {
       rebalanceNoActionNeeded:
         '目前股票與債券的配置已經很接近目標比例。',
       rebalanceSuggestionQuantity: '大約再買 {{quantity}} 股',
+      rebalanceSuggestionQuantityInputLabel: '{{symbol}} 建議購買數量',
       rebalanceSuggestionPrice: '最新價格 {{price}}',
       rebalanceSuggestionAsset: '資產',
       rebalanceSuggestionPriceLabel: '價格',
