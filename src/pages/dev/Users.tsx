@@ -25,7 +25,9 @@ export default function Users() {
             key: 'createdAt',
             label: t('users.createdAt'),
             render: (value) =>
-              value ? new Date(value).toLocaleString(locale) : '-',
+              typeof value === 'string' || typeof value === 'number'
+                ? new Date(value).toLocaleString(locale)
+                : '-',
           },
         ]}
         title={t('users.usersList')}

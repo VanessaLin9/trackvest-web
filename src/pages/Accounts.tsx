@@ -380,13 +380,14 @@ export default function Accounts() {
                   {
                     key: 'type',
                     label: t('accounts.type'),
-                    render: (value) => formatAccountType(value, t),
+                    render: (value) => formatAccountType(value as AccountType, t),
                   },
                   { key: 'currency', label: t('accounts.currency') },
                   {
                     key: 'broker',
                     label: t('accounts.broker'),
-                    render: (value) => formatBroker(value, t),
+                    render: (value) =>
+                      formatBroker(value as string | null | undefined, t),
                   },
                   {
                     key: 'csvImport',
