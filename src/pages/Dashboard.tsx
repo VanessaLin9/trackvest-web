@@ -1300,21 +1300,39 @@ export default function Dashboard() {
                           })}
                         </p>
                         {rebalancePlan.suggestions?.length ? (
-                          <div className="mt-5 space-y-3">
-                            {rebalancePlan.suggestions.map((suggestion) => (
-                              <div
-                                key={suggestion.assetId}
-                                className="rounded-2xl border border-slate-200 bg-white px-4 py-3"
-                              >
-                                <div className="flex flex-wrap items-baseline justify-between gap-3">
-                                  <div>
-                                    <p className="text-sm font-semibold text-slate-900">
+                          <div className="mt-5 overflow-hidden rounded-2xl border border-slate-200 bg-white">
+                            <div className="grid grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)_minmax(0,1fr)_minmax(0,1fr)] gap-3 border-b border-slate-200 px-4 py-3 text-[11px] font-medium uppercase tracking-[0.16em] text-slate-500">
+                              <p>{t('dashboard.rebalanceSuggestionAsset')}</p>
+                              <p>{t('dashboard.rebalanceSuggestionPriceLabel')}</p>
+                              <p>{t('dashboard.rebalanceSuggestionQuantityLabel')}</p>
+                              <p>{t('dashboard.rebalanceSuggestionAmountLabel')}</p>
+                            </div>
+                            <div className="divide-y divide-slate-200">
+                              {rebalancePlan.suggestions.map((suggestion) => (
+                                <div
+                                  key={suggestion.assetId}
+                                  className="grid grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)_minmax(0,1fr)_minmax(0,1fr)] gap-3 px-4 py-3"
+                                >
+                                  <div className="min-w-0">
+                                    <p className="truncate text-sm font-semibold text-slate-900">
                                       {suggestion.symbol}
                                     </p>
-                                    <p className="text-xs text-slate-500">
+                                    <p className="truncate text-xs text-slate-500">
                                       {suggestion.name}
                                     </p>
                                   </div>
+                                  <p className="text-sm text-slate-700">
+                                    {suggestion.latestPrice != null
+                                      ? formatCurrencyWithCode(
+                                          suggestion.latestPrice,
+                                          locale,
+                                          suggestion.latestPriceCurrency,
+                                        )
+                                      : t('common.notAvailable')}
+                                  </p>
+                                  <p className="text-sm text-slate-700">
+                                    {suggestion.estimatedQuantity.toFixed(2)}
+                                  </p>
                                   <p className="text-sm font-medium text-slate-900">
                                     {formatCurrencyWithCode(
                                       suggestion.suggestedBuyAmount,
@@ -1323,26 +1341,8 @@ export default function Dashboard() {
                                     )}
                                   </p>
                                 </div>
-                                <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-sm text-slate-600">
-                                  <p>
-                                    {t('dashboard.rebalanceSuggestionQuantity', {
-                                      quantity: suggestion.estimatedQuantity.toFixed(2),
-                                    })}
-                                  </p>
-                                  {suggestion.latestPrice != null ? (
-                                    <p>
-                                      {t('dashboard.rebalanceSuggestionPrice', {
-                                        price: formatCurrencyWithCode(
-                                          suggestion.latestPrice,
-                                          locale,
-                                          suggestion.latestPriceCurrency,
-                                        ),
-                                      })}
-                                    </p>
-                                  ) : null}
-                                </div>
-                              </div>
-                            ))}
+                              ))}
+                            </div>
                           </div>
                         ) : null}
                       </>
@@ -1352,16 +1352,18 @@ export default function Dashboard() {
                       </p>
                     )}
 
-                    <div className="mt-5 rounded-2xl border border-slate-200 bg-white px-4 py-3">
-                      <p className="text-[11px] font-medium uppercase tracking-[0.18em] text-slate-500">
-                        {t('dashboard.rebalanceFootnoteLabel')}
-                      </p>
-                      <div className="mt-2 space-y-1 text-sm leading-6 text-slate-600">
-                        {rebalancePlan.notes.map((note) => (
-                          <p key={note}>{note}</p>
-                        ))}
-                      </div>
-                    </div>
+                    {rebalancePlan.notes.length ? (
+                      <details className="mt-5 rounded-2xl border border-slate-200 bg-white px-4 py-3">
+                        <summary className="cursor-pointer list-none text-[11px] font-medium uppercase tracking-[0.18em] text-slate-500">
+                          {t('dashboard.rebalanceFootnoteLabel')}
+                        </summary>
+                        <div className="mt-3 space-y-1 text-sm leading-6 text-slate-600">
+                          {rebalancePlan.notes.map((note) => (
+                            <p key={note}>{note}</p>
+                          ))}
+                        </div>
+                      </details>
+                    ) : null}
                   </div>
                 </div>
               ) : (

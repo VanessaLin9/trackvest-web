@@ -125,7 +125,11 @@ export const messages = {
         'Current equity and bond weights are already close to the target mix.',
       rebalanceSuggestionQuantity: 'Buy about {{quantity}} shares',
       rebalanceSuggestionPrice: 'Latest price {{price}}',
-      rebalanceFootnoteLabel: 'Planning note',
+      rebalanceSuggestionAsset: 'Asset',
+      rebalanceSuggestionPriceLabel: 'Price',
+      rebalanceSuggestionQuantityLabel: 'Qty',
+      rebalanceSuggestionAmountLabel: 'Amount',
+      rebalanceFootnoteLabel: 'Calculation notes',
       rebalanceFootnote:
         'This first version only looks at equity and bond asset classes. Specific asset suggestions can come later once the rebalance flow grows beyond asset-class guidance.',
       rebalanceEmptyState:
@@ -647,7 +651,11 @@ export const messages = {
         '目前股票與債券的配置已經很接近目標比例。',
       rebalanceSuggestionQuantity: '大約再買 {{quantity}} 股',
       rebalanceSuggestionPrice: '最新價格 {{price}}',
-      rebalanceFootnoteLabel: '規劃備註',
+      rebalanceSuggestionAsset: '資產',
+      rebalanceSuggestionPriceLabel: '價格',
+      rebalanceSuggestionQuantityLabel: '數量',
+      rebalanceSuggestionAmountLabel: '總額',
+      rebalanceFootnoteLabel: '計算前提',
       rebalanceFootnote:
         '第一版只先看股票與債券這兩個 asset class。更細的具體資產建議，之後再把再平衡流程往下擴充。',
       rebalanceEmptyState:

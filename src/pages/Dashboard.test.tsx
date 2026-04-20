@@ -472,7 +472,7 @@ describe('Dashboard smoke tests', () => {
         preferredBaseCurrency: 'USD',
       })
       expect(screen.getByText('741.2 USD')).toBeTruthy()
-      expect(screen.getByText('950 TWD')).toBeTruthy()
+      expect(screen.getAllByText('950 TWD').length).toBeGreaterThan(0)
     })
   })
 
@@ -580,9 +580,9 @@ describe('Dashboard smoke tests', () => {
 
     await waitFor(() => {
       expect(screen.getAllByText('3,440.23 TWD').length).toBeGreaterThan(0)
-      expect(screen.getByText('Buy about 3.62 shares')).toBeTruthy()
+      expect(screen.getByText('3.62')).toBeTruthy()
     })
 
-    expect(screen.queryByText('Buy about 2.63 shares')).toBeNull()
+    expect(screen.queryByText('2.63')).toBeNull()
   })
 })
