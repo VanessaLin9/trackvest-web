@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { api } from '../lib/api'
 import { useI18n } from '../i18n'
+import { Button } from './ui/Button'
 
 interface EndpointTesterProps {
   method: 'GET' | 'POST' | 'PATCH' | 'DELETE'
@@ -138,17 +139,9 @@ export default function EndpointTester({
         </div>
       )}
 
-      <button
-        onClick={handleSubmit}
-        disabled={loading}
-        className={`px-5 py-2.5 bg-blue-600 text-white border-none rounded transition-opacity ${
-          loading
-            ? 'opacity-60 cursor-not-allowed'
-            : 'cursor-pointer hover:bg-blue-700'
-        }`}
-      >
+      <Button onClick={handleSubmit} disabled={loading}>
         {loading ? t('common.loading') : t('common.sendRequest')}
-      </button>
+      </Button>
 
       {error && (
         <div className="mt-4 p-2.5 bg-red-100 text-red-800 rounded">

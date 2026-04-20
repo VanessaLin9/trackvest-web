@@ -2,6 +2,7 @@ import { useQuery } from '@tanstack/react-query'
 import { api } from '../lib/api'
 import { useI18n } from '../i18n'
 import DataTable from './DataTable'
+import { Button } from './ui/Button'
 
 interface DataDisplayProps {
   endpoint: string
@@ -49,15 +50,9 @@ export default function DataDisplay({
     <div className="mb-8 border border-gray-300 rounded-lg p-5 bg-white">
       <div className="flex justify-between items-center mb-4">
         <h2 className="m-0">{title}</h2>
-        <button
-          onClick={() => refetch()}
-          disabled={isLoading}
-          className={`px-4 py-2 bg-blue-600 text-white border-none rounded cursor-pointer transition-opacity ${
-            isLoading ? 'opacity-60 cursor-not-allowed' : 'hover:bg-blue-700'
-          }`}
-        >
+        <Button onClick={() => refetch()} disabled={isLoading}>
           {isLoading ? t('common.loading') : `🔄 ${t('common.refresh')}`}
-        </button>
+        </Button>
       </div>
 
       {isLoading && (

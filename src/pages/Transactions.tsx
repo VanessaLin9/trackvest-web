@@ -9,6 +9,7 @@ import {
 import { useCurrentUserId } from '../app/current-user'
 import { SUPPORTED_BROKER, type Account } from '../lib/accounts.service'
 import { useI18n } from '../i18n'
+import { Button } from '../components/ui/Button'
 import { Card } from '../components/ui/Card'
 import { getApiErrorMessage } from '../lib/errors'
 import {
@@ -849,24 +850,15 @@ export default function Transactions() {
               </div>
               <div className="flex items-center gap-2">
                 {isEditing && (
-                  <button
-                    type="button"
-                    onClick={resetForm}
-                    className="rounded border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100"
-                  >
+                  <Button variant="secondary" onClick={resetForm}>
                     {t('common.cancel')}
-                  </button>
+                  </Button>
                 )}
-                <button
+                <Button
                   type="submit"
                   disabled={
                     submitting || !accountId || (requiresAsset && !hasTradableAssets)
                   }
-                  className={`rounded bg-blue-600 px-4 py-2 text-sm font-medium text-white ${
-                    submitting || !accountId || (requiresAsset && !hasTradableAssets)
-                      ? 'cursor-not-allowed bg-gray-400'
-                      : 'hover:bg-blue-700'
-                  }`}
                 >
                   {submitting
                     ? t('common.saving')
@@ -875,7 +867,7 @@ export default function Transactions() {
                     : t('transactions.saveMode', {
                         mode: formatTransactionMode(mode, t),
                       })}
-                </button>
+                </Button>
               </div>
             </div>
           </form>
@@ -947,19 +939,15 @@ export default function Transactions() {
                 </p>
               </div>
 
-              <button
+              <Button
+                variant="dark"
                 type="submit"
                 disabled={importSubmitting || importAccounts.length === 0}
-                className={`rounded bg-slate-900 px-4 py-2 text-sm font-medium text-white ${
-                  importSubmitting || importAccounts.length === 0
-                    ? 'cursor-not-allowed bg-gray-400'
-                    : 'hover:bg-slate-700'
-                }`}
               >
                 {importSubmitting
                   ? t('transactions.importing')
                   : t('transactions.importCsv')}
-              </button>
+              </Button>
             </form>
           </Card>
 
@@ -1110,8 +1098,9 @@ export default function Transactions() {
                     <td className="px-2 py-3">
                       {isEditableTransactionType(transaction.type) ? (
                         <div className="flex flex-wrap gap-2">
-                          <button
-                            type="button"
+                          <Button
+                            variant="secondary"
+                            size="icon"
                             onClick={(event) => {
                               event.stopPropagation()
                               startEditingTransaction(transaction)
@@ -1120,7 +1109,6 @@ export default function Transactions() {
                               type: formatTransactionMode(transaction.type, t),
                             })}
                             title={t('transactions.editAction')}
-                            className="rounded border border-gray-300 p-1.5 text-gray-700 hover:bg-gray-50"
                           >
                             <svg
                               aria-hidden="true"
@@ -1136,7 +1124,7 @@ export default function Transactions() {
                               <path d="M8.5 5 11 7.5" />
                               <path d="M9.5 4 11 2.5 13.5 5 12 6.5" />
                             </svg>
-                          </button>
+                          </Button>
                           <button
                             type="button"
                             onClick={(event) => {

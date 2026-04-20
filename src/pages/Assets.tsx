@@ -22,6 +22,7 @@ import {
   sanitizeStrictTextInput,
   sanitizeLightweightTextInput,
 } from '../lib/input-safety'
+import { Button } from '../components/ui/Button'
 import { Card } from '../components/ui/Card'
 import { getApiErrorMessage } from '../lib/errors'
 import { formatAssetType, formatAssetClass } from '../lib/labels'
@@ -557,27 +558,17 @@ export default function Assets() {
               </p>
               <div className="flex items-center gap-2">
                 {isEditing && (
-                  <button
-                    type="button"
-                    onClick={resetToCreateMode}
-                    className="rounded border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100"
-                  >
+                  <Button variant="secondary" onClick={resetToCreateMode}>
                     {t('common.cancel')}
-                  </button>
+                  </Button>
                 )}
-                <button
-                  type="submit"
-                  disabled={submitting}
-                  className={`rounded px-4 py-2 text-sm font-medium text-white ${
-                    submitting ? 'cursor-not-allowed bg-gray-400' : 'bg-blue-600 hover:bg-blue-700'
-                  }`}
-                >
+                <Button type="submit" disabled={submitting}>
                   {submitting
                     ? t('common.saving')
                     : isEditing
                       ? t('common.saveChanges')
                       : t('assets.createAction')}
-                </button>
+                </Button>
               </div>
             </div>
           </form>
@@ -604,13 +595,14 @@ export default function Assets() {
               </div>
               <div className="flex items-center justify-between gap-3">
                 <p>{t('assets.selectedDescription')}</p>
-                <button
-                  type="button"
+                <Button
+                  variant="secondary"
+                  size="sm"
                   onClick={startEditingSelectedAsset}
-                  className="shrink-0 rounded border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100"
+                  className="shrink-0"
                 >
                   {t('assets.editAction')}
-                </button>
+                </Button>
               </div>
             </div>
           ) : (
@@ -827,22 +819,22 @@ export default function Assets() {
                 <span>{t('assets.pageSizeFixed', { count: PAGE_SIZE })}</span>
               </div>
               <div className="flex items-center gap-2">
-                <button
-                  type="button"
+                <Button
+                  variant="secondary"
+                  size="sm"
                   onClick={() => handlePageChange(Math.max(1, currentPage - 1))}
                   disabled={isCatalogLocked || currentPage === 1}
-                  className="rounded border border-gray-300 px-3 py-2 text-sm font-medium text-gray-700 disabled:cursor-not-allowed disabled:border-gray-200 disabled:bg-gray-100 disabled:text-gray-400"
                 >
                   {t('assets.previousPage')}
-                </button>
-                <button
-                  type="button"
+                </Button>
+                <Button
+                  variant="secondary"
+                  size="sm"
                   onClick={() => handlePageChange(Math.min(totalPages, currentPage + 1))}
                   disabled={isCatalogLocked || currentPage === totalPages}
-                  className="rounded border border-gray-300 px-3 py-2 text-sm font-medium text-gray-700 disabled:cursor-not-allowed disabled:border-gray-200 disabled:bg-gray-100 disabled:text-gray-400"
                 >
                   {t('assets.nextPage')}
-                </button>
+                </Button>
               </div>
             </div>
             </>

@@ -15,6 +15,7 @@ import {
   type Currency,
   type SaveAccountPayload,
 } from '../lib/accounts.service'
+import { Button } from '../components/ui/Button'
 import { Card } from '../components/ui/Card'
 import { getApiErrorMessage } from '../lib/errors'
 import { formatAccountType, formatBroker } from '../lib/labels'
@@ -211,13 +212,9 @@ export default function Accounts() {
               </p>
             </div>
             {isEditing && (
-              <button
-                type="button"
-                onClick={handleCreateNew}
-                className="rounded border border-gray-300 px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
-              >
+              <Button variant="secondary" size="sm" onClick={handleCreateNew}>
                 {t('accounts.createNew')}
-              </button>
+              </Button>
             )}
           </div>
 
@@ -327,21 +324,13 @@ export default function Accounts() {
                   ? t('accounts.editingAccount', { name: selectedAccount.name })
                   : t('accounts.creatingNewAccount')}
               </div>
-              <button
-                type="submit"
-                disabled={saveMutation.isPending}
-                className={`rounded bg-blue-600 px-4 py-2 text-sm font-medium text-white ${
-                  saveMutation.isPending
-                    ? 'cursor-not-allowed bg-gray-400'
-                    : 'hover:bg-blue-700'
-                }`}
-              >
+              <Button type="submit" disabled={saveMutation.isPending}>
                 {saveMutation.isPending
                   ? t('common.saving')
                   : isEditing
                   ? t('common.saveChanges')
                   : t('accounts.createAction')}
-              </button>
+              </Button>
             </div>
           </form>
         </Card>
@@ -355,20 +344,16 @@ export default function Accounts() {
                   {t('accounts.accountsListDescription')}
                 </p>
               </div>
-              <button
-                type="button"
+              <Button
+                variant="secondary"
+                size="sm"
                 onClick={() =>
                   queryClient.invalidateQueries({ queryKey: ['accounts', currentUserId] })
                 }
                 disabled={accountsQuery.isFetching}
-                className={`rounded border border-gray-300 px-3 py-2 text-sm font-medium text-gray-700 ${
-                  accountsQuery.isFetching
-                    ? 'cursor-not-allowed opacity-60'
-                    : 'hover:bg-gray-50'
-                }`}
               >
                 {t('common.refresh')}
-              </button>
+              </Button>
             </div>
 
             {accountsQuery.isLoading ? (
