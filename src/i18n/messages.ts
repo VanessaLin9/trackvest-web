@@ -131,6 +131,10 @@ export const messages = {
       rebalanceSuggestionQuantityLabel: 'Qty',
       rebalanceSuggestionAmountLabel: 'Amount',
       rebalanceFootnoteLabel: 'Calculation notes',
+      rebalanceDraftSummaryLabel: 'Your adjustment',
+      rebalanceDraftSummaryTotal: 'Subtotal {{amount}}',
+      rebalanceDraftSummaryMix: 'Projected mix {{equity}} Equity / {{bond}} Bond',
+      rebalanceDraftSummaryShift: 'Equity shift {{shift}}',
       rebalanceFootnote:
         'This first version only looks at equity and bond asset classes. Specific asset suggestions can come later once the rebalance flow grows beyond asset-class guidance.',
       rebalanceEmptyState:
@@ -658,6 +662,10 @@ export const messages = {
       rebalanceSuggestionQuantityLabel: '數量',
       rebalanceSuggestionAmountLabel: '總額',
       rebalanceFootnoteLabel: '計算前提',
+      rebalanceDraftSummaryLabel: '你的調整草稿',
+      rebalanceDraftSummaryTotal: '小計 {{amount}}',
+      rebalanceDraftSummaryMix: '預估配置 {{equity}} 股票 / {{bond}} 債券',
+      rebalanceDraftSummaryShift: '股票比重變化 {{shift}}',
       rebalanceFootnote:
         '第一版只先看股票與債券這兩個 asset class。更細的具體資產建議，之後再把再平衡流程往下擴充。',
       rebalanceEmptyState:

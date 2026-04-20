@@ -657,10 +657,37 @@ export default function Dashboard() {
     })
   }, [rebalancePlan?.suggestions, rebalanceQuantityDrafts])
 
-  const displayedRebalanceTotal = useMemo(
-    () => displayedRebalanceSuggestions.reduce((sum, suggestion) => sum + suggestion.amount, 0),
-    [displayedRebalanceSuggestions],
-  )
+  const rebalanceDraftPreview = useMemo(() => {
+    if (!rebalancePlan || displayedRebalanceSuggestions.length === 0) {
+      return null
+    }
+
+    const addedEquity = displayedRebalanceSuggestions
+      .filter((suggestion) => suggestion.assetClass === 'equity')
+      .reduce((sum, suggestion) => sum + suggestion.amount, 0)
+    const addedBond = displayedRebalanceSuggestions
+      .filter((suggestion) => suggestion.assetClass === 'bond')
+      .reduce((sum, suggestion) => sum + suggestion.amount, 0)
+    const totalAdded = addedEquity + addedBond
+    const nextTrackedMarketValue = rebalancePlan.trackedMarketValue + totalAdded
+
+    if (nextTrackedMarketValue <= 1e-9) {
+      return null
+    }
+
+    const projectedEquity =
+      (rebalancePlan.marketValueByAssetClass.equity + addedEquity) / nextTrackedMarketValue
+    const projectedBond =
+      (rebalancePlan.marketValueByAssetClass.bond + addedBond) / nextTrackedMarketValue
+
+    return {
+      totalAdded,
+      projectedEquity,
+      projectedBond,
+      equityShift: projectedEquity - rebalancePlan.current.equity,
+      bondShift: projectedBond - rebalancePlan.current.bond,
+    }
+  }, [displayedRebalanceSuggestions, rebalancePlan])
 
   const handleRebalanceTargetLockToggle = () => {
     if (isRebalanceTargetUnlocked) {
@@ -1344,7 +1371,7 @@ export default function Dashboard() {
                       <>
                         <p className="mt-3 text-2xl font-semibold text-slate-900">
                           {formatCurrencyWithCode(
-                            displayedRebalanceTotal,
+                            rebalancePlan.totalRecommendedBuyAmount,
                             locale,
                             displayCurrency,
                           )}
@@ -1352,12 +1379,24 @@ export default function Dashboard() {
                         <p className="mt-2 text-sm leading-6 text-slate-600">
                           {t('dashboard.rebalanceActionDescription', {
                             amount: formatCurrencyWithCode(
-                              displayedRebalanceTotal,
+                              rebalancePlan.totalRecommendedBuyAmount,
                               locale,
                               displayCurrency,
                             ),
                           })}
                         </p>
+                        {rebalancePlan.notes.length ? (
+                          <details className="mt-4 rounded-2xl border border-slate-200 bg-white px-4 py-3">
+                            <summary className="cursor-pointer list-none text-[11px] font-medium uppercase tracking-[0.18em] text-slate-500">
+                              {t('dashboard.rebalanceFootnoteLabel')}
+                            </summary>
+                            <div className="mt-3 space-y-1 text-sm leading-6 text-slate-600">
+                              {rebalancePlan.notes.map((note) => (
+                                <p key={note}>{note}</p>
+                              ))}
+                            </div>
+                          </details>
+                        ) : null}
                         {displayedRebalanceSuggestions.length ? (
                           <div className="mt-5 overflow-hidden rounded-2xl border border-slate-200 bg-white">
                             <div className="grid grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)_minmax(0,1fr)_minmax(0,1fr)] gap-3 border-b border-slate-200 px-4 py-3 text-[11px] font-medium uppercase tracking-[0.16em] text-slate-500">
@@ -1427,25 +1466,47 @@ export default function Dashboard() {
                             </div>
                           </div>
                         ) : null}
+                        {rebalanceDraftPreview ? (
+                          <div className="mt-4 rounded-2xl border border-slate-200 bg-white px-4 py-3">
+                            <p className="text-[11px] font-medium uppercase tracking-[0.18em] text-slate-500">
+                              {t('dashboard.rebalanceDraftSummaryLabel')}
+                            </p>
+                            <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-sm text-slate-700">
+                              <p>
+                                {t('dashboard.rebalanceDraftSummaryTotal', {
+                                  amount: formatCurrencyWithCode(
+                                    rebalanceDraftPreview.totalAdded,
+                                    locale,
+                                    displayCurrency,
+                                  ),
+                                })}
+                              </p>
+                              <p>
+                                {t('dashboard.rebalanceDraftSummaryMix', {
+                                  equity: formatPercent(rebalanceDraftPreview.projectedEquity, {
+                                    signed: false,
+                                  }),
+                                  bond: formatPercent(rebalanceDraftPreview.projectedBond, {
+                                    signed: false,
+                                  }),
+                                })}
+                              </p>
+                              <p>
+                                {t('dashboard.rebalanceDraftSummaryShift', {
+                                  shift: formatPercentPoints(
+                                    rebalanceDraftPreview.equityShift,
+                                  ),
+                                })}
+                              </p>
+                            </div>
+                          </div>
+                        ) : null}
                       </>
                     ) : (
                       <p className="mt-3 text-sm leading-6 text-slate-600">
                         {t('dashboard.rebalanceNoActionNeeded')}
                       </p>
                     )}
-
-                    {rebalancePlan.notes.length ? (
-                      <details className="mt-5 rounded-2xl border border-slate-200 bg-white px-4 py-3">
-                        <summary className="cursor-pointer list-none text-[11px] font-medium uppercase tracking-[0.18em] text-slate-500">
-                          {t('dashboard.rebalanceFootnoteLabel')}
-                        </summary>
-                        <div className="mt-3 space-y-1 text-sm leading-6 text-slate-600">
-                          {rebalancePlan.notes.map((note) => (
-                            <p key={note}>{note}</p>
-                          ))}
-                        </div>
-                      </details>
-                    ) : null}
                   </div>
                 </div>
               ) : (
