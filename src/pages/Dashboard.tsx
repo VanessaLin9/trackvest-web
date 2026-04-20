@@ -25,6 +25,7 @@ import { fxService } from '../lib/fx.service'
 import { SegmentedControl } from '../components/ui/SegmentedControl'
 import { getApiErrorMessage } from '../lib/errors'
 import { formatCompactCurrencyAxis } from '../lib/formatters'
+import { queryKeys, resolveDisplayCurrencyKey } from '../lib/query-keys'
 import {
   chartColors,
   PORTFOLIO_PALETTE,
@@ -59,9 +60,10 @@ export default function Dashboard() {
   } = usePreferencesStore()
   const requestedDisplayCurrency =
     displayCurrencyMode === 'base' ? preferredBaseCurrency : undefined
+  const displayCurrencyKey = resolveDisplayCurrencyKey(requestedDisplayCurrency)
 
   const summaryQuery = useQuery({
-    queryKey: ['portfolio', 'summary', currentUserId, requestedDisplayCurrency ?? 'default'],
+    queryKey: queryKeys.portfolio.summary(currentUserId, displayCurrencyKey),
     queryFn: () =>
       portfolioService.getSummary(
         requestedDisplayCurrency
@@ -72,13 +74,13 @@ export default function Dashboard() {
   })
 
   const fxRateQuery = useQuery({
-    queryKey: ['fx', 'today-rate', 'USD', 'TWD'],
+    queryKey: queryKeys.fx.todayRate('USD', 'TWD'),
     queryFn: () => fxService.getTodayRate({ base: 'USD', quote: 'TWD' }),
     enabled: Boolean(currentUserId),
   })
 
   const holdingsQuery = useQuery({
-    queryKey: ['portfolio', 'holdings', currentUserId, requestedDisplayCurrency ?? 'default'],
+    queryKey: queryKeys.portfolio.holdings(currentUserId, displayCurrencyKey),
     queryFn: () =>
       portfolioService.getHoldings(
         requestedDisplayCurrency
@@ -89,7 +91,7 @@ export default function Dashboard() {
   })
 
   const trendQuery = useQuery({
-    queryKey: ['portfolio', 'trend', currentUserId, requestedDisplayCurrency ?? 'default'],
+    queryKey: queryKeys.portfolio.trend(currentUserId, displayCurrencyKey),
     queryFn: () =>
       portfolioService.getTrend(
         requestedDisplayCurrency
@@ -122,13 +124,11 @@ export default function Dashboard() {
   )
 
   const holdingTrendQuery = useQuery({
-    queryKey: [
-      'portfolio',
-      'holding-trend',
+    queryKey: queryKeys.portfolio.holdingTrend(
       currentUserId,
       selectedHolding?.assetId,
-      requestedDisplayCurrency ?? 'default',
-    ],
+      displayCurrencyKey,
+    ),
     queryFn: () =>
       portfolioService.getHoldingTrend(
         selectedHolding!.assetId,

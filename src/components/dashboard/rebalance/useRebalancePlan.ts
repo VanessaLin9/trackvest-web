@@ -4,6 +4,10 @@ import { fxService } from '../../../lib/fx.service'
 import { roundTo } from '../../../lib/formatters'
 import { portfolioService } from '../../../lib/portfolio.service'
 import {
+  queryKeys,
+  resolveDisplayCurrencyKey,
+} from '../../../lib/query-keys'
+import {
   buildClientRebalanceSuggestions,
   type DisplayedRebalanceSuggestion,
   type PricedRebalanceSuggestion,
@@ -60,13 +64,11 @@ export function useRebalancePlan({
   const targetBond = (100 - targetEquityPercent) / 100
 
   const rebalanceQuery = useQuery({
-    queryKey: [
-      'portfolio',
-      'rebalance',
+    queryKey: queryKeys.portfolio.rebalance(
       currentUserId,
-      requestedDisplayCurrency ?? 'default',
+      resolveDisplayCurrencyKey(requestedDisplayCurrency),
       targetEquityPercent,
-    ],
+    ),
     queryFn: () =>
       portfolioService.getRebalance({
         ...(requestedDisplayCurrency
@@ -139,7 +141,7 @@ export function useRebalancePlan({
 
   const fxRateQueries = useQueries({
     queries: fxPairs.map((pair) => ({
-      queryKey: ['fx', 'today-rate', pair.base, pair.quote],
+      queryKey: queryKeys.fx.todayRate(pair.base, pair.quote),
       queryFn: () => fxService.getTodayRate({ base: pair.base, quote: pair.quote }),
       enabled: Boolean(currentUserId),
     })),

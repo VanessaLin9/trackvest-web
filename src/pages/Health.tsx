@@ -3,11 +3,12 @@ import { api } from '../lib/api'
 import EndpointTester from '../components/EndpointTester'
 import { Button } from '../components/ui/Button'
 import { useI18n } from '../i18n'
+import { queryKeys } from '../lib/query-keys'
 
 export default function Health() {
   const { t } = useI18n()
   const { data, isLoading, error, refetch } = useQuery({
-    queryKey: ['health'],
+    queryKey: queryKeys.health(),
     queryFn: async () => (await api.get('/health')).data,
     refetchInterval: 5000, // Auto-refresh every 5 seconds
   })

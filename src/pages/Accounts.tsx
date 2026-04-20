@@ -19,6 +19,7 @@ import { Button } from '../components/ui/Button'
 import { Card } from '../components/ui/Card'
 import { getApiErrorMessage } from '../lib/errors'
 import { formatAccountType, formatBroker } from '../lib/labels'
+import { queryKeys } from '../lib/query-keys'
 
 type AccountFormState = {
   name: string
@@ -44,7 +45,7 @@ export default function Accounts() {
   const [successMessage, setSuccessMessage] = useState<string | null>(null)
 
   const accountsQuery = useQuery({
-    queryKey: ['accounts', currentUserId],
+    queryKey: queryKeys.accounts.all(currentUserId),
     queryFn: () => accountsService.getAccounts(),
     enabled: Boolean(currentUserId),
   })
@@ -99,7 +100,9 @@ export default function Accounts() {
         ? accountsService.updateAccount(selectedAccountId, payload)
         : accountsService.createAccount(payload),
     onSuccess: async (savedAccount) => {
-      await queryClient.invalidateQueries({ queryKey: ['accounts', currentUserId] })
+      await queryClient.invalidateQueries({
+        queryKey: queryKeys.accounts.all(currentUserId),
+      })
       setSelectedAccountId(savedAccount.id)
       setForm({
         name: savedAccount.name,
@@ -348,7 +351,9 @@ export default function Accounts() {
                 variant="secondary"
                 size="sm"
                 onClick={() =>
-                  queryClient.invalidateQueries({ queryKey: ['accounts', currentUserId] })
+                  queryClient.invalidateQueries({
+                    queryKey: queryKeys.accounts.all(currentUserId),
+                  })
                 }
                 disabled={accountsQuery.isFetching}
               >

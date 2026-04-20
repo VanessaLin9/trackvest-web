@@ -2,6 +2,7 @@ import { useState } from 'react'
 import EndpointTester from '../components/EndpointTester'
 import DataDisplay from '../components/DataDisplay'
 import { useI18n } from '../i18n'
+import { queryKeys } from '../lib/query-keys'
 
 export default function Users() {
   const { t, locale } = useI18n()
@@ -15,7 +16,7 @@ export default function Users() {
       <DataDisplay
         key={refreshKey}
         endpoint="/users"
-        queryKey={['users']}
+        queryKey={[...queryKeys.users()]}
         columns={[
           { key: 'id', label: t('users.id') },
           { key: 'email', label: t('users.email') },
