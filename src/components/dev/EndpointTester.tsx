@@ -1,7 +1,7 @@
 import { useState } from 'react'
-import { api } from '../lib/api'
-import { useI18n } from '../i18n'
-import { Button } from './ui/Button'
+import { api } from '../../lib/api'
+import { useI18n } from '../../i18n'
+import { Button } from '../ui/Button'
 
 interface EndpointTesterProps {
   method: 'GET' | 'POST' | 'PATCH' | 'DELETE'

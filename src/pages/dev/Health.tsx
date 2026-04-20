@@ -1,9 +1,9 @@
 import { useQuery } from '@tanstack/react-query'
-import { api } from '../lib/api'
-import EndpointTester from '../components/EndpointTester'
-import { Button } from '../components/ui/Button'
-import { useI18n } from '../i18n'
-import { queryKeys } from '../lib/query-keys'
+import { api } from '../../lib/api'
+import EndpointTester from '../../components/dev/EndpointTester'
+import { Button } from '../../components/ui/Button'
+import { useI18n } from '../../i18n'
+import { queryKeys } from '../../lib/query-keys'
 
 export default function Health() {
   const { t } = useI18n()

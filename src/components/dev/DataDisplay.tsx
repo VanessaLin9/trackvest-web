@@ -1,8 +1,8 @@
 import { useQuery } from '@tanstack/react-query'
-import { api } from '../lib/api'
-import { useI18n } from '../i18n'
-import DataTable from './DataTable'
-import { Button } from './ui/Button'
+import { api } from '../../lib/api'
+import { useI18n } from '../../i18n'
+import DataTable from '../DataTable'
+import { Button } from '../ui/Button'
 
 interface DataDisplayProps {
   endpoint: string

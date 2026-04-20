@@ -1,8 +1,8 @@
 import { useState } from 'react'
-import EndpointTester from '../components/EndpointTester'
-import DataDisplay from '../components/DataDisplay'
-import { useI18n } from '../i18n'
-import { queryKeys } from '../lib/query-keys'
+import EndpointTester from '../../components/dev/EndpointTester'
+import DataDisplay from '../../components/dev/DataDisplay'
+import { useI18n } from '../../i18n'
+import { queryKeys } from '../../lib/query-keys'
 
 export default function Users() {
   const { t, locale } = useI18n()
