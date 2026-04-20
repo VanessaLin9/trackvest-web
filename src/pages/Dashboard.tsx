@@ -3,16 +3,22 @@ import { lazy, Suspense, useEffect, useMemo, useState } from 'react'
 import { useCurrentUserId } from '../app/current-user'
 import type {
   AllocationChartItem,
-  ChartValue,
   PerformanceDatum,
   TrendPoint,
 } from '../components/dashboard/PortfolioCharts'
+import { ChartCardFallback } from '../components/dashboard/ChartCardFallback'
+import { DashboardLoadingState } from '../components/dashboard/DashboardLoadingState'
+import { ApplyIcon, LockIcon } from '../components/dashboard/icons'
+import { formatAllocationLabel } from '../components/dashboard/allocation-label'
+import {
+  getHoldingLatestPriceCurrency,
+  renderTooltipValue,
+} from '../components/dashboard/chart-helpers'
 import { useI18n } from '../i18n'
 import {
   portfolioService,
   type PortfolioRebalanceResponse,
   type PortfolioRebalanceSuggestion,
-  type PortfolioHolding,
 } from '../lib/portfolio.service'
 import {
   usePreferencesStore,
@@ -61,10 +67,6 @@ const HoldingTrendChartCard = lazy(() =>
     default: module.HoldingTrendChartCard,
   })),
 )
-function getHoldingLatestPriceCurrency(holding: PortfolioHolding) {
-  return holding.latestPriceCurrency ?? holding.assetBaseCurrency
-}
-
 function getRebalancePriceDisplay(
   suggestion: {
     latestPrice: number | null
@@ -133,35 +135,6 @@ function RebalancePriceCell({
   )
 }
 
-/**
- * Dashboard uses a mix of asset-class and asset-type ids as allocation keys
- * (plus special "marketValue" / "costBasis" slots for the holding detail
- * breakdown), so it keeps its own wrapper that delegates to the shared
- * `formatAssetClass` / `formatAssetType` helpers.
- */
-function formatAllocationLabel(
-  id: string,
-  fallback: string,
-  t: (key: string) => string,
-) {
-  switch (id) {
-    case 'equity':
-    case 'bond':
-    case 'crypto':
-    case 'cash':
-    case 'precious_metal':
-      return formatAssetClass(id, t)
-    case 'etf':
-      return formatAssetType('etf', t)
-    case 'marketValue':
-      return t('dashboard.marketValue')
-    case 'costBasis':
-      return t('dashboard.costBasis')
-    default:
-      return fallback
-  }
-}
-
 function buildClientRebalanceSuggestions(
   data: PortfolioRebalanceResponse,
 ): PortfolioRebalanceSuggestion[] {
@@ -226,121 +199,6 @@ function buildClientRebalanceSuggestions(
   }
 
   return suggestions.filter((suggestion) => suggestion.suggestedBuyAmount > 1e-9)
-}
-
-function renderTooltipValue(
-  value: ChartValue,
-  locale: string,
-  currency?: string | null,
-): string {
-  if (value === undefined) {
-    return ''
-  }
-
-  if (Array.isArray(value)) {
-    return value.join(' / ')
-  }
-
-  if (typeof value !== 'number') {
-    return String(value)
-  }
-
-  return formatCurrencyWithCode(value, locale, currency)
-}
-
-function ChartCardFallback({
-  title,
-  description,
-  heightClass = 'h-72',
-}: {
-  title: string
-  description: string
-  heightClass?: string
-}) {
-  return (
-    <Card>
-      <div className="mb-4">
-        <h2 className="text-xl font-semibold">{title}</h2>
-        <p className="text-sm text-gray-500">{description}</p>
-      </div>
-      <div className={`rounded-2xl bg-gray-50 ${heightClass} animate-pulse`} />
-    </Card>
-  )
-}
-
-function DashboardLoadingState() {
-  return (
-    <div className="mx-auto max-w-7xl space-y-6">
-      <div className="h-64 animate-pulse rounded-[2rem] bg-slate-100" />
-      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-        {Array.from({ length: 4 }).map((_, index) => (
-          <div
-            key={index}
-            className="h-32 animate-pulse rounded-3xl bg-slate-100"
-          />
-        ))}
-      </div>
-      <div className="grid gap-6 xl:grid-cols-[0.88fr_1.12fr]">
-        <div className="h-96 animate-pulse rounded-3xl bg-slate-100" />
-        <div className="h-96 animate-pulse rounded-3xl bg-slate-100" />
-      </div>
-    </div>
-  )
-}
-
-function LockIcon({ unlocked = false }: { unlocked?: boolean }) {
-  if (unlocked) {
-    return (
-      <svg
-        aria-hidden="true"
-        viewBox="0 0 20 20"
-        className="h-4 w-4"
-        fill="none"
-        stroke="currentColor"
-        strokeWidth="1.8"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      >
-        <path d="M6.5 8V6.5a3.5 3.5 0 1 1 7 0" />
-        <path d="M10 11v2.5" />
-        <rect x="4.5" y="8" width="11" height="8" rx="2" />
-      </svg>
-    )
-  }
-
-  return (
-    <svg
-      aria-hidden="true"
-      viewBox="0 0 20 20"
-      className="h-4 w-4"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="1.8"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    >
-      <path d="M6.5 8V6.5a3.5 3.5 0 1 1 7 0V8" />
-      <path d="M10 11v2.5" />
-      <rect x="4.5" y="8" width="11" height="8" rx="2" />
-    </svg>
-  )
-}
-
-function ApplyIcon() {
-  return (
-    <svg
-      aria-hidden="true"
-      viewBox="0 0 20 20"
-      className="h-4 w-4"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    >
-      <path d="M5 10.5 8.2 13.7 15 7" />
-    </svg>
-  )
 }
 
 export default function Dashboard() {
