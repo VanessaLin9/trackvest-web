@@ -20,6 +20,7 @@ import {
 } from '../store/preferences'
 import { fxService } from '../lib/fx.service'
 import { Card } from '../components/ui/Card'
+import { SegmentedControl } from '../components/ui/SegmentedControl'
 import { getApiErrorMessage } from '../lib/errors'
 import {
   formatCompactCurrencyAxis,
@@ -894,8 +895,12 @@ export default function Dashboard() {
                 <p className="mb-2 text-xs font-medium uppercase tracking-[0.18em] text-gray-500">
                   {t('dashboard.displayCurrencyModeLabel')}
                 </p>
-                <div className="inline-flex rounded-full border border-amber-200 bg-white p-1">
-                  {[
+                <SegmentedControl
+                  tone="amber"
+                  containerTone="amber"
+                  value={displayCurrencyMode}
+                  onChange={setDisplayCurrencyMode}
+                  options={[
                     {
                       value: 'original',
                       label: t('dashboard.displayCurrencyModeOriginal'),
@@ -904,28 +909,8 @@ export default function Dashboard() {
                       value: 'base',
                       label: t('dashboard.displayCurrencyModeBase'),
                     },
-                  ].map((option) => {
-                    const isActive = displayCurrencyMode === option.value
-
-                    return (
-                      <button
-                        key={option.value}
-                        type="button"
-                        onClick={() =>
-                          setDisplayCurrencyMode(option.value as typeof displayCurrencyMode)
-                        }
-                        aria-pressed={isActive}
-                        className={`rounded-full px-3 py-1.5 text-xs font-medium transition ${
-                          isActive
-                            ? 'bg-amber-500 text-white'
-                            : 'text-amber-900 hover:bg-amber-50'
-                        }`}
-                      >
-                        {option.label}
-                      </button>
-                    )
-                  })}
-                </div>
+                  ]}
+                />
               </div>
 
               <div
@@ -939,29 +924,15 @@ export default function Dashboard() {
                 <p className="mb-2 text-xs font-medium uppercase tracking-[0.18em] text-gray-500">
                   {t('dashboard.preferredBaseCurrencyLabel')}
                 </p>
-                <div className="inline-flex rounded-full border border-amber-200 bg-white p-1">
-                  {['TWD', 'USD'].map((currency) => {
-                    const isActive = preferredBaseCurrency === currency
-
-                    return (
-                      <button
-                        key={currency}
-                        type="button"
-                        onClick={() =>
-                          setPreferredBaseCurrency(currency as typeof preferredBaseCurrency)
-                        }
-                        aria-pressed={isActive}
-                        className={`rounded-full px-3 py-1.5 text-xs font-medium transition ${
-                          isActive
-                            ? 'bg-slate-900 text-white'
-                            : 'text-slate-700 hover:bg-slate-50'
-                        }`}
-                      >
-                        {currency}
-                      </button>
-                    )
-                  })}
-                </div>
+                <SegmentedControl
+                  containerTone="amber"
+                  value={preferredBaseCurrency}
+                  onChange={setPreferredBaseCurrency}
+                  options={[
+                    { value: 'TWD', label: 'TWD' },
+                    { value: 'USD', label: 'USD' },
+                  ]}
+                />
               </div>
             </div>
 
@@ -1108,8 +1079,10 @@ export default function Dashboard() {
                       <p className="mb-2 text-[11px] font-medium uppercase tracking-[0.18em] text-gray-500">
                         {t('dashboard.allocationViewLabel')}
                       </p>
-                      <div className="inline-flex rounded-full border border-slate-200 bg-slate-50 p-1">
-                        {([
+                      <SegmentedControl
+                        value={effectiveAllocationViewMode}
+                        onChange={setAllocationViewMode}
+                        options={[
                           {
                             value: 'assetClass',
                             label: t('dashboard.allocationViewAssetClass'),
@@ -1118,26 +1091,8 @@ export default function Dashboard() {
                             value: 'type',
                             label: t('dashboard.allocationViewType'),
                           },
-                        ] as const).map((option) => {
-                          const isActive = effectiveAllocationViewMode === option.value
-
-                          return (
-                            <button
-                              key={option.value}
-                              type="button"
-                              onClick={() => setAllocationViewMode(option.value)}
-                              aria-pressed={isActive}
-                              className={`rounded-full px-3 py-1.5 text-xs font-medium transition ${
-                                isActive
-                                  ? 'bg-slate-900 text-white'
-                                  : 'text-slate-700 hover:bg-white'
-                              }`}
-                            >
-                              {option.label}
-                            </button>
-                          )
-                        })}
-                      </div>
+                        ]}
+                      />
                     </div>
                   ) : null
                 }
