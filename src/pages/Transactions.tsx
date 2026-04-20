@@ -9,56 +9,17 @@ import {
 import { useCurrentUserId } from '../app/current-user'
 import { SUPPORTED_BROKER, type Account } from '../lib/accounts.service'
 import { useI18n } from '../i18n'
+import { getApiErrorMessage } from '../lib/errors'
+import {
+  formatFixed2Amount as formatMoney,
+  formatDateOnly,
+  toDateTimeLocalValue,
+  getDefaultTradeTimeValue,
+} from '../lib/formatters'
+import { formatTransactionMode } from '../lib/labels'
 
 const INVESTMENT_MODE_OPTIONS = ['deposit', 'buy', 'sell', 'dividend'] as const
 type InvestmentMode = (typeof INVESTMENT_MODE_OPTIONS)[number]
-
-function getErrorMessage(err: unknown, fallback: string) {
-  if (err && typeof err === 'object' && 'response' in err) {
-    return (
-      (err.response as { data?: { message?: string } })?.data?.message ??
-      fallback
-    )
-  }
-
-  if (err instanceof Error) {
-    return err.message
-  }
-
-  return fallback
-}
-
-function formatMoney(
-  value: number | string | null | undefined,
-  locale: string,
-) {
-  if (value === null || value === undefined || value === '') {
-    return '-'
-  }
-
-  return Number(value).toLocaleString(locale, {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  })
-}
-
-function formatDateOnly(value: string, locale: string) {
-  return new Date(value).toLocaleDateString(locale)
-}
-
-function toDateTimeLocalValue(value: string | Date) {
-  const date = value instanceof Date ? value : new Date(value)
-  if (Number.isNaN(date.getTime())) {
-    return ''
-  }
-
-  const offset = date.getTimezoneOffset()
-  return new Date(date.getTime() - offset * 60_000).toISOString().slice(0, 16)
-}
-
-function getDefaultTradeTimeValue() {
-  return toDateTimeLocalValue(new Date())
-}
 
 function isPositiveNumber(value: string) {
   const numeric = Number(value)
@@ -109,24 +70,6 @@ function isEditableTransactionType(
   type: TransactionListItem['type'],
 ): type is InvestmentMode {
   return INVESTMENT_MODE_OPTIONS.includes(type as InvestmentMode)
-}
-
-function formatModeLabel(
-  mode: TransactionListItem['type'] | InvestmentMode | string,
-  t: (key: string) => string,
-) {
-  switch (mode) {
-    case 'deposit':
-      return t('transactions.modeDeposit')
-    case 'buy':
-      return t('transactions.modeBuy')
-    case 'sell':
-      return t('transactions.modeSell')
-    case 'dividend':
-      return t('transactions.modeDividend')
-    default:
-      return mode
-  }
 }
 
 export default function Transactions() {
@@ -228,7 +171,7 @@ export default function Transactions() {
       })
       setTransactions(response.items)
     } catch (err: unknown) {
-      setError(getErrorMessage(err, t('transactions.failedToLoadTransactions')))
+      setError(getApiErrorMessage(err, t('transactions.failedToLoadTransactions')))
     } finally {
       setLoadingTransactions(false)
     }
@@ -263,7 +206,7 @@ export default function Transactions() {
           setAssetId((current) => current || firstTradableAsset?.id || '')
         }
       } catch (err: unknown) {
-        setError(getErrorMessage(err, t('transactions.failedToLoadData')))
+        setError(getApiErrorMessage(err, t('transactions.failedToLoadData')))
       } finally {
         setLoadingMeta(false)
       }
@@ -465,8 +408,8 @@ export default function Transactions() {
       }
       setSuccessMessage(
         isEditing
-          ? t('transactions.updated', { mode: formatModeLabel(mode, t) })
-          : t('transactions.saved', { mode: formatModeLabel(mode, t) }),
+          ? t('transactions.updated', { mode: formatTransactionMode(mode, t) })
+          : t('transactions.saved', { mode: formatTransactionMode(mode, t) }),
       )
       if (isEditing) {
         startEditingTransaction(savedTransaction)
@@ -475,7 +418,7 @@ export default function Transactions() {
       }
       await loadTransactions(listAccountId)
     } catch (err: unknown) {
-      setError(getErrorMessage(err, t('transactions.failedToSave')))
+      setError(getApiErrorMessage(err, t('transactions.failedToSave')))
     } finally {
       setSubmitting(false)
     }
@@ -485,7 +428,7 @@ export default function Transactions() {
     if (
       !window.confirm(
         t('transactions.softDeleteConfirm', {
-          type: formatModeLabel(transaction.type, t),
+          type: formatTransactionMode(transaction.type, t),
         }),
       )
     ) {
@@ -502,12 +445,12 @@ export default function Transactions() {
       }
       setSuccessMessage(
         t('transactions.deleted', {
-          type: formatModeLabel(transaction.type, t),
+          type: formatTransactionMode(transaction.type, t),
         }),
       )
       await loadTransactions(listAccountId)
     } catch (err: unknown) {
-      setError(getErrorMessage(err, t('transactions.failedToDelete')))
+      setError(getApiErrorMessage(err, t('transactions.failedToDelete')))
     } finally {
       setDeletingTransactionId(null)
     }
@@ -578,7 +521,7 @@ export default function Transactions() {
         setSuccessMessage(null)
       }
     } catch (err: unknown) {
-      setError(getErrorMessage(err, t('transactions.failedToImport')))
+      setError(getApiErrorMessage(err, t('transactions.failedToImport')))
     } finally {
       setImportSubmitting(false)
     }
@@ -648,7 +591,7 @@ export default function Transactions() {
                       isEditing ? 'cursor-not-allowed opacity-60' : ''
                     }`}
                   >
-                    {formatModeLabel(item, t)}
+                    {formatTransactionMode(item, t)}
                   </button>
                 ))}
               </div>
@@ -929,7 +872,7 @@ export default function Transactions() {
                     : isEditing
                     ? t('common.saveChanges')
                     : t('transactions.saveMode', {
-                        mode: formatModeLabel(mode, t),
+                        mode: formatTransactionMode(mode, t),
                       })}
                 </button>
               </div>
@@ -1145,7 +1088,7 @@ export default function Transactions() {
                       {formatDateOnly(transaction.tradeTime, locale)}
                     </td>
                     <td className="px-2 py-3">
-                      {formatModeLabel(transaction.type, t)}
+                      {formatTransactionMode(transaction.type, t)}
                     </td>
                     <td className="px-2 py-3">
                       {transaction.account?.name || transaction.accountId}
@@ -1173,7 +1116,7 @@ export default function Transactions() {
                               startEditingTransaction(transaction)
                             }}
                             aria-label={t('transactions.editAria', {
-                              type: formatModeLabel(transaction.type, t),
+                              type: formatTransactionMode(transaction.type, t),
                             })}
                             title={t('transactions.editAction')}
                             className="rounded border border-gray-300 p-1.5 text-gray-700 hover:bg-gray-50"
@@ -1200,7 +1143,7 @@ export default function Transactions() {
                               handleSoftDelete(transaction).catch(console.error)
                             }}
                             aria-label={t('transactions.deleteAria', {
-                              type: formatModeLabel(transaction.type, t),
+                              type: formatTransactionMode(transaction.type, t),
                             })}
                             title={t('transactions.deleteAction')}
                             disabled={deletingTransactionId === transaction.id}

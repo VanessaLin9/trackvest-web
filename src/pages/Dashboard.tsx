@@ -19,6 +19,25 @@ import {
   type AllocationViewMode,
 } from '../store/preferences'
 import { fxService } from '../lib/fx.service'
+import { getApiErrorMessage } from '../lib/errors'
+import {
+  formatCompactCurrencyAxis,
+  formatCurrency,
+  formatCurrencyWithCode,
+  formatSignedCurrency,
+  formatPercent,
+  formatPercentPoints,
+  formatSnapshotDate,
+  formatFxRate,
+  roundTo,
+} from '../lib/formatters'
+import { formatAssetType, formatAssetClass } from '../lib/labels'
+import {
+  chartColors,
+  PORTFOLIO_PALETTE,
+  getAllocationColor,
+  getPnlColor,
+} from '../theme/chart-tokens'
 
 const AllocationChartCard = lazy(() =>
   import('../components/dashboard/PortfolioCharts').then((module) => ({
@@ -40,81 +59,8 @@ const HoldingTrendChartCard = lazy(() =>
     default: module.HoldingTrendChartCard,
   })),
 )
-const PORTFOLIO_COLORS = ['#0f766e', '#2563eb', '#f59e0b', '#9333ea', '#ef4444']
-
-function getErrorMessage(err: unknown, fallback: string) {
-  if (err && typeof err === 'object' && 'response' in err) {
-    const message = (err.response as { data?: { message?: string } })?.data?.message
-    return message ?? fallback
-  }
-
-  if (err instanceof Error) {
-    return err.message
-  }
-
-  return fallback
-}
-
-function formatCurrency(value: number, locale: string) {
-  return value.toLocaleString(locale, {
-    minimumFractionDigits: 0,
-    maximumFractionDigits: 2,
-  })
-}
-
-function formatCurrencyWithCode(
-  value: number,
-  locale: string,
-  currency?: string | null,
-) {
-  const formattedValue = formatCurrency(value, locale)
-  return currency ? `${formattedValue} ${currency}` : formattedValue
-}
-
-function formatSignedCurrency(
-  value: number,
-  locale: string,
-  currency?: string | null,
-) {
-  const prefix = value > 0 ? '+' : value < 0 ? '-' : ''
-  return `${prefix}${formatCurrency(Math.abs(value), locale)}${currency ? ` ${currency}` : ''}`
-}
-
-function formatCompactCurrencyAxis(value: number, locale: string) {
-  const absoluteValue = Math.abs(value)
-
-  if (absoluteValue < 1000) {
-    return formatCurrency(value, locale)
-  }
-
-  return new Intl.NumberFormat(locale, {
-    notation: 'compact',
-    maximumFractionDigits: absoluteValue < 10000 ? 1 : 0,
-  }).format(value)
-}
-
 function getHoldingLatestPriceCurrency(holding: PortfolioHolding) {
   return holding.latestPriceCurrency ?? holding.assetBaseCurrency
-}
-
-function formatPercent(
-  value: number,
-  options: { signed?: boolean } = {},
-) {
-  const { signed = true } = options
-  const prefix =
-    signed && value > 0 ? '+' : signed && value < 0 ? '-' : ''
-
-  return `${prefix}${(Math.abs(value) * 100).toFixed(2)}%`
-}
-
-function formatPercentPoints(value: number) {
-  const prefix = value > 0 ? '+' : value < 0 ? '-' : ''
-  return `${prefix}${Math.abs(value * 100).toFixed(2)}pp`
-}
-
-function roundTo(value: number, digits = 8) {
-  return Number(value.toFixed(digits))
 }
 
 function getRebalancePriceDisplay(
@@ -185,44 +131,12 @@ function RebalancePriceCell({
   )
 }
 
-function formatHoldingType(
-  type: PortfolioHolding['type'],
-  t: (key: string) => string,
-) {
-  switch (type) {
-    case 'equity':
-      return t('assets.typeEquity')
-    case 'etf':
-      return t('assets.typeEtf')
-    case 'crypto':
-      return t('assets.typeCrypto')
-    case 'cash':
-      return t('assets.typeCash')
-    default:
-      return type
-  }
-}
-
-function formatHoldingAssetClass(
-  assetClass: PortfolioHolding['assetClass'],
-  t: (key: string) => string,
-) {
-  switch (assetClass) {
-    case 'equity':
-      return t('dashboard.assetClassEquity')
-    case 'bond':
-      return t('dashboard.assetClassBond')
-    case 'cash':
-      return t('dashboard.assetClassCash')
-    case 'crypto':
-      return t('dashboard.assetClassCrypto')
-    case 'precious_metal':
-      return t('dashboard.assetClassPreciousMetal')
-    default:
-      return t('common.notAvailable')
-  }
-}
-
+/**
+ * Dashboard uses a mix of asset-class and asset-type ids as allocation keys
+ * (plus special "marketValue" / "costBasis" slots for the holding detail
+ * breakdown), so it keeps its own wrapper that delegates to the shared
+ * `formatAssetClass` / `formatAssetType` helpers.
+ */
 function formatAllocationLabel(
   id: string,
   fallback: string,
@@ -230,69 +144,19 @@ function formatAllocationLabel(
 ) {
   switch (id) {
     case 'equity':
-      return t('dashboard.assetClassEquity')
     case 'bond':
-      return t('dashboard.assetClassBond')
-    case 'etf':
-      return t('assets.typeEtf')
-    case 'precious_metal':
-      return t('dashboard.assetClassPreciousMetal')
     case 'crypto':
-      return t('dashboard.assetClassCrypto')
     case 'cash':
-      return t('dashboard.assetClassCash')
+    case 'precious_metal':
+      return formatAssetClass(id, t)
+    case 'etf':
+      return formatAssetType('etf', t)
     case 'marketValue':
       return t('dashboard.marketValue')
     case 'costBasis':
       return t('dashboard.costBasis')
     default:
       return fallback
-  }
-}
-
-function formatSnapshotDate(value: string, locale: string) {
-  return new Date(value).toLocaleDateString(locale, {
-    year: 'numeric',
-    month: 'short',
-    day: 'numeric',
-  })
-}
-
-function formatFxRate(value: number, locale: string) {
-  return value.toLocaleString(locale, {
-    minimumFractionDigits: 4,
-    maximumFractionDigits: 6,
-  })
-}
-
-function getHoldingBarColor(pnl: number) {
-  if (pnl > 0) {
-    return '#0f766e'
-  }
-
-  if (pnl < 0) {
-    return '#dc2626'
-  }
-
-  return '#94a3b8'
-}
-
-function getAllocationColor(type: string) {
-  switch (type) {
-    case 'equity':
-      return '#2563eb'
-    case 'bond':
-      return '#14b8a6'
-    case 'etf':
-      return '#0f766e'
-    case 'crypto':
-      return '#f59e0b'
-    case 'cash':
-      return '#9333ea'
-    case 'precious_metal':
-      return '#ca8a04'
-    default:
-      return '#94a3b8'
   }
 }
 
@@ -653,8 +517,8 @@ export default function Dashboard() {
         symbol: holding.symbol,
         pnl: holding.pnl,
         color: holdings.length > 0
-          ? getHoldingBarColor(holding.pnl) || PORTFOLIO_COLORS[index % PORTFOLIO_COLORS.length]
-          : PORTFOLIO_COLORS[index % PORTFOLIO_COLORS.length],
+          ? getPnlColor(holding.pnl) || PORTFOLIO_PALETTE[index % PORTFOLIO_PALETTE.length]
+          : PORTFOLIO_PALETTE[index % PORTFOLIO_PALETTE.length],
       })),
     [holdings],
   )
@@ -895,13 +759,13 @@ export default function Dashboard() {
           id: 'marketValue',
           label: formatAllocationLabel('marketValue', 'Market value', t),
           value: selectedHolding.marketValue,
-          color: '#2563eb',
+          color: chartColors.equity,
         },
         {
           id: 'costBasis',
           label: formatAllocationLabel('costBasis', 'Cost basis', t),
           value: selectedHolding.investedAmount,
-          color: '#cbd5e1',
+          color: chartColors.costBasis,
         },
       ]
     },
@@ -910,7 +774,7 @@ export default function Dashboard() {
 
   const overviewErrorMessage = useMemo(() => {
     const error = summaryQuery.error ?? holdingsQuery.error ?? trendQuery.error ?? null
-    return error ? getErrorMessage(error, t('dashboard.failedToLoad')) : null
+    return error ? getApiErrorMessage(error, t('dashboard.failedToLoad')) : null
   }, [holdingsQuery.error, summaryQuery.error, t, trendQuery.error])
 
   const selectedTrendErrorMessage = useMemo(() => {
@@ -918,7 +782,7 @@ export default function Dashboard() {
       return null
     }
 
-    return getErrorMessage(holdingTrendQuery.error, t('dashboard.failedToLoad'))
+    return getApiErrorMessage(holdingTrendQuery.error, t('dashboard.failedToLoad'))
   }, [holdingTrendQuery.error, t])
 
   const fxRateErrorMessage = useMemo(() => {
@@ -926,7 +790,7 @@ export default function Dashboard() {
       return null
     }
 
-    return getErrorMessage(fxRateQuery.error, t('dashboard.fxRateUnavailable'))
+    return getApiErrorMessage(fxRateQuery.error, t('dashboard.fxRateUnavailable'))
   }, [fxRateQuery.error, t])
 
   const displayModeStatusMessage = useMemo(() => {
@@ -1298,7 +1162,7 @@ export default function Dashboard() {
                 </div>
               ) : rebalanceQuery.error ? (
                 <div className="mt-6 rounded-2xl border border-red-200 bg-red-50 px-5 py-6 text-sm text-red-700">
-                  {getErrorMessage(rebalanceQuery.error, t('dashboard.failedToLoad'))}
+                  {getApiErrorMessage(rebalanceQuery.error, t('dashboard.failedToLoad'))}
                 </div>
               ) : rebalancePlan ? (
                 <div className="mt-6 space-y-4">
@@ -1315,7 +1179,7 @@ export default function Dashboard() {
                             cy="110"
                             r="94"
                             fill="none"
-                            stroke="#2563eb"
+                            stroke={chartColors.equity}
                             strokeWidth="30"
                             strokeDasharray={`${rebalancePlan.current.equity * 100} ${100 - rebalancePlan.current.equity * 100}`}
                             pathLength="100"
@@ -1340,7 +1204,7 @@ export default function Dashboard() {
                             cy="110"
                             r="94"
                             fill="none"
-                            stroke="#14b8a6"
+                            stroke={chartColors.bond}
                             strokeWidth="30"
                             strokeDasharray={`${(1 - rebalancePlan.current.equity) * 100} ${rebalancePlan.current.equity * 100}`}
                             strokeDashoffset={-rebalancePlan.current.equity * 100}
@@ -1366,7 +1230,7 @@ export default function Dashboard() {
                             cy="110"
                             r="62"
                             fill="none"
-                            stroke="#93c5fd"
+                            stroke={chartColors.rebalanceTargetEquity}
                             strokeWidth="26"
                             strokeDasharray={`${rebalancePlan.targets.equity * 100} ${100 - rebalancePlan.targets.equity * 100}`}
                             pathLength="100"
@@ -1391,7 +1255,7 @@ export default function Dashboard() {
                             cy="110"
                             r="62"
                             fill="none"
-                            stroke="#99f6e4"
+                            stroke={chartColors.rebalanceTargetBond}
                             strokeWidth="26"
                             strokeDasharray={`${(1 - rebalancePlan.targets.equity) * 100} ${rebalancePlan.targets.equity * 100}`}
                             strokeDashoffset={-rebalancePlan.targets.equity * 100}
@@ -1512,7 +1376,7 @@ export default function Dashboard() {
                               isRebalanceTargetUnlocked ? 'cursor-pointer' : 'cursor-not-allowed opacity-75'
                             }`}
                             style={{
-                              background: `linear-gradient(to right, #2563eb 0%, #2563eb ${rebalanceDraftEquityPercent}%, #14b8a6 ${rebalanceDraftEquityPercent}%, #14b8a6 100%)`,
+                              background: `linear-gradient(to right, ${chartColors.equity} 0%, ${chartColors.equity} ${rebalanceDraftEquityPercent}%, ${chartColors.bond} ${rebalanceDraftEquityPercent}%, ${chartColors.bond} 100%)`,
                             }}
                           />
                         </div>
@@ -1796,7 +1660,7 @@ export default function Dashboard() {
                   <div className="flex items-start justify-between gap-4">
                     <div>
                       <p className="text-xs uppercase tracking-[0.22em] text-gray-500">
-                        {formatHoldingType(selectedHolding.type, t)}
+                        {formatAssetType(selectedHolding.type, t)}
                       </p>
                       <h2 className="mt-2 text-3xl font-semibold text-gray-950">
                         {selectedHolding.symbol}
@@ -1851,7 +1715,7 @@ export default function Dashboard() {
                         {t('dashboard.assetClassLabel')}
                       </p>
                       <p className="mt-2 text-sm font-medium text-gray-900">
-                        {formatHoldingAssetClass(selectedHolding.assetClass, t)}
+                        {formatAssetClass(selectedHolding.assetClass, t)}
                       </p>
                     </div>
                     <div className="rounded-2xl bg-gray-50 px-4 py-3">

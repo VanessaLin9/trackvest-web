@@ -15,6 +15,8 @@ import {
   type Currency,
   type SaveAccountPayload,
 } from '../lib/accounts.service'
+import { getApiErrorMessage } from '../lib/errors'
+import { formatAccountType, formatBroker } from '../lib/labels'
 
 type AccountFormState = {
   name: string
@@ -28,38 +30,6 @@ const DEFAULT_FORM: AccountFormState = {
   type: 'broker',
   currency: 'TWD',
   broker: '',
-}
-
-function formatBrokerLabel(
-  broker: string | null | undefined,
-  t: (key: string) => string,
-) {
-  if (!broker) {
-    return '-'
-  }
-
-  if (broker === 'cathay') {
-    return t('accounts.brokerOptionCathay')
-  }
-
-  const option = BROKER_OPTIONS.find((item) => item.value === broker)
-  return option?.label ?? broker
-}
-
-function formatAccountTypeLabel(
-  type: AccountType,
-  t: (key: string) => string,
-) {
-  switch (type) {
-    case 'broker':
-      return t('accounts.typeBroker')
-    case 'bank':
-      return t('accounts.typeBank')
-    case 'cash':
-      return t('accounts.typeCash')
-    default:
-      return type
-  }
 }
 
 export default function Accounts() {
@@ -145,13 +115,7 @@ export default function Accounts() {
       )
     },
     onError: (error: unknown) => {
-      if (error && typeof error === 'object' && 'response' in error) {
-        const message = (error.response as { data?: { message?: string } })?.data?.message
-        setErrorMessage(message ?? t('accounts.failedToSave'))
-        return
-      }
-
-      setErrorMessage(error instanceof Error ? error.message : t('accounts.failedToSave'))
+      setErrorMessage(getApiErrorMessage(error, t('accounts.failedToSave')))
     },
   })
 
@@ -285,7 +249,7 @@ export default function Accounts() {
               >
                 {ACCOUNT_TYPE_OPTIONS.map((type) => (
                   <option key={type} value={type}>
-                    {formatAccountTypeLabel(type, t)}
+                    {formatAccountType(type, t)}
                   </option>
                 ))}
               </select>
@@ -422,13 +386,13 @@ export default function Accounts() {
                   {
                     key: 'type',
                     label: t('accounts.type'),
-                    render: (value) => formatAccountTypeLabel(value, t),
+                    render: (value) => formatAccountType(value, t),
                   },
                   { key: 'currency', label: t('accounts.currency') },
                   {
                     key: 'broker',
                     label: t('accounts.broker'),
-                    render: (value) => formatBrokerLabel(value, t),
+                    render: (value) => formatBroker(value, t),
                   },
                   {
                     key: 'csvImport',
@@ -459,7 +423,7 @@ export default function Accounts() {
                       key={account.id}
                       className="rounded border border-gray-200 bg-white px-3 py-2"
                     >
-                      <strong>{account.name}</strong> · {formatBrokerLabel(account.broker, t)} ·{' '}
+                      <strong>{account.name}</strong> · {formatBroker(account.broker, t)} ·{' '}
                       {account.currency}
                     </li>
                   ))}

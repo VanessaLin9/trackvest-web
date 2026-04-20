@@ -6,23 +6,9 @@ import {
 } from '../lib/cashbook.service'
 import { useCurrentUserId } from '../app/current-user'
 import { useI18n } from '../i18n'
+import { getApiErrorMessage } from '../lib/errors'
 
 type FormMode = 'expense' | 'income' | 'transfer'
-
-function getErrorMessage(err: unknown, fallback: string) {
-  if (err && typeof err === 'object' && 'response' in err) {
-    return (
-      (err.response as { data?: { message?: string } })?.data?.message ??
-      fallback
-    )
-  }
-
-  if (err instanceof Error) {
-    return err.message
-  }
-
-  return fallback
-}
 
 export default function CashbookPage() {
   const currentUserId = useCurrentUserId()
@@ -100,7 +86,7 @@ export default function CashbookPage() {
       const loadedEntries = await cashbookService.getGlEntries(accountId)
       setEntries(loadedEntries)
     } catch (err: unknown) {
-      setError(getErrorMessage(err, t('cashbook.failedToLoadEntries')))
+      setError(getApiErrorMessage(err, t('cashbook.failedToLoadEntries')))
     } finally {
       setLoadingEntries(false)
     }
@@ -134,7 +120,7 @@ export default function CashbookPage() {
           setCashAccountId((current) => current || loadedAssetAccounts[0].id)
         }
       } catch (err: unknown) {
-        setError(getErrorMessage(err, t('cashbook.failedToLoadAccounts')))
+        setError(getApiErrorMessage(err, t('cashbook.failedToLoadAccounts')))
       } finally {
         setLoadingAccounts(false)
       }
@@ -240,7 +226,7 @@ export default function CashbookPage() {
       setMemo('')
       await loadEntries(entryFilterAccountId)
     } catch (err: unknown) {
-      setError(getErrorMessage(err, t('cashbook.failedToSaveEntry')))
+      setError(getApiErrorMessage(err, t('cashbook.failedToSaveEntry')))
     } finally {
       setSubmitting(false)
     }

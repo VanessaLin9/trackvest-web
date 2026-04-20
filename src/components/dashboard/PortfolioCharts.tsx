@@ -13,6 +13,7 @@ import {
   XAxis,
   YAxis,
 } from 'recharts'
+import { chartColors } from '../../theme/chart-tokens'
 
 export type ChartValue =
   | number
@@ -144,7 +145,7 @@ export function PerformanceChartCard({
       <div className="h-80">
         <ResponsiveContainer width="100%" height="100%">
           <BarChart data={data} margin={{ top: 8, right: 12, left: 0, bottom: 0 }}>
-            <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" />
+            <CartesianGrid strokeDasharray="3 3" vertical={false} stroke={chartColors.gridStrokeAlt} />
             <XAxis dataKey="symbol" tickLine={false} axisLine={false} />
             <YAxis
               tickLine={false}
@@ -182,15 +183,15 @@ export function PortfolioTrendChartCard({
           <AreaChart data={data} margin={{ top: 8, right: 8, left: 0, bottom: 0 }}>
             <defs>
               <linearGradient id="portfolioInvestedGradient" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="0%" stopColor="#94a3b8" stopOpacity={0.2} />
-                <stop offset="100%" stopColor="#94a3b8" stopOpacity={0.01} />
+                <stop offset="0%" stopColor={chartColors.investedArea} stopOpacity={0.2} />
+                <stop offset="100%" stopColor={chartColors.investedArea} stopOpacity={0.01} />
               </linearGradient>
               <linearGradient id="portfolioValueGradient" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="0%" stopColor="#2563eb" stopOpacity={0.28} />
-                <stop offset="100%" stopColor="#2563eb" stopOpacity={0.03} />
+                <stop offset="0%" stopColor={chartColors.primary} stopOpacity={0.28} />
+                <stop offset="100%" stopColor={chartColors.primary} stopOpacity={0.03} />
               </linearGradient>
             </defs>
-            <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e5e7eb" />
+            <CartesianGrid strokeDasharray="3 3" vertical={false} stroke={chartColors.gridStroke} />
             <XAxis dataKey="label" tickLine={false} axisLine={false} />
             <YAxis
               tickLine={false}
@@ -201,14 +202,14 @@ export function PortfolioTrendChartCard({
             <Area
               type="monotone"
               dataKey="invested"
-              stroke="#64748b"
+              stroke={chartColors.investedStroke}
               fill="url(#portfolioInvestedGradient)"
               strokeWidth={2}
             />
             <Area
               type="monotone"
               dataKey="marketValue"
-              stroke="#2563eb"
+              stroke={chartColors.primary}
               fill="url(#portfolioValueGradient)"
               strokeWidth={2.5}
             />
@@ -237,18 +238,18 @@ export function HoldingTrendChartCard({
           <AreaChart data={data} margin={{ top: 8, right: 8, left: 0, bottom: 0 }}>
             <defs>
               <linearGradient id="selectedHoldingGradient" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="0%" stopColor="#2563eb" stopOpacity={0.35} />
-                <stop offset="100%" stopColor="#2563eb" stopOpacity={0.02} />
+                <stop offset="0%" stopColor={chartColors.primary} stopOpacity={0.35} />
+                <stop offset="100%" stopColor={chartColors.primary} stopOpacity={0.02} />
               </linearGradient>
             </defs>
-            <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e5e7eb" />
+            <CartesianGrid strokeDasharray="3 3" vertical={false} stroke={chartColors.gridStroke} />
             <XAxis dataKey="label" tickLine={false} axisLine={false} />
             <YAxis hide />
             <Tooltip formatter={(value) => valueFormatter(value)} />
             <Area
               type="monotone"
               dataKey="marketValue"
-              stroke="#2563eb"
+              stroke={chartColors.primary}
               fill="url(#selectedHoldingGradient)"
               strokeWidth={2.5}
             />

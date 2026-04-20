@@ -22,6 +22,8 @@ import {
   sanitizeStrictTextInput,
   sanitizeLightweightTextInput,
 } from '../lib/input-safety'
+import { getApiErrorMessage } from '../lib/errors'
+import { formatAssetType, formatAssetClass } from '../lib/labels'
 
 type AssetFormState = {
   symbol: string
@@ -65,67 +67,6 @@ function toAssetFormState(asset: Asset): AssetFormState {
     type: asset.type,
     assetClass: asset.assetClass ?? getSuggestedAssetClassForType(asset.type),
     baseCurrency: asset.baseCurrency,
-  }
-}
-
-function getErrorMessage(err: unknown, fallback: string) {
-  if (err && typeof err === 'object' && 'response' in err) {
-    return (
-      (err.response as { data?: { message?: string } })?.data?.message ??
-      fallback
-    )
-  }
-
-  if (err instanceof Error) {
-    return err.message
-  }
-
-  return fallback
-}
-
-function formatTypeLabel(
-  type: string | null | undefined,
-  t: (key: string) => string,
-) {
-  if (!type) {
-    return t('assets.unknownType')
-  }
-
-  switch (type) {
-    case 'equity':
-      return t('assets.typeEquity')
-    case 'etf':
-      return t('assets.typeEtf')
-    case 'crypto':
-      return t('assets.typeCrypto')
-    case 'cash':
-      return t('assets.typeCash')
-    default:
-      return type.toUpperCase()
-  }
-}
-
-function formatAssetClassLabel(
-  assetClass: string | null | undefined,
-  t: (key: string) => string,
-) {
-  if (!assetClass) {
-    return t('assets.unknownAssetClass')
-  }
-
-  switch (assetClass) {
-    case 'equity':
-      return t('assets.assetClassEquity')
-    case 'bond':
-      return t('assets.assetClassBond')
-    case 'cash':
-      return t('assets.assetClassCash')
-    case 'crypto':
-      return t('assets.assetClassCrypto')
-    case 'precious_metal':
-      return t('assets.assetClassPreciousMetal')
-    default:
-      return assetClass.toUpperCase()
   }
 }
 
@@ -246,7 +187,7 @@ export default function Assets() {
       )
     } catch (err: unknown) {
       if (requestId === loadRequestIdRef.current) {
-        setErrorMessage(getErrorMessage(err, t('assets.failedToLoad')))
+        setErrorMessage(getApiErrorMessage(err, t('assets.failedToLoad')))
       }
     } finally {
       if (requestId === loadRequestIdRef.current) {
@@ -430,7 +371,7 @@ export default function Assets() {
       }
     } catch (err: unknown) {
       setErrorMessage(
-        getErrorMessage(
+        getApiErrorMessage(
           err,
           isEditing ? t('assets.failedToUpdate') : t('assets.failedToCreate'),
         ),
@@ -575,7 +516,7 @@ export default function Assets() {
               >
                 {ASSET_TYPE_OPTIONS.map((type) => (
                   <option key={type} value={type}>
-                    {formatTypeLabel(type, t)}
+                    {formatAssetType(type, t)}
                   </option>
                 ))}
               </select>
@@ -598,7 +539,7 @@ export default function Assets() {
               >
                 {ASSET_CLASS_OPTIONS.map((assetClass) => (
                   <option key={assetClass} value={assetClass}>
-                    {formatAssetClassLabel(assetClass, t)}
+                    {formatAssetClass(assetClass, t)}
                   </option>
                 ))}
               </select>
@@ -647,7 +588,7 @@ export default function Assets() {
             <div className="space-y-3 text-sm text-gray-700">
               <div className="rounded-lg border border-gray-200 bg-white p-4">
                 <div className="text-xs uppercase tracking-[0.2em] text-gray-500">
-                  {formatTypeLabel(selectedAsset.type, t)}
+                  {formatAssetType(selectedAsset.type, t)}
                 </div>
                 <div className="mt-2 text-2xl font-semibold text-gray-900">
                   {selectedAsset.symbol}
@@ -657,7 +598,7 @@ export default function Assets() {
                   {t('assets.baseCurrency')}: {selectedAsset.baseCurrency}
                 </div>
                 <div className="mt-1 text-sm text-gray-500">
-                  {t('assets.assetClass')}: {formatAssetClassLabel(selectedAsset.assetClass, t)}
+                  {t('assets.assetClass')}: {formatAssetClass(selectedAsset.assetClass, t)}
                 </div>
               </div>
               <div className="flex items-center justify-between gap-3">
@@ -746,7 +687,7 @@ export default function Assets() {
                       <option value={ALL_FILTER_VALUE}>{t('assets.allTypes')}</option>
                       {ASSET_TYPE_OPTIONS.map((type) => (
                         <option key={type} value={type}>
-                          {formatTypeLabel(type, t)}
+                          {formatAssetType(type, t)}
                         </option>
                       ))}
                     </select>
@@ -775,7 +716,7 @@ export default function Assets() {
                       <option value={ALL_FILTER_VALUE}>{t('assets.allAssetClasses')}</option>
                       {ASSET_CLASS_OPTIONS.map((assetClass) => (
                         <option key={assetClass} value={assetClass}>
-                          {formatAssetClassLabel(assetClass, t)}
+                          {formatAssetClass(assetClass, t)}
                         </option>
                       ))}
                     </select>
@@ -863,10 +804,10 @@ export default function Assets() {
                         </td>
                         <td className="px-3 py-3 text-gray-700">{asset.name}</td>
                         <td className="px-3 py-3 capitalize text-gray-600">
-                          {formatTypeLabel(asset.type, t)}
+                          {formatAssetType(asset.type, t)}
                         </td>
                         <td className="px-3 py-3 text-gray-600">
-                          {formatAssetClassLabel(asset.assetClass, t)}
+                          {formatAssetClass(asset.assetClass, t)}
                         </td>
                         <td className="px-3 py-3 text-gray-600">
                           {asset.baseCurrency}
