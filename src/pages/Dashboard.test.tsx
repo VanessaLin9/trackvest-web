@@ -11,12 +11,16 @@ const {
   getSummary,
   getHoldings,
   getTrend,
+  getRebalance,
   getHoldingTrend,
+  getTodayRate,
 } = vi.hoisted(() => ({
   getSummary: vi.fn(),
   getHoldings: vi.fn(),
   getTrend: vi.fn(),
+  getRebalance: vi.fn(),
   getHoldingTrend: vi.fn(),
+  getTodayRate: vi.fn(),
 }))
 
 vi.mock('../lib/portfolio.service', () => ({
@@ -24,7 +28,14 @@ vi.mock('../lib/portfolio.service', () => ({
     getSummary,
     getHoldings,
     getTrend,
+    getRebalance,
     getHoldingTrend,
+  },
+}))
+
+vi.mock('../lib/fx.service', () => ({
+  fxService: {
+    getTodayRate,
   },
 }))
 
@@ -287,6 +298,74 @@ describe('Dashboard smoke tests', () => {
     ],
   }
 
+  const twdRebalance = {
+    asOf: '2026-03-27T09:00:00.000Z',
+    displayCurrencyMode: 'portfolio-default' as const,
+    requestedDisplayCurrency: null,
+    effectiveDisplayCurrency: 'TWD',
+    baseCurrency: 'TWD',
+    targets: { equity: 0.8, bond: 0.2 },
+    current: { equity: 0.7554672, bond: 0.2445328 },
+    gaps: { equity: 0.0445328, bond: -0.0445328 },
+    marketValueByAssetClass: { equity: 19000, bond: 6150 },
+    recommendedBuyAmountByAssetClass: { equity: 3440.23, bond: 0 },
+    trackedMarketValue: 25150,
+    candidates: [
+      {
+        assetClass: 'equity' as const,
+        assetId: 'asset-2330',
+        symbol: '2330',
+        name: 'TSMC',
+        currentMarketValue: 19000,
+        currentWeightWithinAssetClass: 1,
+        latestPrice: 950,
+        latestPriceCurrency: 'TWD',
+        assetBaseCurrency: 'TWD',
+        lotSize: null,
+        minTradeUnit: null,
+      },
+      {
+        assetClass: 'bond' as const,
+        assetId: 'asset-0050',
+        symbol: '0050',
+        name: 'Taiwan 50 ETF',
+        currentMarketValue: 6150,
+        currentWeightWithinAssetClass: 1,
+        latestPrice: 205,
+        latestPriceCurrency: 'TWD',
+        assetBaseCurrency: 'TWD',
+        lotSize: null,
+        minTradeUnit: null,
+      },
+    ],
+    suggestions: [
+      {
+        assetClass: 'equity' as const,
+        assetId: 'asset-2330',
+        symbol: '2330',
+        name: 'TSMC',
+        currentMarketValue: 19000,
+        currentWeightWithinAssetClass: 0.7554672,
+        suggestedBuyAmount: 2500,
+        estimatedQuantity: 2.63,
+        latestPrice: 950,
+        latestPriceCurrency: 'TWD',
+      },
+    ],
+    notes: ['Recommended buy amounts assume a buy-only rebalance and do not suggest selling.'],
+  }
+
+  const usdRebalance = {
+    ...twdRebalance,
+    displayCurrencyMode: 'preferred-base' as const,
+    requestedDisplayCurrency: 'USD',
+    effectiveDisplayCurrency: 'USD',
+    baseCurrency: 'USD',
+    marketValueByAssetClass: { equity: 593.56, bond: 192.126 },
+    recommendedBuyAmountByAssetClass: { equity: 107.438, bond: 0 },
+    trackedMarketValue: 785.686,
+  }
+
   beforeEach(() => {
     setCurrentUserId('user-1')
     usePreferencesStore.setState({
@@ -298,7 +377,29 @@ describe('Dashboard smoke tests', () => {
     getSummary.mockResolvedValue(twdSummary)
     getHoldings.mockResolvedValue(twdHoldings)
     getTrend.mockResolvedValue(twdTrend)
+    getRebalance.mockResolvedValue(twdRebalance)
     getHoldingTrend.mockResolvedValue(twdHoldingTrend)
+    getTodayRate.mockImplementation(
+      async ({ base, quote }: { base?: string; quote?: string } = {}) => {
+        if (base === 'TWD' && quote === 'USD') {
+          return {
+            base: 'TWD',
+            quote: 'USD',
+            rate: 1 / 31.2,
+            date: '2026-03-27',
+            provider: 'db' as const,
+          }
+        }
+
+        return {
+          base: base ?? 'USD',
+          quote: quote ?? 'TWD',
+          rate: 31.2,
+          date: '2026-03-27',
+          provider: 'db' as const,
+        }
+      },
+    )
   })
 
   afterEach(() => {
@@ -337,12 +438,13 @@ describe('Dashboard smoke tests', () => {
       expect(getSummary).toHaveBeenCalledTimes(1)
       expect(getHoldings).toHaveBeenCalledTimes(1)
       expect(getTrend).toHaveBeenCalledTimes(1)
+      expect(getRebalance).toHaveBeenCalledTimes(1)
       expect(screen.getByText('Portfolio overview')).toBeTruthy()
       expect(screen.getByText('Tracked assets')).toBeTruthy()
       expect(screen.getByText('23,726 TWD')).toBeTruthy()
       expect(screen.getByText('25,150 TWD')).toBeTruthy()
-      expect(screen.getByText('2330')).toBeTruthy()
-      expect(screen.getByText('0050')).toBeTruthy()
+      expect(screen.getAllByText('2330').length).toBeGreaterThan(0)
+      expect(screen.getAllByText('0050').length).toBeGreaterThan(0)
     })
   })
 
@@ -376,6 +478,7 @@ describe('Dashboard smoke tests', () => {
       ],
     })
     getTrend.mockResolvedValue(usdTrend)
+    getRebalance.mockResolvedValue(usdRebalance)
     getHoldingTrend.mockResolvedValue(usdHoldingTrend)
     usePreferencesStore.setState({
       displayCurrencyMode: 'base',
@@ -389,11 +492,16 @@ describe('Dashboard smoke tests', () => {
       expect(getSummary).toHaveBeenCalledWith({ preferredBaseCurrency: 'USD' })
       expect(getHoldings).toHaveBeenCalledWith({ preferredBaseCurrency: 'USD' })
       expect(getTrend).toHaveBeenCalledWith({ preferredBaseCurrency: 'USD' })
+      expect(getRebalance).toHaveBeenCalledWith({
+        preferredBaseCurrency: 'USD',
+        targetEquity: 0.8,
+        targetBond: 0.2,
+      })
       expect(getHoldingTrend).toHaveBeenCalledWith('asset-2330', {
         preferredBaseCurrency: 'USD',
       })
       expect(screen.getByText('741.2 USD')).toBeTruthy()
-      expect(screen.getByText('950 TWD')).toBeTruthy()
+      expect(screen.getAllByText('950 TWD').length).toBeGreaterThan(0)
     })
   })
 
@@ -406,6 +514,10 @@ describe('Dashboard smoke tests', () => {
     )
     getTrend.mockImplementation(async (query?: { preferredBaseCurrency?: string }) =>
       query?.preferredBaseCurrency === 'USD' ? usdTrend : twdTrend,
+    )
+    getRebalance.mockImplementation(
+      async (query?: { preferredBaseCurrency?: string; targetEquity?: number; targetBond?: number }) =>
+        query?.preferredBaseCurrency === 'USD' ? usdRebalance : twdRebalance,
     )
     getHoldingTrend.mockImplementation(
       async (_assetId: string, query?: { preferredBaseCurrency?: string }) =>
@@ -431,6 +543,11 @@ describe('Dashboard smoke tests', () => {
       expect(getSummary).toHaveBeenLastCalledWith({ preferredBaseCurrency: 'USD' })
       expect(getHoldings).toHaveBeenLastCalledWith({ preferredBaseCurrency: 'USD' })
       expect(getTrend).toHaveBeenLastCalledWith({ preferredBaseCurrency: 'USD' })
+      expect(getRebalance).toHaveBeenLastCalledWith({
+        preferredBaseCurrency: 'USD',
+        targetEquity: 0.8,
+        targetBond: 0.2,
+      })
       expect(getHoldingTrend).toHaveBeenLastCalledWith('asset-2330', {
         preferredBaseCurrency: 'USD',
       })
@@ -450,6 +567,103 @@ describe('Dashboard smoke tests', () => {
 
     await waitFor(() => {
       expect(screen.getByText('Equity, ETF')).toBeTruthy()
+    })
+  })
+
+  it('updates rebalance target query only after the target lock is re-applied', async () => {
+    renderPage()
+
+    await waitFor(() => {
+      expect(screen.getByLabelText('Equity target')).toBeTruthy()
+      expect(getRebalance).toHaveBeenCalledWith({
+        targetEquity: 0.8,
+        targetBond: 0.2,
+      })
+    })
+
+    const slider = screen.getByLabelText('Equity target') as HTMLInputElement
+    expect(slider.disabled).toBe(true)
+
+    fireEvent.click(screen.getByRole('button', { name: 'Unlock target adjustment' }))
+    expect(slider.disabled).toBe(false)
+
+    fireEvent.change(screen.getByLabelText('Equity target'), {
+      target: { value: '70' },
+    })
+
+    expect(getRebalance).toHaveBeenCalledTimes(1)
+    expect(screen.getByText('70% Equity / 30% Bond')).toBeTruthy()
+
+    fireEvent.click(screen.getByRole('button', { name: 'Lock target and apply changes' }))
+
+    await waitFor(() => {
+      expect(getRebalance).toHaveBeenLastCalledWith({
+        targetEquity: 0.7,
+        targetBond: 0.3,
+      })
+    })
+  })
+
+  it('prefers frontend-computed rebalance suggestions when candidates are available', async () => {
+    renderPage()
+
+    await waitFor(() => {
+      expect(screen.getAllByText('3,440.23 TWD').length).toBeGreaterThan(0)
+      expect(screen.getByDisplayValue('3.62')).toBeTruthy()
+    })
+
+    expect(screen.queryByText('2.63')).toBeNull()
+  })
+
+  it('recalculates suggestion amount when the user edits quantity', async () => {
+    renderPage()
+
+    await waitFor(() => {
+      expect(screen.getByDisplayValue('3.62')).toBeTruthy()
+    })
+
+    fireEvent.change(screen.getByLabelText('Suggested quantity for 2330'), {
+      target: { value: '4.5' },
+    })
+
+    await waitFor(() => {
+      expect(screen.getByDisplayValue('4.5')).toBeTruthy()
+      expect(screen.getAllByText('4,275 TWD').length).toBeGreaterThan(0)
+    })
+  })
+
+  it('uses today fx rates to convert mixed-currency rebalance prices before estimating quantity', async () => {
+    getSummary.mockResolvedValue(usdSummary)
+    getRebalance.mockResolvedValue({
+      ...usdRebalance,
+      suggestions: [
+        {
+          assetClass: 'equity' as const,
+          assetId: 'asset-2330',
+          symbol: '2330',
+          name: 'TSMC',
+          currentMarketValue: 593.56,
+          currentWeightWithinAssetClass: 1,
+          suggestedBuyAmount: 107.438,
+          estimatedQuantity: 0.11,
+          latestPrice: 950,
+          latestPriceCurrency: 'TWD',
+        },
+      ],
+    })
+    usePreferencesStore.setState({
+      displayCurrencyMode: 'base',
+      preferredBaseCurrency: 'USD',
+      allocationViewMode: 'assetClass',
+    })
+
+    renderPage()
+
+    await waitFor(() => {
+      expect(getTodayRate).toHaveBeenCalledWith({ base: 'TWD', quote: 'USD' })
+      expect(screen.getAllByText('950 TWD').length).toBeGreaterThan(0)
+      expect(screen.getByText('30.45 USD')).toBeTruthy()
+      expect(screen.getByDisplayValue('3.53')).toBeTruthy()
     })
   })
 })
