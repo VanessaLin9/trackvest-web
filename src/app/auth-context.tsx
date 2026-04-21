@@ -2,7 +2,6 @@ import {
   useCallback,
   useEffect,
   useMemo,
-  useRef,
   useState,
   type ReactNode,
 } from 'react'
@@ -43,15 +42,12 @@ export function AuthProvider({
     return 'loading'
   })
 
-  const bootstrappedRef = useRef(Boolean(initialUser || skipBootstrap))
-
   useEffect(() => {
     setCurrentUserId(user?.id ?? '')
   }, [user])
 
   useEffect(() => {
-    if (bootstrappedRef.current) return
-    bootstrappedRef.current = true
+    if (initialUser || skipBootstrap) return
 
     let cancelled = false
     authService
@@ -70,7 +66,7 @@ export function AuthProvider({
     return () => {
       cancelled = true
     }
-  }, [])
+  }, [initialUser, skipBootstrap])
 
   const login = useCallback(async (payload: LoginPayload) => {
     const authenticated = await authService.login(payload)
