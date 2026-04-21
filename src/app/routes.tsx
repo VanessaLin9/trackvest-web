@@ -1,4 +1,4 @@
-import { createBrowserRouter } from 'react-router-dom'
+import { createBrowserRouter, Navigate } from 'react-router-dom'
 import Layout from '../components/Layout'
 import Login from '../pages/Login'
 import { ProtectedRoute } from './ProtectedRoute'
@@ -20,5 +20,9 @@ export const router = createBrowserRouter([
       path,
       element,
     })),
+  },
+  {
+    path: '*',
+    element: <Navigate to="/" replace />,
   },
 ])
