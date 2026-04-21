@@ -1,5 +1,6 @@
 // Re-exports every namespace so messages.ts can compose them.
 export { app } from './app'
+export { auth } from './auth'
 export { locales } from './locales'
 export { routes } from './routes'
 export { common } from './common'
