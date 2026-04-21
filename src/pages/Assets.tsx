@@ -7,7 +7,7 @@ import {
   useQueryClient,
 } from '@tanstack/react-query'
 import { useI18n } from '../i18n'
-import { useCurrentUserId } from '../app/current-user'
+import { useAuthenticatedUser } from '../app/use-auth'
 import { queryKeys } from '../lib/query-keys'
 import {
   assetsService,
@@ -106,7 +106,7 @@ function FilterChevronIcon() {
 
 export default function Assets() {
   const { t } = useI18n()
-  const currentUserId = useCurrentUserId()
+  const currentUserId = useAuthenticatedUser().id
   const queryClient = useQueryClient()
 
   const [selectedAssetId, setSelectedAssetId] = useState<string | null>(null)

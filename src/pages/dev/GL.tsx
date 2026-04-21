@@ -1,21 +1,10 @@
 import EndpointTester from '../../components/dev/EndpointTester'
-import { useCurrentUserId } from '../../app/current-user'
+import { useAuthenticatedUser } from '../../app/use-auth'
 import { useI18n } from '../../i18n'
 
 export default function GL() {
-  const currentUserId = useCurrentUserId()
+  const currentUserId = useAuthenticatedUser().id
   const { t } = useI18n()
-
-  if (!currentUserId) {
-    return (
-      <div>
-        <h1>{t('gl.title')}</h1>
-        <p className="text-red-600">
-          {t('common.envDemoUserMissing')}
-        </p>
-      </div>
-    )
-  }
 
   return (
     <div>

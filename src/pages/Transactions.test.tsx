@@ -10,6 +10,7 @@ import {
   vi,
 } from 'vitest'
 import { setCurrentUserId } from '../app/current-user'
+import { AuthProvider } from '../app/auth-context'
 import { I18nProvider } from '../i18n'
 import Transactions from './Transactions'
 
@@ -103,9 +104,13 @@ describe('Transactions page trade flows', () => {
     return render(
       <QueryClientProvider client={queryClient}>
         <I18nProvider>
-          <MemoryRouter>
-            <Transactions />
-          </MemoryRouter>
+          <AuthProvider
+            initialUser={{ id: 'user-1', email: 'test@example.com', role: 'USER' }}
+          >
+            <MemoryRouter>
+              <Transactions />
+            </MemoryRouter>
+          </AuthProvider>
         </I18nProvider>
       </QueryClientProvider>,
     )

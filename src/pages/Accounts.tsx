@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { useCurrentUserId } from '../app/current-user'
+import { useAuthenticatedUser } from '../app/use-auth'
 import DataTable from '../components/DataTable'
 import { useI18n } from '../i18n'
 import {
@@ -36,7 +36,7 @@ const DEFAULT_FORM: AccountFormState = {
 }
 
 export default function Accounts() {
-  const currentUserId = useCurrentUserId()
+  const currentUserId = useAuthenticatedUser().id
   const queryClient = useQueryClient()
   const { t } = useI18n()
   const [selectedAccountId, setSelectedAccountId] = useState<string | null>(null)

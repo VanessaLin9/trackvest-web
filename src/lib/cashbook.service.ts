@@ -63,8 +63,6 @@ export const cashbookService = {
    * Get GL accounts by type
    */
   async getGlAccounts(type: GlAccountType): Promise<GlAccount[]> {
-    getRequiredCurrentUserId()
-
     const response = await api.get<GlAccount[]>('/gl/accounts', {
       params: { type },
     })
@@ -75,8 +73,6 @@ export const cashbookService = {
    * Get GL entries for a specific account
    */
   async getGlEntries(accountId: string = 'All'): Promise<GlEntry[]> {
-    getRequiredCurrentUserId()
-
     const response = await api.get<GlEntry[]>('/gl/entries', {
       params: { accountId },
     })

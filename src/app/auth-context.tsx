@@ -12,6 +12,8 @@ import {
   type AuthStatus,
 } from './auth-context-base'
 import { authService, type AuthUser, type LoginPayload } from '../lib/auth.service'
+import { setOnUnauthenticated } from '../lib/api'
+import { setCurrentUserId } from './current-user'
 
 export interface AuthProviderProps {
   children: ReactNode
@@ -31,7 +33,10 @@ export function AuthProvider({
   initialUser,
   skipBootstrap,
 }: AuthProviderProps) {
-  const [user, setUser] = useState<AuthUser | null>(initialUser ?? null)
+  const [user, setUser] = useState<AuthUser | null>(() => {
+    setCurrentUserId(initialUser?.id ?? '')
+    return initialUser ?? null
+  })
   const [status, setStatus] = useState<AuthStatus>(() => {
     if (initialUser) return 'authenticated'
     if (skipBootstrap) return 'unauthenticated'
@@ -39,6 +44,10 @@ export function AuthProvider({
   })
 
   const bootstrappedRef = useRef(Boolean(initialUser || skipBootstrap))
+
+  useEffect(() => {
+    setCurrentUserId(user?.id ?? '')
+  }, [user])
 
   useEffect(() => {
     if (bootstrappedRef.current) return
@@ -89,6 +98,16 @@ export function AuthProvider({
       setUser(null)
       setStatus('unauthenticated')
       return null
+    }
+  }, [])
+
+  useEffect(() => {
+    setOnUnauthenticated(() => {
+      setUser(null)
+      setStatus('unauthenticated')
+    })
+    return () => {
+      setOnUnauthenticated(null)
     }
   }, [])
 

@@ -1,5 +1,4 @@
 import { api } from './api'
-import { getRequiredCurrentUserId } from '../app/current-user'
 import type { Account } from './accounts.service'
 import type { Asset, AssetListResponse } from './assets.service'
 
@@ -76,8 +75,6 @@ export type ImportTransactionsResponse = {
 
 export const investmentsService = {
   async getAccounts(): Promise<Account[]> {
-    getRequiredCurrentUserId()
-
     const response = await api.get<Account[]>('/accounts')
     return response.data
   },
@@ -95,29 +92,21 @@ export const investmentsService = {
   async getTransactions(
     params: { accountId?: string; assetId?: string; take?: number } = {},
   ): Promise<TransactionsResponse> {
-    getRequiredCurrentUserId()
-
     const response = await api.get<TransactionsResponse>('/transactions', { params })
     return response.data
   },
 
   async createTransaction(payload: CreateTransactionPayload) {
-    getRequiredCurrentUserId()
-
     const response = await api.post<TransactionListItem>('/transactions', payload)
     return response.data
   },
 
   async updateTransaction(id: string, payload: UpdateTransactionPayload) {
-    getRequiredCurrentUserId()
-
     const response = await api.patch<TransactionListItem>(`/transactions/${id}`, payload)
     return response.data
   },
 
   async removeTransaction(id: string) {
-    getRequiredCurrentUserId()
-
     const response = await api.delete<TransactionListItem>(`/transactions/${id}`)
     return response.data
   },
@@ -125,8 +114,6 @@ export const investmentsService = {
   async importTransactions(
     payload: ImportTransactionsPayload,
   ): Promise<ImportTransactionsResponse> {
-    getRequiredCurrentUserId()
-
     const response = await api.post<ImportTransactionsResponse>(
       '/transactions/import',
       payload,

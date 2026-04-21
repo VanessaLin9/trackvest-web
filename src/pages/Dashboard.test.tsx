@@ -3,6 +3,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import type { ReactNode } from 'react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { setCurrentUserId } from '../app/current-user'
+import { AuthProvider } from '../app/auth-context'
 import { I18nProvider } from '../i18n'
 import Dashboard from './Dashboard'
 import { usePreferencesStore } from '../store/preferences'
@@ -425,7 +426,11 @@ describe('Dashboard smoke tests', () => {
     return render(
       <QueryClientProvider client={queryClient}>
         <I18nProvider>
-          <Dashboard />
+          <AuthProvider
+            initialUser={{ id: 'user-1', email: 'test@example.com', role: 'USER' }}
+          >
+            <Dashboard />
+          </AuthProvider>
         </I18nProvider>
       </QueryClientProvider>,
     )

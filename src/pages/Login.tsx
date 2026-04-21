@@ -1,5 +1,10 @@
 import { useState, type FormEvent } from 'react'
-import { useLocation, useNavigate, type Location } from 'react-router-dom'
+import {
+  Navigate,
+  useLocation,
+  useNavigate,
+  type Location,
+} from 'react-router-dom'
 import { useAuth } from '../app/use-auth'
 import { useI18n } from '../i18n'
 import { getApiErrorMessage } from '../lib/errors'
@@ -10,7 +15,7 @@ interface LocationState {
 
 export default function Login() {
   const { t } = useI18n()
-  const { login } = useAuth()
+  const { login, status } = useAuth()
   const navigate = useNavigate()
   const location = useLocation()
   const from = (location.state as LocationState | null)?.from?.pathname ?? '/'
@@ -19,6 +24,10 @@ export default function Login() {
   const [password, setPassword] = useState('')
   const [submitting, setSubmitting] = useState(false)
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
+
+  if (status === 'authenticated') {
+    return <Navigate to={from} replace />
+  }
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()

@@ -1,12 +1,20 @@
-import { Outlet, Link, useLocation } from 'react-router-dom'
+import { Outlet, Link, useLocation, useNavigate } from 'react-router-dom'
 import { getNavItems } from '../app/route-config'
+import { useAuth } from '../app/use-auth'
 import { useI18n } from '../i18n'
 
 const navItems = getNavItems()
 
 export default function Layout() {
   const location = useLocation()
+  const navigate = useNavigate()
   const { locale, setLocale, t } = useI18n()
+  const { user, logout } = useAuth()
+
+  async function handleLogout() {
+    await logout()
+    navigate('/login', { replace: true })
+  }
 
   return (
     <div className="flex min-h-screen">
@@ -77,6 +85,19 @@ export default function Layout() {
             </li>
           ))}
         </ul>
+
+        {user && (
+          <div className="mt-6 border-t border-gray-200 pt-4">
+            <p className="mb-2 break-all text-xs text-gray-500">{user.email}</p>
+            <button
+              type="button"
+              onClick={handleLogout}
+              className="w-full rounded-md bg-slate-900 px-3 py-1.5 text-xs font-medium text-white transition hover:bg-slate-800"
+            >
+              {t('auth.logout')}
+            </button>
+          </div>
+        )}
       </nav>
       <main className="flex-1 p-5">
         <Outlet />

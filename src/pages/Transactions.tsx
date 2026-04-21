@@ -7,7 +7,7 @@ import {
   type ImportTransactionsResponse,
   type TransactionListItem,
 } from '../lib/investments.service'
-import { useCurrentUserId } from '../app/current-user'
+import { useAuthenticatedUser } from '../app/use-auth'
 import { SUPPORTED_BROKER } from '../lib/accounts.service'
 import { useI18n } from '../i18n'
 import { Button } from '../components/ui/Button'
@@ -77,7 +77,7 @@ function isEditableTransactionType(
 }
 
 export default function Transactions() {
-  const currentUserId = useCurrentUserId()
+  const currentUserId = useAuthenticatedUser().id
   const queryClient = useQueryClient()
   const { t, locale } = useI18n()
 
