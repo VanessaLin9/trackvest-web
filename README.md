@@ -14,6 +14,8 @@ Vite + React frontend for Trackvest. It currently covers:
 - React 19
 - React Router 7
 - TanStack Query
+- Recharts
+- Zustand
 - Axios
 - TypeScript
 - Vite
@@ -45,7 +47,7 @@ pnpm dev
 
 Default local URL:
 
-- `http://localhost:5173`
+- `http://localhost:3001`
 
 ## Backend dependency
 
@@ -53,7 +55,7 @@ This frontend expects the API server to be running at `VITE_API_BASE_URL`.
 
 For normal local development:
 
-- frontend: `http://localhost:5173`
+- frontend: `http://localhost:3001`
 - backend: `http://localhost:3000`
 
 The backend repo is responsible for:
@@ -69,7 +71,7 @@ Routes are defined in [src/app/route-config.tsx](/Users/vanessa/develop/trackves
 
 - `/` dashboard
 - `/cashbook`
-- `/transactions` investments
+- `/investments`
 - `/gl` ledger
 - `/accounts`
 - `/assets`
@@ -80,6 +82,7 @@ The investments page is focused on capture-first workflows:
 
 - manual `deposit`
 - manual `buy`
+- manual `sell`
 - manual `dividend`
 - CSV import for supported broker accounts
 
@@ -87,8 +90,8 @@ Current rules:
 
 - only broker accounts with `broker = cathay` appear in CSV import
 - assets must exist before they can be used in investment entry
-- `sell` is intentionally disabled in UI for now
-  - reason: backend cost basis / realized P&L logic is not ready yet
+- buy and sell amounts are computed from quantity, price, fee, and tax
+- backend validation still owns cost-basis and oversell rules
 
 ## Useful commands
 
@@ -102,6 +105,9 @@ pnpm build
 # lint
 pnpm lint
 
+# test
+pnpm test
+
 # preview build
 pnpm preview
 ```
@@ -114,6 +120,5 @@ pnpm preview
 
 ## Known gaps
 
-- no frontend test suite yet
 - CSV import is broker-specific, not generic
-- `sell` will stay hidden until cost basis handling is implemented end-to-end
+- frontend tests currently cover the dashboard, assets, and investments flows
