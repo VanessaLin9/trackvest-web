@@ -1,4 +1,5 @@
 import { app } from './namespaces/app'
+import { auth } from './namespaces/auth'
 import { locales } from './namespaces/locales'
 import { routes } from './namespaces/routes'
 import { common } from './namespaces/common'
@@ -15,6 +16,7 @@ import { transactions } from './namespaces/transactions'
 export const messages = {
   en: {
     app: app.en,
+    auth: auth.en,
     locales: locales.en,
     routes: routes.en,
     common: common.en,
@@ -30,6 +32,7 @@ export const messages = {
   },
   'zh-TW': {
     app: app['zh-TW'],
+    auth: auth['zh-TW'],
     locales: locales['zh-TW'],
     routes: routes['zh-TW'],
     common: common['zh-TW'],

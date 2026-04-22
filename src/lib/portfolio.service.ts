@@ -1,4 +1,3 @@
-import { getRequiredCurrentUserId } from '../app/current-user'
 import { api } from './api'
 import type { AssetClass, AssetType } from './assets.service'
 
@@ -163,8 +162,6 @@ function buildPortfolioRebalanceParams(query?: PortfolioRebalanceQuery) {
 
 export const portfolioService = {
   async getSummary(query?: PortfolioDisplayCurrencyQuery): Promise<PortfolioSummary> {
-    getRequiredCurrentUserId()
-
     const response = await api.get<PortfolioSummary>('/portfolio/summary', {
       params: buildPortfolioDisplayCurrencyParams(query),
     })
@@ -172,8 +169,6 @@ export const portfolioService = {
   },
 
   async getHoldings(query?: PortfolioDisplayCurrencyQuery): Promise<PortfolioHoldingsResponse> {
-    getRequiredCurrentUserId()
-
     const response = await api.get<PortfolioHoldingsResponse>('/portfolio/holdings', {
       params: buildPortfolioDisplayCurrencyParams(query),
     })
@@ -181,8 +176,6 @@ export const portfolioService = {
   },
 
   async getTrend(query?: PortfolioDisplayCurrencyQuery): Promise<PortfolioTrendResponse> {
-    getRequiredCurrentUserId()
-
     const response = await api.get<PortfolioTrendResponse>('/portfolio/trend', {
       params: buildPortfolioDisplayCurrencyParams(query),
     })
@@ -190,8 +183,6 @@ export const portfolioService = {
   },
 
   async getRebalance(query?: PortfolioRebalanceQuery): Promise<PortfolioRebalanceResponse> {
-    getRequiredCurrentUserId()
-
     const response = await api.get<PortfolioRebalanceResponse>('/portfolio/rebalance', {
       params: buildPortfolioRebalanceParams(query),
     })
@@ -202,8 +193,6 @@ export const portfolioService = {
     assetId: string,
     query?: PortfolioDisplayCurrencyQuery,
   ): Promise<PortfolioHoldingTrendResponse> {
-    getRequiredCurrentUserId()
-
     const response = await api.get<PortfolioHoldingTrendResponse>(
       `/portfolio/holdings/${assetId}/trend`,
       {

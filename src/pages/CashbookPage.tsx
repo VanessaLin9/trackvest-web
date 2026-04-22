@@ -6,7 +6,7 @@ import {
   type PostIncomePayload,
   type PostTransferPayload,
 } from '../lib/cashbook.service'
-import { useCurrentUserId } from '../app/current-user'
+import { useAuthenticatedUser } from '../app/use-auth'
 import { useI18n } from '../i18n'
 import { Card } from '../components/ui/Card'
 import { getApiErrorMessage } from '../lib/errors'
@@ -20,7 +20,7 @@ type PostEntryVariables =
   | { mode: 'transfer'; payload: PostTransferPayload }
 
 export default function CashbookPage() {
-  const currentUserId = useCurrentUserId()
+  const currentUserId = useAuthenticatedUser().id
   const queryClient = useQueryClient()
   const { t, locale } = useI18n()
 

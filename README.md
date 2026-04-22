@@ -34,10 +34,12 @@ Local `.env` currently uses:
 
 ```env
 VITE_API_BASE_URL=http://localhost:3000
-VITE_DEMO_USER_ID=889d1083-5b1d-4262-a162-4d24410da9f5
 ```
 
-`VITE_DEMO_USER_ID` is important because the app injects it into every API request as `X-User-Id`.
+Authentication runs through the backend's cookie-based `/auth/login`
+flow. The app sends requests with credentials and relies on the API's
+httpOnly `access_token` / `refresh_token` cookies, so no hardcoded user id
+is needed. Visit `/login` to sign in with a seeded account.
 
 3. Start the app
 
@@ -114,9 +116,9 @@ pnpm preview
 
 ## Notes for development
 
-- API requests are created in [src/lib/api.ts](/Users/vanessa/develop/trackvest-web/src/lib/api.ts)
-- current user state is managed in [src/app/current-user.ts](/Users/vanessa/develop/trackvest-web/src/app/current-user.ts)
-- the app assumes a single local demo user unless you explicitly switch it in code or env
+- API requests are created in [src/lib/api.ts](/Users/vanessa/develop/trackvest-web/src/lib/api.ts); the axios instance sends `withCredentials: true` and silently retries once via `/auth/refresh` on 401.
+- auth state lives in [src/app/auth-context.tsx](/Users/vanessa/develop/trackvest-web/src/app/auth-context.tsx); components read it through `useAuth()` / `useAuthenticatedUser()` in [src/app/use-auth.ts](/Users/vanessa/develop/trackvest-web/src/app/use-auth.ts)
+- protected pages are gated by [src/app/ProtectedRoute.tsx](/Users/vanessa/develop/trackvest-web/src/app/ProtectedRoute.tsx); unauthenticated visitors are redirected to `/login`
 
 ## Known gaps
 

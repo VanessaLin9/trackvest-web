@@ -32,8 +32,6 @@ export type SaveAccountPayload = {
 
 export const accountsService = {
   async getAccounts(): Promise<Account[]> {
-    getRequiredCurrentUserId()
-
     const response = await api.get<Account[]>('/accounts')
     return response.data
   },

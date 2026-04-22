@@ -16,8 +16,6 @@ export const common = {
     yes: 'Yes',
     no: 'No',
     notSet: 'Not set',
-    envDemoUserMissing:
-      'VITE_DEMO_USER_ID is not set. Please set it in your .env file.',
     unsupportedLanguage: 'Language',
   },
   'zh-TW': {
@@ -36,8 +34,6 @@ export const common = {
     yes: '是',
     no: '否',
     notSet: '未設定',
-    envDemoUserMissing:
-      '尚未設定 VITE_DEMO_USER_ID，請先在 .env 檔案中設定。',
     unsupportedLanguage: '語言',
   },
 } as const

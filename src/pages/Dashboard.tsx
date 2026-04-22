@@ -1,6 +1,6 @@
 import { useQuery } from '@tanstack/react-query'
 import { lazy, Suspense, useEffect, useMemo, useState } from 'react'
-import { useCurrentUserId } from '../app/current-user'
+import { useAuthenticatedUser } from '../app/use-auth'
 import type {
   AllocationChartItem,
   PerformanceDatum,
@@ -49,7 +49,7 @@ const PortfolioTrendChartCard = lazy(() =>
   })),
 )
 export default function Dashboard() {
-  const currentUserId = useCurrentUserId()
+  const currentUserId = useAuthenticatedUser().id
   const { t, locale } = useI18n()
   const [selectedHoldingId, setSelectedHoldingId] = useState<string | null>(null)
   const {

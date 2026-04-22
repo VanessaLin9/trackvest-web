@@ -1,47 +1,24 @@
-import { useSyncExternalStore } from 'react'
+/**
+ * Internal cache of the currently authenticated user's id, kept in sync by
+ * AuthProvider. Service modules that must include userId in outgoing request
+ * bodies (e.g. ownership-checked endpoints) read from this cache.
+ *
+ * UI components should use `useAuthenticatedUser()` from `app/use-auth`
+ * instead of calling into this module directly.
+ */
+let currentUserId = ''
 
-const initialUserId = import.meta.env.VITE_DEMO_USER_ID?.trim() ?? ''
-
-let currentUserId = initialUserId
-
-const listeners = new Set<() => void>()
-
-function emitChange() {
-  for (const listener of listeners) {
-    listener()
-  }
-}
-
-function subscribe(listener: () => void) {
-  listeners.add(listener)
-  return () => {
-    listeners.delete(listener)
-  }
-}
-
-export function getCurrentUserId() {
+export function getCurrentUserId(): string {
   return currentUserId
 }
 
-export function getRequiredCurrentUserId() {
+export function getRequiredCurrentUserId(): string {
   if (!currentUserId) {
-    throw new Error('VITE_DEMO_USER_ID is not set. Please set it in your .env file.')
+    throw new Error('Not authenticated')
   }
-
   return currentUserId
 }
 
-export function setCurrentUserId(nextUserId: string) {
-  const normalizedUserId = nextUserId.trim()
-
-  if (normalizedUserId === currentUserId) {
-    return
-  }
-
-  currentUserId = normalizedUserId
-  emitChange()
-}
-
-export function useCurrentUserId() {
-  return useSyncExternalStore(subscribe, getCurrentUserId, getCurrentUserId)
+export function setCurrentUserId(nextUserId: string): void {
+  currentUserId = nextUserId.trim()
 }
