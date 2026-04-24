@@ -288,7 +288,8 @@ export function RebalancePanel({
               </div>
             </div>
           </div>
-
+          
+          {/* Estimated top-up */}
           <div className="rounded-3xl border border-slate-200 bg-slate-50 p-5">
             <p className="text-xs uppercase tracking-[0.2em] text-slate-500">
               {t('dashboard.rebalanceActionTitle')}
@@ -302,7 +303,7 @@ export function RebalancePanel({
                     displayCurrency,
                   )}
                 </p>
-                <p className="mt-2 text-sm leading-6 text-slate-600">
+                {/* <p className="mt-2 text-sm leading-6 text-slate-600">
                   {t('dashboard.rebalanceActionDescription', {
                     amount: formatCurrencyWithCode(
                       rebalancePlan.totalRecommendedBuyAmount,
@@ -310,7 +311,7 @@ export function RebalancePanel({
                       displayCurrency,
                     ),
                   })}
-                </p>
+                </p> */}
                 {rebalancePlan.notes.length ? (
                   <details className="mt-4 rounded-2xl border border-slate-200 bg-white px-4 py-3">
                     <summary className="cursor-pointer list-none text-[11px] font-medium uppercase tracking-[0.18em] text-slate-500">

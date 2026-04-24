@@ -341,6 +341,7 @@ export default function Dashboard() {
             />
           </section>
 
+          {/*  PerformanceChartCard */}
           <Suspense
             fallback={
               <ChartCardFallback
@@ -364,6 +365,7 @@ export default function Dashboard() {
             />
           </Suspense>
 
+          {/*  PortfolioTrendChartCard */}
           <Suspense
             fallback={
               <ChartCardFallback
@@ -383,6 +385,7 @@ export default function Dashboard() {
             />
           </Suspense>
 
+          {/*  HoldingsTable */}
           <section className="grid gap-6 xl:grid-cols-[1.1fr_0.9fr]">
             <HoldingsTable
               holdings={holdings}
@@ -390,7 +393,6 @@ export default function Dashboard() {
               onSelectHolding={setSelectedHoldingId}
               displayCurrency={displayCurrency}
             />
-
             {selectedHolding ? (
               <SelectedHoldingAside
                 holding={selectedHolding}
