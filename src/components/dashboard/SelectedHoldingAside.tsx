@@ -1,9 +1,9 @@
 import { lazy, Suspense } from 'react'
 import { useI18n } from '../../i18n'
 import {
-  formatCurrency,
   formatCurrencyWithCode,
   formatPercent,
+  formatShareQuantity,
 } from '../../lib/formatters'
 import { formatAssetClass, formatAssetType } from '../../lib/labels'
 import type { PortfolioHolding } from '../../lib/portfolio.service'
@@ -69,8 +69,17 @@ export function SelectedHoldingAside({
               {t('dashboard.quantity')}
             </p>
             <p className="mt-2 text-xl font-semibold text-gray-900">
-              {formatCurrency(holding.quantity, locale)}
+              {formatShareQuantity(
+                holding.quantity,
+                locale,
+                t('dashboard.quantityUnitShares'),
+              )}
             </p>
+            {holding.assetBaseCurrency === 'TWD' ? (
+              <p className="mt-2 text-xs text-gray-500">
+                {t('dashboard.quantityTwHint')}
+              </p>
+            ) : null}
           </div>
           <div className="rounded-2xl bg-gray-50 px-4 py-3">
             <p className="text-xs uppercase tracking-[0.2em] text-gray-500">

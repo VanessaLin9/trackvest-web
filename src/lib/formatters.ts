@@ -9,6 +9,20 @@ type Nullable<T> = T | null | undefined
 
 const PLACEHOLDER = '-'
 
+/** Share count with a unit suffix (not currency). */
+export function formatShareQuantity(
+  quantity: number,
+  locale: string,
+  unit: string,
+): string {
+  const hasFraction = Math.abs(quantity % 1) > 1e-9
+  const formatted = quantity.toLocaleString(locale, {
+    minimumFractionDigits: 0,
+    maximumFractionDigits: hasFraction ? 4 : 0,
+  })
+  return `${formatted} ${unit}`
+}
+
 /** 0–2 fractional digits. Used for most hero/KPI numeric displays. */
 export function formatCurrency(value: number, locale: string): string {
   return value.toLocaleString(locale, {

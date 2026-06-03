@@ -341,6 +341,25 @@ export default function Dashboard() {
             />
           </section>
 
+          <section className="grid gap-6 xl:grid-cols-[1.1fr_0.9fr]">
+            <HoldingsTable
+              holdings={holdings}
+              selectedHoldingId={selectedHolding?.assetId ?? null}
+              onSelectHolding={setSelectedHoldingId}
+              displayCurrency={displayCurrency}
+            />
+
+            {selectedHolding ? (
+              <SelectedHoldingAside
+                holding={selectedHolding}
+                displayCurrency={displayCurrency}
+                trendData={selectedHoldingTrendData}
+                allocation={selectedHoldingAllocation}
+                trendErrorMessage={selectedTrendErrorMessage}
+              />
+            ) : null}
+          </section>
+
           <Suspense
             fallback={
               <ChartCardFallback
@@ -382,25 +401,6 @@ export default function Dashboard() {
               }
             />
           </Suspense>
-
-          <section className="grid gap-6 xl:grid-cols-[1.1fr_0.9fr]">
-            <HoldingsTable
-              holdings={holdings}
-              selectedHoldingId={selectedHolding?.assetId ?? null}
-              onSelectHolding={setSelectedHoldingId}
-              displayCurrency={displayCurrency}
-            />
-
-            {selectedHolding ? (
-              <SelectedHoldingAside
-                holding={selectedHolding}
-                displayCurrency={displayCurrency}
-                trendData={selectedHoldingTrendData}
-                allocation={selectedHoldingAllocation}
-                trendErrorMessage={selectedTrendErrorMessage}
-              />
-            ) : null}
-          </section>
         </>
       )}
     </div>
