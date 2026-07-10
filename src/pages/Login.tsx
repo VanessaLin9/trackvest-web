@@ -1,5 +1,6 @@
 import { useState, type FormEvent } from 'react'
 import {
+  Link,
   Navigate,
   useLocation,
   useNavigate,
@@ -122,6 +123,16 @@ export default function Login() {
             {submitting ? t('auth.login.submitting') : t('auth.login.submit')}
           </button>
         </form>
+
+        <p className="mt-6 text-center text-sm text-slate-500">
+          {t('auth.login.noAccount')}{' '}
+          <Link
+            to="/signup"
+            className="font-medium text-slate-900 underline-offset-2 hover:underline"
+          >
+            {t('auth.login.signUpLink')}
+          </Link>
+        </p>
       </div>
     </div>
   )
