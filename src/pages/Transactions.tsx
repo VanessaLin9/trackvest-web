@@ -1069,149 +1069,6 @@ export default function Transactions() {
             </form>
           </Card>
 
-          {importPreview && (
-            <section className="rounded-xl border border-gray-200 bg-gray-50 p-5 shadow-sm">
-              <h2 className="mb-3 text-lg font-semibold">
-                {t('transactions.importPreview')}
-              </h2>
-              <div className="grid grid-cols-2 gap-3 text-sm sm:grid-cols-4">
-                <div className="rounded border border-gray-200 bg-white px-3 py-2">
-                  <div className="text-gray-500">{t('transactions.rows')}</div>
-                  <div className="font-semibold">{importPreview.totalRows}</div>
-                </div>
-                <div className="rounded border border-green-200 bg-white px-3 py-2">
-                  <div className="text-gray-500">{t('transactions.readyRows')}</div>
-                  <div className="font-semibold text-green-700">
-                    {importPreview.readyCount}
-                  </div>
-                </div>
-                <div className="rounded border border-red-200 bg-white px-3 py-2">
-                  <div className="text-gray-500">{t('transactions.errorRows')}</div>
-                  <div className="font-semibold text-red-700">
-                    {importPreview.errorCount}
-                  </div>
-                </div>
-                <div className="rounded border border-amber-200 bg-white px-3 py-2">
-                  <div className="text-gray-500">{t('transactions.warningRows')}</div>
-                  <div className="font-semibold text-amber-800">
-                    {importPreview.warningCount}
-                  </div>
-                </div>
-              </div>
-
-              <div className="mt-4 overflow-x-auto">
-                <table className="min-w-full border-collapse text-sm">
-                  <thead>
-                    <tr className="border-b border-gray-200 text-left text-gray-600">
-                      <th className="px-2 py-2 font-medium">
-                        {t('transactions.previewColumnRow')}
-                      </th>
-                      <th className="px-2 py-2 font-medium">
-                        {t('transactions.previewColumnStatus')}
-                      </th>
-                      <th className="px-2 py-2 font-medium">
-                        {t('transactions.previewColumnAsset')}
-                      </th>
-                      <th className="px-2 py-2 font-medium">
-                        {t('transactions.previewColumnTrade')}
-                      </th>
-                      <th className="px-2 py-2 font-medium">
-                        {t('transactions.previewColumnIssues')}
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {importPreview.rows.map((row) => {
-                      const issues = [...row.errors, ...row.warnings]
-                      return (
-                        <tr
-                          key={`preview-row-${row.row}`}
-                          className="border-b border-gray-100 align-top"
-                        >
-                          <td className="px-2 py-2 font-medium">{row.row}</td>
-                          <td className="px-2 py-2">
-                            <span
-                              className={`inline-flex rounded border px-2 py-0.5 text-xs font-medium ${importStatusBadgeClass(row.status)}`}
-                            >
-                              {row.status === 'ready'
-                                ? t('transactions.importStatusReady')
-                                : row.status === 'warning'
-                                  ? t('transactions.importStatusWarning')
-                                  : t('transactions.importStatusError')}
-                            </span>
-                          </td>
-                          <td className="px-2 py-2">{formatPreviewAsset(row, t)}</td>
-                          <td className="px-2 py-2">{formatPreviewTrade(row, t)}</td>
-                          <td className="px-2 py-2">
-                            {issues.length === 0 ? (
-                              <span className="text-gray-500">-</span>
-                            ) : (
-                              <div className="space-y-1">
-                                {issues.map((issue, index) => (
-                                  <div
-                                    key={`${row.row}-${issue.code}-${index}`}
-                                    className="text-gray-700"
-                                  >
-                                    <span className="font-medium">
-                                      {t('transactions.rowError', {
-                                        row: row.row,
-                                        field: issue.field,
-                                      })}
-                                    </span>
-                                    <div>{issue.message}</div>
-                                  </div>
-                                ))}
-                              </div>
-                            )}
-                          </td>
-                        </tr>
-                      )
-                    })}
-                  </tbody>
-                </table>
-              </div>
-
-              <div className="mt-4">
-                <Button
-                  variant="dark"
-                  type="button"
-                  onClick={handleCommitImport}
-                  disabled={!importPreview.canCommit || importBusy}
-                >
-                  {commitImportMutation.isPending
-                    ? t('transactions.committing')
-                    : t('transactions.commitImport')}
-                </Button>
-              </div>
-            </section>
-          )}
-
-          {importCommitResult && (
-            <section className="rounded-xl border border-gray-200 bg-gray-50 p-5 shadow-sm">
-              <h2 className="mb-3 text-lg font-semibold">
-                {t('transactions.importCommitResult')}
-              </h2>
-              <div className="grid grid-cols-3 gap-3 text-sm">
-                <div className="rounded border border-gray-200 bg-white px-3 py-2">
-                  <div className="text-gray-500">{t('transactions.rows')}</div>
-                  <div className="font-semibold">{importCommitResult.totalRows}</div>
-                </div>
-                <div className="rounded border border-green-200 bg-white px-3 py-2">
-                  <div className="text-gray-500">{t('transactions.success')}</div>
-                  <div className="font-semibold text-green-700">
-                    {importCommitResult.successCount}
-                  </div>
-                </div>
-                <div className="rounded border border-red-200 bg-white px-3 py-2">
-                  <div className="text-gray-500">{t('transactions.failed')}</div>
-                  <div className="font-semibold text-red-700">
-                    {importCommitResult.failureCount}
-                  </div>
-                </div>
-              </div>
-            </section>
-          )}
-
           <section className="rounded-xl border border-gray-200 bg-gray-50 p-5 shadow-sm">
             <h2 className="mb-3 text-lg font-semibold">{t('transactions.howItWorks')}</h2>
             <ul className="space-y-2 text-sm text-gray-700">
@@ -1226,6 +1083,149 @@ export default function Transactions() {
           </section>
         </aside>
       </section>
+
+      {importPreview && (
+        <Card as="section">
+          <h2 className="mb-3 text-lg font-semibold">
+            {t('transactions.importPreview')}
+          </h2>
+          <div className="grid grid-cols-2 gap-3 text-sm sm:grid-cols-4">
+            <div className="rounded border border-gray-200 bg-white px-3 py-2">
+              <div className="text-gray-500">{t('transactions.rows')}</div>
+              <div className="font-semibold">{importPreview.totalRows}</div>
+            </div>
+            <div className="rounded border border-green-200 bg-white px-3 py-2">
+              <div className="text-gray-500">{t('transactions.readyRows')}</div>
+              <div className="font-semibold text-green-700">
+                {importPreview.readyCount}
+              </div>
+            </div>
+            <div className="rounded border border-red-200 bg-white px-3 py-2">
+              <div className="text-gray-500">{t('transactions.errorRows')}</div>
+              <div className="font-semibold text-red-700">
+                {importPreview.errorCount}
+              </div>
+            </div>
+            <div className="rounded border border-amber-200 bg-white px-3 py-2">
+              <div className="text-gray-500">{t('transactions.warningRows')}</div>
+              <div className="font-semibold text-amber-800">
+                {importPreview.warningCount}
+              </div>
+            </div>
+          </div>
+
+          <div className="mt-4 overflow-x-auto">
+            <table className="min-w-full border-collapse text-sm">
+              <thead>
+                <tr className="border-b border-gray-200 text-left text-gray-600">
+                  <th className="px-3 py-2 font-medium">
+                    {t('transactions.previewColumnRow')}
+                  </th>
+                  <th className="px-3 py-2 font-medium">
+                    {t('transactions.previewColumnStatus')}
+                  </th>
+                  <th className="px-3 py-2 font-medium">
+                    {t('transactions.previewColumnAsset')}
+                  </th>
+                  <th className="px-3 py-2 font-medium">
+                    {t('transactions.previewColumnTrade')}
+                  </th>
+                  <th className="min-w-[16rem] px-3 py-2 font-medium">
+                    {t('transactions.previewColumnIssues')}
+                  </th>
+                </tr>
+              </thead>
+              <tbody>
+                {importPreview.rows.map((row) => {
+                  const issues = [...row.errors, ...row.warnings]
+                  return (
+                    <tr
+                      key={`preview-row-${row.row}`}
+                      className="border-b border-gray-100 align-top"
+                    >
+                      <td className="px-3 py-2 font-medium">{row.row}</td>
+                      <td className="px-3 py-2">
+                        <span
+                          className={`inline-flex rounded border px-2 py-0.5 text-xs font-medium ${importStatusBadgeClass(row.status)}`}
+                        >
+                          {row.status === 'ready'
+                            ? t('transactions.importStatusReady')
+                            : row.status === 'warning'
+                              ? t('transactions.importStatusWarning')
+                              : t('transactions.importStatusError')}
+                        </span>
+                      </td>
+                      <td className="px-3 py-2">{formatPreviewAsset(row, t)}</td>
+                      <td className="px-3 py-2">{formatPreviewTrade(row, t)}</td>
+                      <td className="px-3 py-2">
+                        {issues.length === 0 ? (
+                          <span className="text-gray-500">-</span>
+                        ) : (
+                          <div className="space-y-1">
+                            {issues.map((issue, index) => (
+                              <div
+                                key={`${row.row}-${issue.code}-${index}`}
+                                className="text-gray-700"
+                              >
+                                <span className="font-medium">
+                                  {t('transactions.rowError', {
+                                    row: row.row,
+                                    field: issue.field,
+                                  })}
+                                </span>
+                                <div>{issue.message}</div>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </td>
+                    </tr>
+                  )
+                })}
+              </tbody>
+            </table>
+          </div>
+
+          <div className="mt-4">
+            <Button
+              variant="dark"
+              type="button"
+              onClick={handleCommitImport}
+              disabled={!importPreview.canCommit || importBusy}
+            >
+              {commitImportMutation.isPending
+                ? t('transactions.committing')
+                : t('transactions.commitImport')}
+            </Button>
+          </div>
+        </Card>
+      )}
+
+      {importCommitResult && (
+        <Card as="section">
+          <h2 className="mb-3 text-lg font-semibold">
+            {t('transactions.importCommitResult')}
+          </h2>
+          <div className="grid grid-cols-3 gap-3 text-sm">
+            <div className="rounded border border-gray-200 bg-white px-3 py-2">
+              <div className="text-gray-500">{t('transactions.rows')}</div>
+              <div className="font-semibold">{importCommitResult.totalRows}</div>
+            </div>
+            <div className="rounded border border-green-200 bg-white px-3 py-2">
+              <div className="text-gray-500">{t('transactions.success')}</div>
+              <div className="font-semibold text-green-700">
+                {importCommitResult.successCount}
+              </div>
+            </div>
+            <div className="rounded border border-red-200 bg-white px-3 py-2">
+              <div className="text-gray-500">{t('transactions.failed')}</div>
+              <div className="font-semibold text-red-700">
+                {importCommitResult.failureCount}
+              </div>
+            </div>
+          </div>
+        </Card>
+      )}
 
       <Card as="section">
         <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
