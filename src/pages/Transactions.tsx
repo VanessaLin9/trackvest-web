@@ -496,11 +496,12 @@ export default function Transactions() {
       )
       await invalidateTransactionScopes()
     },
-    onError: (err: unknown) => {
+    onError: async (err: unknown) => {
       const rejection = parseImportCommitRejection(err)
       if (rejection) {
         setImportPreview(rejection.preview)
         setImportCommitResult(null)
+        setSuccessMessage(null)
         if (rejection.errorCode === 'COMMIT_NOT_ALLOWED_WITH_ERRORS') {
           setError(t('transactions.previewBlocked'))
           return
@@ -511,6 +512,9 @@ export default function Transactions() {
               successCount: rejection.successCount,
             }),
           )
+          if (rejection.successCount > 0) {
+            await invalidateTransactionScopes()
+          }
           return
         }
       }
