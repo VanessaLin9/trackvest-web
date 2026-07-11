@@ -21,7 +21,8 @@ const {
   createTransaction,
   updateTransaction,
   removeTransaction,
-  importTransactions,
+  previewImportTransactions,
+  commitImportTransactions,
 } = vi.hoisted(() => ({
   getAccounts: vi.fn(),
   getAssets: vi.fn(),
@@ -29,7 +30,8 @@ const {
   createTransaction: vi.fn(),
   updateTransaction: vi.fn(),
   removeTransaction: vi.fn(),
-  importTransactions: vi.fn(),
+  previewImportTransactions: vi.fn(),
+  commitImportTransactions: vi.fn(),
 }))
 
 vi.mock('../lib/investments.service', () => ({
@@ -40,7 +42,8 @@ vi.mock('../lib/investments.service', () => ({
     createTransaction,
     updateTransaction,
     removeTransaction,
-    importTransactions,
+    previewImportTransactions,
+    commitImportTransactions,
   },
 }))
 
@@ -77,12 +80,19 @@ describe('Transactions page trade flows', () => {
     createTransaction.mockResolvedValue({ id: 'tx-1' })
     updateTransaction.mockResolvedValue({ id: 'tx-1' })
     removeTransaction.mockResolvedValue({ id: 'tx-1' })
-    importTransactions.mockResolvedValue({
+    previewImportTransactions.mockResolvedValue({
+      totalRows: 0,
+      readyCount: 0,
+      errorCount: 0,
+      warningCount: 0,
+      canCommit: true,
+      rows: [],
+    })
+    commitImportTransactions.mockResolvedValue({
       totalRows: 0,
       successCount: 0,
       failureCount: 0,
       createdTransactionIds: [],
-      errors: [],
     })
   })
 
@@ -124,6 +134,67 @@ describe('Transactions page trade flows', () => {
         },
       },
     }
+  }
+
+  function buildImportCommitRejection(
+    body: Record<string, unknown>,
+  ) {
+    return {
+      response: {
+        data: body,
+      },
+    }
+  }
+
+  const readyPreview = {
+    totalRows: 1,
+    readyCount: 1,
+    errorCount: 0,
+    warningCount: 0,
+    canCommit: true,
+    rows: [
+      {
+        row: 2,
+        status: 'ready' as const,
+        rawAssetName: '0050',
+        brokerOrderNo: 'BRK-001',
+        tradeDate: '2026-03-31',
+        resolvedAsset: {
+          id: 'asset-0050',
+          symbol: '0050',
+          name: 'Yuanta/P-shares Taiwan Top 50 ETF',
+        },
+        normalizedTransaction: {
+          type: 'buy' as const,
+          quantity: '10',
+          unitPrice: '100',
+          currency: 'TWD',
+          fees: '10',
+          taxes: '0',
+        },
+        errors: [],
+        warnings: [],
+      },
+    ],
+  }
+
+  async function previewReadyImportFile() {
+    previewImportTransactions.mockResolvedValueOnce(readyPreview)
+
+    const file = new File(
+      ['股名,日期,成交股數\n0050,2026-03-31,10'],
+      'buy-import.csv',
+      { type: 'text/csv' },
+    )
+
+    fireEvent.change(screen.getByLabelText('File'), {
+      target: { files: [file] },
+    })
+    fireEvent.click(screen.getByRole('button', { name: 'Preview CSV' }))
+
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: 'Commit import' })).toBeTruthy()
+    })
   }
 
   async function switchToMode(mode: 'buy' | 'sell') {
@@ -399,17 +470,30 @@ describe('Transactions page trade flows', () => {
     ).toBeTruthy()
   })
 
-  it('shows import row errors when a sell CSV row exceeds the remaining open lots', async () => {
-    importTransactions.mockResolvedValueOnce({
+  it('shows import preview row errors and blocks commit when rows are not ready', async () => {
+    previewImportTransactions.mockResolvedValueOnce({
       totalRows: 1,
-      successCount: 0,
-      failureCount: 1,
-      createdTransactionIds: [],
-      errors: [
+      readyCount: 0,
+      errorCount: 1,
+      warningCount: 0,
+      canCommit: false,
+      rows: [
         {
           row: 2,
-          field: '委託書號',
-          message: 'sell quantity exceeds the remaining open position lots',
+          status: 'error',
+          rawAssetName: '0050',
+          brokerOrderNo: 'BRK-001',
+          tradeDate: '2026-03-31',
+          resolvedAsset: null,
+          normalizedTransaction: null,
+          errors: [
+            {
+              code: 'INVALID_ROW',
+              field: '委託書號',
+              message: 'sell quantity exceeds the remaining open position lots',
+            },
+          ],
+          warnings: [],
         },
       ],
     })
@@ -431,10 +515,10 @@ describe('Transactions page trade flows', () => {
       target: { files: [file] },
     })
 
-    fireEvent.click(screen.getByRole('button', { name: 'Import CSV' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Preview CSV' }))
 
     await waitFor(() => {
-      expect(importTransactions).toHaveBeenCalledWith({
+      expect(previewImportTransactions).toHaveBeenCalledWith({
         accountId: 'broker-1',
         csvContent: '股名,日期,成交股數\n0050,2026-03-31,999',
       })
@@ -444,5 +528,210 @@ describe('Transactions page trade flows', () => {
       await screen.findByText('sell quantity exceeds the remaining open position lots'),
     ).toBeTruthy()
     expect(screen.getByText('Row 2 · 委託書號')).toBeTruthy()
+
+    const commitButton = screen.getByRole('button', { name: 'Commit import' })
+    expect(commitButton).toHaveProperty('disabled', true)
+    expect(commitImportTransactions).not.toHaveBeenCalled()
+  })
+
+  it('commits import when preview is ready', async () => {
+    previewImportTransactions.mockResolvedValueOnce({
+      totalRows: 1,
+      readyCount: 1,
+      errorCount: 0,
+      warningCount: 0,
+      canCommit: true,
+      rows: [
+        {
+          row: 2,
+          status: 'ready',
+          rawAssetName: '0050',
+          brokerOrderNo: 'BRK-001',
+          tradeDate: '2026-03-31',
+          resolvedAsset: {
+            id: 'asset-0050',
+            symbol: '0050',
+            name: 'Yuanta/P-shares Taiwan Top 50 ETF',
+          },
+          normalizedTransaction: {
+            type: 'buy',
+            quantity: '10',
+            unitPrice: '100',
+            currency: 'TWD',
+            fees: '10',
+            taxes: '0',
+          },
+          errors: [],
+          warnings: [],
+        },
+      ],
+    })
+    commitImportTransactions.mockResolvedValueOnce({
+      totalRows: 1,
+      successCount: 1,
+      failureCount: 0,
+      createdTransactionIds: ['tx-import-1'],
+    })
+
+    renderPage()
+
+    await waitFor(() => {
+      expect(getAccounts).toHaveBeenCalled()
+    })
+
+    const file = new File(
+      ['股名,日期,成交股數\n0050,2026-03-31,10'],
+      'buy-import.csv',
+      { type: 'text/csv' },
+    )
+
+    fireEvent.change(screen.getByLabelText('File'), {
+      target: { files: [file] },
+    })
+
+    fireEvent.click(screen.getByRole('button', { name: 'Preview CSV' }))
+
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: 'Commit import' })).toBeTruthy()
+    })
+
+    fireEvent.click(screen.getByRole('button', { name: 'Commit import' }))
+
+    await waitFor(() => {
+      expect(commitImportTransactions).toHaveBeenCalledWith({
+        accountId: 'broker-1',
+        csvContent: '股名,日期,成交股數\n0050,2026-03-31,10',
+      })
+    })
+
+    expect(await screen.findByText('Imported 1 transaction(s)')).toBeTruthy()
+  })
+
+  it('keeps preview visible without success when commit is blocked by preview errors', async () => {
+    renderPage()
+
+    await waitFor(() => {
+      expect(getAccounts).toHaveBeenCalled()
+    })
+
+    await previewReadyImportFile()
+
+    commitImportTransactions.mockRejectedValueOnce(
+      buildImportCommitRejection({
+        totalRows: 1,
+        successCount: 0,
+        failureCount: 1,
+        errorCode: 'COMMIT_NOT_ALLOWED_WITH_ERRORS',
+        createdTransactionIds: [],
+        preview: {
+          totalRows: 1,
+          readyCount: 0,
+          errorCount: 1,
+          warningCount: 0,
+          canCommit: false,
+          rows: [
+            {
+              row: 2,
+              status: 'error',
+              rawAssetName: '0050',
+              brokerOrderNo: 'BRK-001',
+              tradeDate: '2026-03-31',
+              resolvedAsset: null,
+              normalizedTransaction: null,
+              errors: [
+                {
+                  code: 'DUPLICATE_BROKER_ORDER_IN_ACCOUNT',
+                  field: '委託書號',
+                  message: 'Duplicate broker order number for selected account',
+                },
+              ],
+              warnings: [],
+            },
+          ],
+        },
+      }),
+    )
+
+    fireEvent.click(screen.getByRole('button', { name: 'Commit import' }))
+
+    expect(
+      await screen.findByText('Fix all row errors before committing.'),
+    ).toBeTruthy()
+    expect(
+      screen.getByText('Duplicate broker order number for selected account'),
+    ).toBeTruthy()
+    expect(screen.queryByText('Imported 1 transaction(s)')).toBeNull()
+    expect(getTransactions).toHaveBeenCalledTimes(1)
+  })
+
+  it('refetches transactions after a partial import commit failure', async () => {
+    renderPage()
+
+    await waitFor(() => {
+      expect(getAccounts).toHaveBeenCalled()
+      expect(getTransactions).toHaveBeenCalledTimes(1)
+    })
+
+    await previewReadyImportFile()
+
+    commitImportTransactions.mockRejectedValueOnce(
+      buildImportCommitRejection({
+        totalRows: 2,
+        successCount: 1,
+        failureCount: 1,
+        errorCode: 'IMPORT_COMMIT_FAILED',
+        createdTransactionIds: ['tx-import-partial-1'],
+        preview: {
+          totalRows: 2,
+          readyCount: 1,
+          errorCount: 1,
+          warningCount: 0,
+          canCommit: false,
+          rows: [
+            readyPreview.rows[0],
+            {
+              row: 3,
+              status: 'error',
+              rawAssetName: '0050',
+              brokerOrderNo: 'BRK-002',
+              tradeDate: '2026-03-31',
+              resolvedAsset: {
+                id: 'asset-0050',
+                symbol: '0050',
+                name: 'Yuanta/P-shares Taiwan Top 50 ETF',
+              },
+              normalizedTransaction: {
+                type: 'buy',
+                quantity: '10',
+                unitPrice: '100',
+                currency: 'TWD',
+                fees: '10',
+                taxes: '0',
+              },
+              errors: [
+                {
+                  code: 'IMPORT_COMMIT_FAILED',
+                  field: 'row',
+                  message: 'Amount must be a positive number',
+                },
+              ],
+              warnings: [],
+            },
+          ],
+        },
+      }),
+    )
+
+    fireEvent.click(screen.getByRole('button', { name: 'Commit import' }))
+
+    expect(
+      await screen.findByText(
+        '1 row(s) were saved before the failure. Review the preview and try again.',
+      ),
+    ).toBeTruthy()
+
+    await waitFor(() => {
+      expect(getTransactions).toHaveBeenCalledTimes(2)
+    })
   })
 })

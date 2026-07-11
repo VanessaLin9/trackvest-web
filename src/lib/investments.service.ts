@@ -61,16 +61,62 @@ export type ImportTransactionsPayload = {
   csvContent: string
 }
 
-export type ImportTransactionsResponse = {
+export type ImportRowIssue = {
+  code: string
+  field: string
+  message: string
+}
+
+export type ImportPreviewNormalizedTransaction = {
+  type: 'buy' | 'sell'
+  quantity: string
+  unitPrice: string
+  currency: string
+  fees: string
+  taxes: string
+}
+
+export type ImportResolvedAsset = {
+  id: string
+  symbol: string
+  name: string
+}
+
+export type ImportPreviewRow = {
+  row: number
+  status: 'ready' | 'error' | 'warning'
+  rawAssetName: string
+  brokerOrderNo: string
+  tradeDate: string
+  resolvedAsset: ImportResolvedAsset | null
+  normalizedTransaction: ImportPreviewNormalizedTransaction | null
+  errors: ImportRowIssue[]
+  warnings: ImportRowIssue[]
+}
+
+export type ImportPreviewResponse = {
+  totalRows: number
+  readyCount: number
+  errorCount: number
+  warningCount: number
+  canCommit: boolean
+  rows: ImportPreviewRow[]
+}
+
+export type ImportCommitResponse = {
   totalRows: number
   successCount: number
   failureCount: number
   createdTransactionIds: string[]
-  errors: Array<{
-    row: number
-    field: string
-    message: string
-  }>
+}
+
+export type ImportCommitRejectedResponse = {
+  totalRows: number
+  successCount: number
+  failureCount: number
+  errorCode: string
+  createdTransactionIds: string[]
+  preview: ImportPreviewResponse
 }
 
 export const investmentsService = {
@@ -111,11 +157,21 @@ export const investmentsService = {
     return response.data
   },
 
-  async importTransactions(
+  async previewImportTransactions(
     payload: ImportTransactionsPayload,
-  ): Promise<ImportTransactionsResponse> {
-    const response = await api.post<ImportTransactionsResponse>(
-      '/transactions/import',
+  ): Promise<ImportPreviewResponse> {
+    const response = await api.post<ImportPreviewResponse>(
+      '/transactions/import/preview',
+      payload,
+    )
+    return response.data
+  },
+
+  async commitImportTransactions(
+    payload: ImportTransactionsPayload,
+  ): Promise<ImportCommitResponse> {
+    const response = await api.post<ImportCommitResponse>(
+      '/transactions/import/commit',
       payload,
     )
     return response.data

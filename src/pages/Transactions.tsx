@@ -4,7 +4,9 @@ import { Link } from 'react-router-dom'
 import {
   investmentsService,
   type CreateTransactionPayload,
-  type ImportTransactionsResponse,
+  type ImportCommitResponse,
+  type ImportPreviewResponse,
+  type ImportPreviewRow,
   type TransactionListItem,
 } from '../lib/investments.service'
 import { useAuthenticatedUser } from '../app/use-auth'
@@ -12,7 +14,7 @@ import { SUPPORTED_BROKER } from '../lib/accounts.service'
 import { useI18n } from '../i18n'
 import { Button } from '../components/ui/Button'
 import { Card } from '../components/ui/Card'
-import { getApiErrorMessage } from '../lib/errors'
+import { getApiErrorMessage, parseImportCommitRejection } from '../lib/errors'
 import {
   formatFixed2Amount as formatMoney,
   formatDateOnly,
@@ -76,6 +78,35 @@ function isEditableTransactionType(
   return INVESTMENT_MODE_OPTIONS.includes(type as InvestmentMode)
 }
 
+function importStatusBadgeClass(status: ImportPreviewRow['status']) {
+  if (status === 'ready') {
+    return 'border-green-200 bg-green-50 text-green-800'
+  }
+  if (status === 'warning') {
+    return 'border-amber-200 bg-amber-50 text-amber-900'
+  }
+  return 'border-red-200 bg-red-50 text-red-800'
+}
+
+function formatPreviewTrade(
+  row: ImportPreviewRow,
+  t: (key: string, values?: Record<string, string | number>) => string,
+) {
+  if (!row.normalizedTransaction) {
+    return '-'
+  }
+
+  const { type, quantity, unitPrice } = row.normalizedTransaction
+  return `${formatTransactionMode(type, t)} · ${quantity} @ ${unitPrice}`
+}
+
+function formatPreviewAsset(row: ImportPreviewRow, t: (key: string) => string) {
+  if (row.resolvedAsset) {
+    return `${row.resolvedAsset.symbol} · ${row.resolvedAsset.name}`
+  }
+  return `${row.rawAssetName} (${t('transactions.previewUnresolvedAsset')})`
+}
+
 export default function Transactions() {
   const currentUserId = useAuthenticatedUser().id
   const queryClient = useQueryClient()
@@ -111,8 +142,12 @@ export default function Transactions() {
   const [note, setNote] = useState('')
   const [importAccountId, setImportAccountId] = useState('')
   const [importFile, setImportFile] = useState<File | null>(null)
-  const [importResult, setImportResult] =
-    useState<ImportTransactionsResponse | null>(null)
+  const [importCsvContent, setImportCsvContent] = useState<string | null>(null)
+  const [importPreview, setImportPreview] = useState<ImportPreviewResponse | null>(
+    null,
+  )
+  const [importCommitResult, setImportCommitResult] =
+    useState<ImportCommitResponse | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [successMessage, setSuccessMessage] = useState<string | null>(null)
 
@@ -420,27 +455,75 @@ export default function Transactions() {
     ? deleteTransactionMutation.variables?.id ?? null
     : null
 
-  const importTransactionsMutation = useMutation({
+  const resetImportFlow = () => {
+    setImportCsvContent(null)
+    setImportPreview(null)
+    setImportCommitResult(null)
+  }
+
+  const previewImportMutation = useMutation({
     mutationFn: (args: { accountId: string; csvContent: string }) =>
-      investmentsService.importTransactions(args),
-    onSuccess: async (result) => {
-      setImportResult(result)
-      if (result.successCount > 0) {
-        setError(null)
-        setSuccessMessage(
-          t('transactions.importedCount', {
-            count: result.successCount,
-          }),
-        )
-        await invalidateTransactionScopes()
+      investmentsService.previewImportTransactions(args),
+    onSuccess: (result) => {
+      setImportPreview(result)
+      setImportCommitResult(null)
+      setSuccessMessage(null)
+      if (result.errorCount > 0) {
+        setError(t('transactions.previewBlocked'))
       } else {
-        setSuccessMessage(null)
+        setError(null)
       }
     },
     onError: (err: unknown) => {
+      resetImportFlow()
       setError(getApiErrorMessage(err, t('transactions.failedToImport')))
     },
   })
+
+  const commitImportMutation = useMutation({
+    mutationFn: (args: { accountId: string; csvContent: string }) =>
+      investmentsService.commitImportTransactions(args),
+    onSuccess: async (result) => {
+      setImportCommitResult(result)
+      setImportPreview(null)
+      setImportCsvContent(null)
+      setImportFile(null)
+      setError(null)
+      setSuccessMessage(
+        t('transactions.importedCount', {
+          count: result.successCount,
+        }),
+      )
+      await invalidateTransactionScopes()
+    },
+    onError: async (err: unknown) => {
+      const rejection = parseImportCommitRejection(err)
+      if (rejection) {
+        setImportPreview(rejection.preview)
+        setImportCommitResult(null)
+        setSuccessMessage(null)
+        if (rejection.errorCode === 'COMMIT_NOT_ALLOWED_WITH_ERRORS') {
+          setError(t('transactions.previewBlocked'))
+          return
+        }
+        if (rejection.errorCode === 'IMPORT_COMMIT_FAILED') {
+          setError(
+            t('transactions.commitFailedPartial', {
+              successCount: rejection.successCount,
+            }),
+          )
+          if (rejection.successCount > 0) {
+            await invalidateTransactionScopes()
+          }
+          return
+        }
+      }
+      setError(getApiErrorMessage(err, t('transactions.failedToImport')))
+    },
+  })
+
+  const importBusy =
+    previewImportMutation.isPending || commitImportMutation.isPending
 
   const handleSubmit = (event: React.FormEvent) => {
     event.preventDefault()
@@ -519,7 +602,7 @@ export default function Transactions() {
     return null
   }
 
-  const handleImport = async (event: React.FormEvent) => {
+  const handlePreviewImport = async (event: React.FormEvent) => {
     event.preventDefault()
 
     const validationError = validateImport()
@@ -530,6 +613,7 @@ export default function Transactions() {
 
     setError(null)
     setSuccessMessage(null)
+    setImportCommitResult(null)
 
     const csvContent = await importFile!.text()
     if (!csvContent.trim()) {
@@ -537,9 +621,23 @@ export default function Transactions() {
       return
     }
 
-    importTransactionsMutation.mutate({
+    setImportCsvContent(csvContent)
+    previewImportMutation.mutate({
       accountId: importAccountId,
       csvContent,
+    })
+  }
+
+  const handleCommitImport = () => {
+    if (!importCsvContent || !importPreview?.canCommit) {
+      return
+    }
+
+    setError(null)
+    setSuccessMessage(null)
+    commitImportMutation.mutate({
+      accountId: importAccountId,
+      csvContent: importCsvContent,
     })
   }
 
@@ -907,7 +1005,7 @@ export default function Transactions() {
               </div>
             )}
 
-            <form onSubmit={handleImport} className="space-y-4">
+            <form onSubmit={handlePreviewImport} className="space-y-4">
               <div className="space-y-1">
                 <label
                   htmlFor="import-account-id"
@@ -918,11 +1016,11 @@ export default function Transactions() {
                 <select
                   id="import-account-id"
                   value={importAccountId}
-                  onChange={(event) => setImportAccountId(event.target.value)}
-                  disabled={
-                    importAccounts.length === 0 ||
-                    importTransactionsMutation.isPending
-                  }
+                  onChange={(event) => {
+                    setImportAccountId(event.target.value)
+                    resetImportFlow()
+                  }}
+                  disabled={importAccounts.length === 0 || importBusy}
                   className="w-full rounded border border-gray-300 px-3 py-2"
                 >
                   {importAccounts.length === 0 && (
@@ -947,10 +1045,11 @@ export default function Transactions() {
                   id="import-file"
                   type="file"
                   accept=".csv,.tsv,.txt"
-                  onChange={(event) =>
+                  onChange={(event) => {
                     setImportFile(event.target.files?.[0] ?? null)
-                  }
-                  disabled={importTransactionsMutation.isPending}
+                    resetImportFlow()
+                  }}
+                  disabled={importBusy}
                   className="block w-full rounded border border-gray-300 px-3 py-2 text-sm"
                 />
                 <p className="text-xs text-gray-500">
@@ -961,63 +1060,14 @@ export default function Transactions() {
               <Button
                 variant="dark"
                 type="submit"
-                disabled={
-                  importTransactionsMutation.isPending ||
-                  importAccounts.length === 0
-                }
+                disabled={importBusy || importAccounts.length === 0}
               >
-                {importTransactionsMutation.isPending
-                  ? t('transactions.importing')
-                  : t('transactions.importCsv')}
+                {previewImportMutation.isPending
+                  ? t('transactions.previewing')
+                  : t('transactions.previewCsv')}
               </Button>
             </form>
           </Card>
-
-          {importResult && (
-            <section className="rounded-xl border border-gray-200 bg-gray-50 p-5 shadow-sm">
-              <h2 className="mb-3 text-lg font-semibold">{t('transactions.importResult')}</h2>
-              <div className="grid grid-cols-3 gap-3 text-sm">
-                <div className="rounded border border-gray-200 bg-white px-3 py-2">
-                  <div className="text-gray-500">{t('transactions.rows')}</div>
-                  <div className="font-semibold">{importResult.totalRows}</div>
-                </div>
-                <div className="rounded border border-green-200 bg-white px-3 py-2">
-                  <div className="text-gray-500">{t('transactions.success')}</div>
-                  <div className="font-semibold text-green-700">
-                    {importResult.successCount}
-                  </div>
-                </div>
-                <div className="rounded border border-red-200 bg-white px-3 py-2">
-                  <div className="text-gray-500">{t('transactions.failed')}</div>
-                  <div className="font-semibold text-red-700">
-                    {importResult.failureCount}
-                  </div>
-                </div>
-              </div>
-
-              {importResult.errors.length > 0 && (
-                <div className="mt-4 space-y-2">
-                  <h3 className="text-sm font-medium text-gray-800">{t('transactions.errors')}</h3>
-                  <div className="space-y-2">
-                    {importResult.errors.map((item, index) => (
-                      <div
-                        key={`${item.row}-${item.field}-${index}`}
-                        className="rounded border border-red-200 bg-white px-3 py-2 text-sm"
-                      >
-                        <div className="font-medium text-red-700">
-                          {t('transactions.rowError', {
-                            row: item.row,
-                            field: item.field,
-                          })}
-                        </div>
-                        <div className="text-gray-700">{item.message}</div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-            </section>
-          )}
 
           <section className="rounded-xl border border-gray-200 bg-gray-50 p-5 shadow-sm">
             <h2 className="mb-3 text-lg font-semibold">{t('transactions.howItWorks')}</h2>
@@ -1033,6 +1083,149 @@ export default function Transactions() {
           </section>
         </aside>
       </section>
+
+      {importPreview && (
+        <Card as="section">
+          <h2 className="mb-3 text-lg font-semibold">
+            {t('transactions.importPreview')}
+          </h2>
+          <div className="grid grid-cols-2 gap-3 text-sm sm:grid-cols-4">
+            <div className="rounded border border-gray-200 bg-white px-3 py-2">
+              <div className="text-gray-500">{t('transactions.rows')}</div>
+              <div className="font-semibold">{importPreview.totalRows}</div>
+            </div>
+            <div className="rounded border border-green-200 bg-white px-3 py-2">
+              <div className="text-gray-500">{t('transactions.readyRows')}</div>
+              <div className="font-semibold text-green-700">
+                {importPreview.readyCount}
+              </div>
+            </div>
+            <div className="rounded border border-red-200 bg-white px-3 py-2">
+              <div className="text-gray-500">{t('transactions.errorRows')}</div>
+              <div className="font-semibold text-red-700">
+                {importPreview.errorCount}
+              </div>
+            </div>
+            <div className="rounded border border-amber-200 bg-white px-3 py-2">
+              <div className="text-gray-500">{t('transactions.warningRows')}</div>
+              <div className="font-semibold text-amber-800">
+                {importPreview.warningCount}
+              </div>
+            </div>
+          </div>
+
+          <div className="mt-4 overflow-x-auto">
+            <table className="min-w-full border-collapse text-sm">
+              <thead>
+                <tr className="border-b border-gray-200 text-left text-gray-600">
+                  <th className="px-3 py-2 font-medium">
+                    {t('transactions.previewColumnRow')}
+                  </th>
+                  <th className="px-3 py-2 font-medium">
+                    {t('transactions.previewColumnStatus')}
+                  </th>
+                  <th className="px-3 py-2 font-medium">
+                    {t('transactions.previewColumnAsset')}
+                  </th>
+                  <th className="px-3 py-2 font-medium">
+                    {t('transactions.previewColumnTrade')}
+                  </th>
+                  <th className="min-w-[16rem] px-3 py-2 font-medium">
+                    {t('transactions.previewColumnIssues')}
+                  </th>
+                </tr>
+              </thead>
+              <tbody>
+                {importPreview.rows.map((row) => {
+                  const issues = [...row.errors, ...row.warnings]
+                  return (
+                    <tr
+                      key={`preview-row-${row.row}`}
+                      className="border-b border-gray-100 align-top"
+                    >
+                      <td className="px-3 py-2 font-medium">{row.row}</td>
+                      <td className="px-3 py-2">
+                        <span
+                          className={`inline-flex rounded border px-2 py-0.5 text-xs font-medium ${importStatusBadgeClass(row.status)}`}
+                        >
+                          {row.status === 'ready'
+                            ? t('transactions.importStatusReady')
+                            : row.status === 'warning'
+                              ? t('transactions.importStatusWarning')
+                              : t('transactions.importStatusError')}
+                        </span>
+                      </td>
+                      <td className="px-3 py-2">{formatPreviewAsset(row, t)}</td>
+                      <td className="px-3 py-2">{formatPreviewTrade(row, t)}</td>
+                      <td className="px-3 py-2">
+                        {issues.length === 0 ? (
+                          <span className="text-gray-500">-</span>
+                        ) : (
+                          <div className="space-y-1">
+                            {issues.map((issue, index) => (
+                              <div
+                                key={`${row.row}-${issue.code}-${index}`}
+                                className="text-gray-700"
+                              >
+                                <span className="font-medium">
+                                  {t('transactions.rowError', {
+                                    row: row.row,
+                                    field: issue.field,
+                                  })}
+                                </span>
+                                <div>{issue.message}</div>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </td>
+                    </tr>
+                  )
+                })}
+              </tbody>
+            </table>
+          </div>
+
+          <div className="mt-4">
+            <Button
+              variant="dark"
+              type="button"
+              onClick={handleCommitImport}
+              disabled={!importPreview.canCommit || importBusy}
+            >
+              {commitImportMutation.isPending
+                ? t('transactions.committing')
+                : t('transactions.commitImport')}
+            </Button>
+          </div>
+        </Card>
+      )}
+
+      {importCommitResult && (
+        <Card as="section">
+          <h2 className="mb-3 text-lg font-semibold">
+            {t('transactions.importCommitResult')}
+          </h2>
+          <div className="grid grid-cols-3 gap-3 text-sm">
+            <div className="rounded border border-gray-200 bg-white px-3 py-2">
+              <div className="text-gray-500">{t('transactions.rows')}</div>
+              <div className="font-semibold">{importCommitResult.totalRows}</div>
+            </div>
+            <div className="rounded border border-green-200 bg-white px-3 py-2">
+              <div className="text-gray-500">{t('transactions.success')}</div>
+              <div className="font-semibold text-green-700">
+                {importCommitResult.successCount}
+              </div>
+            </div>
+            <div className="rounded border border-red-200 bg-white px-3 py-2">
+              <div className="text-gray-500">{t('transactions.failed')}</div>
+              <div className="font-semibold text-red-700">
+                {importCommitResult.failureCount}
+              </div>
+            </div>
+          </div>
+        </Card>
+      )}
 
       <Card as="section">
         <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
