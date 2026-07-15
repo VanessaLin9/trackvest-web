@@ -1,3 +1,4 @@
+import type { AssetAliasConflictResponse } from './assets.service'
 import type { ImportCommitRejectedResponse } from './investments.service'
 
 /**
@@ -18,9 +19,9 @@ export function getApiErrorMessage(err: unknown, fallback: string): string {
   }
 
   if (err && typeof err === 'object' && 'response' in err) {
-    const message = (err as { response?: { data?: { message?: string } } })
+    const message = (err as { response?: { data?: { message?: unknown } } })
       .response?.data?.message
-    if (message) {
+    if (typeof message === 'string' && message) {
       return message
     }
   }
@@ -50,4 +51,25 @@ export function parseImportCommitRejection(
   }
 
   return data as ImportCommitRejectedResponse
+}
+
+export function parseAssetAliasConflict(
+  err: unknown,
+): AssetAliasConflictResponse | null {
+  if (!err || typeof err !== 'object' || !('response' in err)) {
+    return null
+  }
+
+  const data = (err as { response?: { data?: unknown } }).response?.data
+  if (
+    !data ||
+    typeof data !== 'object' ||
+    !('code' in data) ||
+    !('existingAsset' in data) ||
+    (data as { code?: unknown }).code !== 'ASSET_ALIAS_CONFLICT'
+  ) {
+    return null
+  }
+
+  return data as AssetAliasConflictResponse
 }
