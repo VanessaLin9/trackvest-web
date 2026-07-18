@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Link } from 'react-router-dom'
 import {
+  IMPORT_ERROR_CODES,
   investmentsService,
   type CreateTransactionPayload,
   type ImportCommitResponse,
@@ -12,6 +13,7 @@ import {
 import { useAuthenticatedUser } from '../app/use-auth'
 import { SUPPORTED_BROKER } from '../lib/accounts.service'
 import { useI18n } from '../i18n'
+import { ImportAliasRepairDialog } from '../components/ImportAliasRepairDialog'
 import { Button } from '../components/ui/Button'
 import { Card } from '../components/ui/Card'
 import { getApiErrorMessage, parseImportCommitRejection } from '../lib/errors'
@@ -82,10 +84,35 @@ function importStatusBadgeClass(status: ImportPreviewRow['status']) {
   if (status === 'ready') {
     return 'border-green-200 bg-green-50 text-green-800'
   }
+  if (status === 'skipped') {
+    return 'border-slate-200 bg-slate-50 text-slate-700'
+  }
   if (status === 'warning') {
     return 'border-amber-200 bg-amber-50 text-amber-900'
   }
   return 'border-red-200 bg-red-50 text-red-800'
+}
+
+function formatImportStatusLabel(
+  status: ImportPreviewRow['status'],
+  t: (key: string) => string,
+) {
+  if (status === 'ready') {
+    return t('transactions.importStatusReady')
+  }
+  if (status === 'skipped') {
+    return t('transactions.importStatusSkipped')
+  }
+  if (status === 'warning') {
+    return t('transactions.importStatusWarning')
+  }
+  return t('transactions.importStatusError')
+}
+
+function rowHasAliasNotFound(row: ImportPreviewRow) {
+  return row.errors.some(
+    (issue) => issue.code === IMPORT_ERROR_CODES.ASSET_ALIAS_NOT_FOUND,
+  )
 }
 
 function formatPreviewTrade(
@@ -148,6 +175,9 @@ export default function Transactions() {
   )
   const [importCommitResult, setImportCommitResult] =
     useState<ImportCommitResponse | null>(null)
+  const [aliasRepairRawName, setAliasRepairRawName] = useState<string | null>(
+    null,
+  )
   const [error, setError] = useState<string | null>(null)
   const [successMessage, setSuccessMessage] = useState<string | null>(null)
 
@@ -468,7 +498,7 @@ export default function Transactions() {
       setImportPreview(result)
       setImportCommitResult(null)
       setSuccessMessage(null)
-      if (result.errorCount > 0) {
+      if (!result.canCommit) {
         setError(t('transactions.previewBlocked'))
       } else {
         setError(null)
@@ -636,6 +666,20 @@ export default function Transactions() {
     setError(null)
     setSuccessMessage(null)
     commitImportMutation.mutate({
+      accountId: importAccountId,
+      csvContent: importCsvContent,
+    })
+  }
+
+  const handleAliasRepairSuccess = () => {
+    setAliasRepairRawName(null)
+    if (!importAccountId || !importCsvContent) {
+      return
+    }
+
+    setError(null)
+    setSuccessMessage(null)
+    previewImportMutation.mutate({
       accountId: importAccountId,
       csvContent: importCsvContent,
     })
@@ -1089,7 +1133,7 @@ export default function Transactions() {
           <h2 className="mb-3 text-lg font-semibold">
             {t('transactions.importPreview')}
           </h2>
-          <div className="grid grid-cols-2 gap-3 text-sm sm:grid-cols-4">
+          <div className="grid grid-cols-2 gap-3 text-sm sm:grid-cols-5">
             <div className="rounded border border-gray-200 bg-white px-3 py-2">
               <div className="text-gray-500">{t('transactions.rows')}</div>
               <div className="font-semibold">{importPreview.totalRows}</div>
@@ -1098,6 +1142,12 @@ export default function Transactions() {
               <div className="text-gray-500">{t('transactions.readyRows')}</div>
               <div className="font-semibold text-green-700">
                 {importPreview.readyCount}
+              </div>
+            </div>
+            <div className="rounded border border-slate-200 bg-white px-3 py-2">
+              <div className="text-gray-500">{t('transactions.skippedRows')}</div>
+              <div className="font-semibold text-slate-700">
+                {importPreview.skippedCount}
               </div>
             </div>
             <div className="rounded border border-red-200 bg-white px-3 py-2">
@@ -1133,11 +1183,15 @@ export default function Transactions() {
                   <th className="min-w-[16rem] px-3 py-2 font-medium">
                     {t('transactions.previewColumnIssues')}
                   </th>
+                  <th className="px-3 py-2 font-medium">
+                    {t('transactions.previewColumnActions')}
+                  </th>
                 </tr>
               </thead>
               <tbody>
                 {importPreview.rows.map((row) => {
                   const issues = [...row.errors, ...row.warnings]
+                  const canRepairAlias = rowHasAliasNotFound(row)
                   return (
                     <tr
                       key={`preview-row-${row.row}`}
@@ -1148,11 +1202,7 @@ export default function Transactions() {
                         <span
                           className={`inline-flex rounded border px-2 py-0.5 text-xs font-medium ${importStatusBadgeClass(row.status)}`}
                         >
-                          {row.status === 'ready'
-                            ? t('transactions.importStatusReady')
-                            : row.status === 'warning'
-                              ? t('transactions.importStatusWarning')
-                              : t('transactions.importStatusError')}
+                          {formatImportStatusLabel(row.status, t)}
                         </span>
                       </td>
                       <td className="px-3 py-2">{formatPreviewAsset(row, t)}</td>
@@ -1177,6 +1227,21 @@ export default function Transactions() {
                               </div>
                             ))}
                           </div>
+                        )}
+                      </td>
+                      <td className="px-3 py-2">
+                        {canRepairAlias ? (
+                          <Button
+                            variant="secondary"
+                            size="sm"
+                            type="button"
+                            disabled={importBusy}
+                            onClick={() => setAliasRepairRawName(row.rawAssetName)}
+                          >
+                            {t('transactions.aliasRepairAction')}
+                          </Button>
+                        ) : (
+                          <span className="text-gray-500">-</span>
                         )}
                       </td>
                     </tr>
@@ -1206,7 +1271,7 @@ export default function Transactions() {
           <h2 className="mb-3 text-lg font-semibold">
             {t('transactions.importCommitResult')}
           </h2>
-          <div className="grid grid-cols-3 gap-3 text-sm">
+          <div className="grid grid-cols-2 gap-3 text-sm sm:grid-cols-4">
             <div className="rounded border border-gray-200 bg-white px-3 py-2">
               <div className="text-gray-500">{t('transactions.rows')}</div>
               <div className="font-semibold">{importCommitResult.totalRows}</div>
@@ -1215,6 +1280,12 @@ export default function Transactions() {
               <div className="text-gray-500">{t('transactions.success')}</div>
               <div className="font-semibold text-green-700">
                 {importCommitResult.successCount}
+              </div>
+            </div>
+            <div className="rounded border border-slate-200 bg-white px-3 py-2">
+              <div className="text-gray-500">{t('transactions.skippedRows')}</div>
+              <div className="font-semibold text-slate-700">
+                {importCommitResult.skippedCount}
               </div>
             </div>
             <div className="rounded border border-red-200 bg-white px-3 py-2">
@@ -1226,6 +1297,13 @@ export default function Transactions() {
           </div>
         </Card>
       )}
+
+      <ImportAliasRepairDialog
+        open={aliasRepairRawName !== null}
+        rawAlias={aliasRepairRawName ?? ''}
+        onClose={() => setAliasRepairRawName(null)}
+        onSuccess={handleAliasRepairSuccess}
+      />
 
       <Card as="section">
         <div className="mb-4 flex flex-wrap items-center justify-between gap-3">

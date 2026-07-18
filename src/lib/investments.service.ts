@@ -82,9 +82,13 @@ export type ImportResolvedAsset = {
   name: string
 }
 
+export const IMPORT_ERROR_CODES = {
+  ASSET_ALIAS_NOT_FOUND: 'ASSET_ALIAS_NOT_FOUND',
+} as const
+
 export type ImportPreviewRow = {
   row: number
-  status: 'ready' | 'error' | 'warning'
+  status: 'ready' | 'skipped' | 'error' | 'warning'
   rawAssetName: string
   brokerOrderNo: string
   tradeDate: string
@@ -97,15 +101,18 @@ export type ImportPreviewRow = {
 export type ImportPreviewResponse = {
   totalRows: number
   readyCount: number
+  skippedCount: number
   errorCount: number
   warningCount: number
   canCommit: boolean
+  writeOrderRowNumbers: number[]
   rows: ImportPreviewRow[]
 }
 
 export type ImportCommitResponse = {
   totalRows: number
   successCount: number
+  skippedCount: number
   failureCount: number
   createdTransactionIds: string[]
 }
@@ -113,6 +120,7 @@ export type ImportCommitResponse = {
 export type ImportCommitRejectedResponse = {
   totalRows: number
   successCount: number
+  skippedCount: number
   failureCount: number
   errorCode: string
   createdTransactionIds: string[]

@@ -23,6 +23,8 @@ const {
   removeTransaction,
   previewImportTransactions,
   commitImportTransactions,
+  searchAssets,
+  createAssetAlias,
 } = vi.hoisted(() => ({
   getAccounts: vi.fn(),
   getAssets: vi.fn(),
@@ -32,20 +34,42 @@ const {
   removeTransaction: vi.fn(),
   previewImportTransactions: vi.fn(),
   commitImportTransactions: vi.fn(),
+  searchAssets: vi.fn(),
+  createAssetAlias: vi.fn(),
 }))
 
-vi.mock('../lib/investments.service', () => ({
-  investmentsService: {
-    getAccounts,
-    getAssets,
-    getTransactions,
-    createTransaction,
-    updateTransaction,
-    removeTransaction,
-    previewImportTransactions,
-    commitImportTransactions,
-  },
-}))
+vi.mock('../lib/investments.service', async () => {
+  const actual = await vi.importActual<typeof import('../lib/investments.service')>(
+    '../lib/investments.service',
+  )
+  return {
+    ...actual,
+    investmentsService: {
+      getAccounts,
+      getAssets,
+      getTransactions,
+      createTransaction,
+      updateTransaction,
+      removeTransaction,
+      previewImportTransactions,
+      commitImportTransactions,
+    },
+  }
+})
+
+vi.mock('../lib/assets.service', async () => {
+  const actual = await vi.importActual<typeof import('../lib/assets.service')>(
+    '../lib/assets.service',
+  )
+  return {
+    ...actual,
+    assetsService: {
+      ...actual.assetsService,
+      getAssets: searchAssets,
+      createAssetAlias,
+    },
+  }
+})
 
 describe('Transactions page trade flows', () => {
   beforeEach(() => {
@@ -83,16 +107,36 @@ describe('Transactions page trade flows', () => {
     previewImportTransactions.mockResolvedValue({
       totalRows: 0,
       readyCount: 0,
+      skippedCount: 0,
       errorCount: 0,
       warningCount: 0,
       canCommit: true,
+      writeOrderRowNumbers: [],
       rows: [],
     })
     commitImportTransactions.mockResolvedValue({
       totalRows: 0,
       successCount: 0,
+      skippedCount: 0,
       failureCount: 0,
       createdTransactionIds: [],
+    })
+    searchAssets.mockResolvedValue({
+      items: [],
+      total: 0,
+      page: 1,
+      take: 10,
+    })
+    createAssetAlias.mockResolvedValue({
+      id: 'alias-1',
+      assetId: 'asset-00900',
+      alias: '國泰台灣領袖50',
+      broker: 'cathay',
+      asset: {
+        id: 'asset-00900',
+        symbol: '00900',
+        name: '國泰台灣領袖50',
+      },
     })
   })
 
@@ -149,9 +193,11 @@ describe('Transactions page trade flows', () => {
   const readyPreview = {
     totalRows: 1,
     readyCount: 1,
+    skippedCount: 0,
     errorCount: 0,
     warningCount: 0,
     canCommit: true,
+    writeOrderRowNumbers: [2],
     rows: [
       {
         row: 2,
@@ -474,9 +520,11 @@ describe('Transactions page trade flows', () => {
     previewImportTransactions.mockResolvedValueOnce({
       totalRows: 1,
       readyCount: 0,
+      skippedCount: 0,
       errorCount: 1,
       warningCount: 0,
       canCommit: false,
+      writeOrderRowNumbers: [],
       rows: [
         {
           row: 2,
@@ -538,9 +586,11 @@ describe('Transactions page trade flows', () => {
     previewImportTransactions.mockResolvedValueOnce({
       totalRows: 1,
       readyCount: 1,
+      skippedCount: 0,
       errorCount: 0,
       warningCount: 0,
       canCommit: true,
+      writeOrderRowNumbers: [2],
       rows: [
         {
           row: 2,
@@ -569,6 +619,7 @@ describe('Transactions page trade flows', () => {
     commitImportTransactions.mockResolvedValueOnce({
       totalRows: 1,
       successCount: 1,
+      skippedCount: 0,
       failureCount: 0,
       createdTransactionIds: ['tx-import-1'],
     })
@@ -620,15 +671,18 @@ describe('Transactions page trade flows', () => {
       buildImportCommitRejection({
         totalRows: 1,
         successCount: 0,
+        skippedCount: 0,
         failureCount: 1,
         errorCode: 'COMMIT_NOT_ALLOWED_WITH_ERRORS',
         createdTransactionIds: [],
         preview: {
           totalRows: 1,
           readyCount: 0,
+          skippedCount: 0,
           errorCount: 1,
           warningCount: 0,
           canCommit: false,
+          writeOrderRowNumbers: [],
           rows: [
             {
               row: 2,
@@ -640,7 +694,7 @@ describe('Transactions page trade flows', () => {
               normalizedTransaction: null,
               errors: [
                 {
-                  code: 'DUPLICATE_BROKER_ORDER_IN_ACCOUNT',
+                  code: 'DUPLICATE_BROKER_ORDER_IN_FILE',
                   field: '委託書號',
                   message: 'Duplicate broker order number for selected account',
                 },
@@ -655,7 +709,7 @@ describe('Transactions page trade flows', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Commit import' }))
 
     expect(
-      await screen.findByText('Fix all row errors before committing.'),
+      await screen.findByText('Commit is blocked until the preview allows it.'),
     ).toBeTruthy()
     expect(
       screen.getByText('Duplicate broker order number for selected account'),
@@ -678,15 +732,18 @@ describe('Transactions page trade flows', () => {
       buildImportCommitRejection({
         totalRows: 2,
         successCount: 1,
+        skippedCount: 0,
         failureCount: 1,
         errorCode: 'IMPORT_COMMIT_FAILED',
         createdTransactionIds: ['tx-import-partial-1'],
         preview: {
           totalRows: 2,
           readyCount: 1,
+          skippedCount: 0,
           errorCount: 1,
           warningCount: 0,
           canCommit: false,
+          writeOrderRowNumbers: [2],
           rows: [
             readyPreview.rows[0],
             {
@@ -733,5 +790,288 @@ describe('Transactions page trade flows', () => {
     await waitFor(() => {
       expect(getTransactions).toHaveBeenCalledTimes(2)
     })
+  })
+
+  it('shows alias repair only for ASSET_ALIAS_NOT_FOUND and re-previews after success', async () => {
+    const unresolvedPreview = {
+      totalRows: 2,
+      readyCount: 1,
+      skippedCount: 0,
+      errorCount: 1,
+      warningCount: 0,
+      canCommit: true,
+      writeOrderRowNumbers: [2],
+      rows: [
+        {
+          ...readyPreview.rows[0],
+        },
+        {
+          row: 3,
+          status: 'error' as const,
+          rawAssetName: '國泰台灣領袖50',
+          brokerOrderNo: 'BRK-002',
+          tradeDate: '2026-03-31',
+          resolvedAsset: null,
+          normalizedTransaction: null,
+          errors: [
+            {
+              code: 'ASSET_ALIAS_NOT_FOUND',
+              field: '股名',
+              message: 'Asset alias not found for 國泰台灣領袖50',
+            },
+          ],
+          warnings: [],
+        },
+      ],
+    }
+    const repairedPreview = {
+      ...unresolvedPreview,
+      readyCount: 2,
+      errorCount: 0,
+      writeOrderRowNumbers: [2, 3],
+      rows: [
+        unresolvedPreview.rows[0],
+        {
+          ...unresolvedPreview.rows[1],
+          status: 'ready' as const,
+          resolvedAsset: {
+            id: 'asset-00900',
+            symbol: '00900',
+            name: '國泰台灣領袖50',
+          },
+          normalizedTransaction: {
+            type: 'buy' as const,
+            quantity: '10',
+            unitPrice: '100',
+            currency: 'TWD',
+            fees: '10',
+            taxes: '0',
+          },
+          errors: [],
+        },
+      ],
+    }
+
+    previewImportTransactions
+      .mockResolvedValueOnce(unresolvedPreview)
+      .mockResolvedValueOnce(repairedPreview)
+    searchAssets.mockResolvedValue({
+      items: [
+        {
+          id: 'asset-00900',
+          symbol: '00900',
+          name: '國泰台灣領袖50',
+          type: 'etf',
+          assetClass: 'equity',
+          baseCurrency: 'TWD',
+        },
+      ],
+      total: 1,
+      page: 1,
+      take: 10,
+    })
+
+    renderPage()
+
+    await waitFor(() => {
+      expect(getAccounts).toHaveBeenCalled()
+    })
+
+    const file = new File(
+      ['股名,日期,成交股數\n0050,2026-03-31,10\n國泰台灣領袖50,2026-03-31,10'],
+      'alias-import.csv',
+      { type: 'text/csv' },
+    )
+    fireEvent.change(screen.getByLabelText('File'), {
+      target: { files: [file] },
+    })
+    fireEvent.click(screen.getByRole('button', { name: 'Preview CSV' }))
+
+    expect(await screen.findByRole('button', { name: 'Map asset' })).toBeTruthy()
+    expect(screen.getByText('Skipped')).toBeTruthy()
+    expect(screen.queryByText('Commit is blocked until the preview allows it.')).toBeNull()
+
+    fireEvent.click(screen.getByRole('button', { name: 'Map asset' }))
+    expect(await screen.findByRole('dialog')).toBeTruthy()
+    expect(screen.getByText('國泰台灣領袖50')).toBeTruthy()
+    expect(screen.getByRole('button', { name: 'Create alias' })).toHaveProperty(
+      'disabled',
+      true,
+    )
+
+    fireEvent.change(screen.getByPlaceholderText('Symbol or name'), {
+      target: { value: '00900' },
+    })
+
+    await waitFor(() => {
+      expect(searchAssets).toHaveBeenCalledWith({
+        q: '00900',
+        page: 1,
+        take: 10,
+      })
+    })
+
+    fireEvent.click(await screen.findByRole('button', { name: /00900/ }))
+    fireEvent.click(screen.getByRole('button', { name: 'Create alias' }))
+
+    await waitFor(() => {
+      expect(createAssetAlias).toHaveBeenCalledWith('asset-00900', {
+        alias: '國泰台灣領袖50',
+        broker: 'cathay',
+      })
+    })
+
+    await waitFor(() => {
+      expect(previewImportTransactions).toHaveBeenCalledTimes(2)
+      expect(previewImportTransactions).toHaveBeenLastCalledWith({
+        accountId: 'broker-1',
+        csvContent:
+          '股名,日期,成交股數\n0050,2026-03-31,10\n國泰台灣領袖50,2026-03-31,10',
+      })
+    })
+
+    expect(screen.queryByRole('dialog')).toBeNull()
+    expect(commitImportTransactions).not.toHaveBeenCalled()
+  })
+
+  it('keeps the repair dialog open on alias conflict and does not re-preview', async () => {
+    previewImportTransactions.mockResolvedValueOnce({
+      totalRows: 1,
+      readyCount: 0,
+      skippedCount: 0,
+      errorCount: 1,
+      warningCount: 0,
+      canCommit: false,
+      writeOrderRowNumbers: [],
+      rows: [
+        {
+          row: 2,
+          status: 'error',
+          rawAssetName: '國泰台灣領袖50',
+          brokerOrderNo: 'BRK-001',
+          tradeDate: '2026-03-31',
+          resolvedAsset: null,
+          normalizedTransaction: null,
+          errors: [
+            {
+              code: 'ASSET_ALIAS_NOT_FOUND',
+              field: '股名',
+              message: 'Asset alias not found for 國泰台灣領袖50',
+            },
+          ],
+          warnings: [],
+        },
+      ],
+    })
+    searchAssets.mockResolvedValue({
+      items: [
+        {
+          id: 'asset-00900',
+          symbol: '00900',
+          name: '國泰台灣領袖50',
+          type: 'etf',
+          assetClass: 'equity',
+          baseCurrency: 'TWD',
+        },
+      ],
+      total: 1,
+      page: 1,
+      take: 10,
+    })
+    createAssetAlias.mockRejectedValueOnce({
+      response: {
+        data: {
+          code: 'ASSET_ALIAS_CONFLICT',
+          message: 'Asset alias already maps to another asset',
+          existingAsset: {
+            id: 'asset-0050',
+            symbol: '0050',
+            name: 'Yuanta/P-shares Taiwan Top 50 ETF',
+          },
+        },
+      },
+    })
+
+    renderPage()
+
+    await waitFor(() => {
+      expect(getAccounts).toHaveBeenCalled()
+    })
+
+    const file = new File(
+      ['股名,日期,成交股數\n國泰台灣領袖50,2026-03-31,10'],
+      'alias-conflict.csv',
+      { type: 'text/csv' },
+    )
+    fireEvent.change(screen.getByLabelText('File'), {
+      target: { files: [file] },
+    })
+    fireEvent.click(screen.getByRole('button', { name: 'Preview CSV' }))
+    fireEvent.click(await screen.findByRole('button', { name: 'Map asset' }))
+
+    fireEvent.change(screen.getByPlaceholderText('Symbol or name'), {
+      target: { value: '00900' },
+    })
+    fireEvent.click(await screen.findByRole('button', { name: /00900/ }))
+    fireEvent.click(screen.getByRole('button', { name: 'Create alias' }))
+
+    expect(
+      await screen.findByText(
+        'This Cathay name already maps to 0050 · Yuanta/P-shares Taiwan Top 50 ETF. The existing mapping was not changed.',
+      ),
+    ).toBeTruthy()
+    expect(screen.getByRole('dialog')).toBeTruthy()
+    expect(previewImportTransactions).toHaveBeenCalledTimes(1)
+    expect(commitImportTransactions).not.toHaveBeenCalled()
+  })
+
+  it('does not show alias repair for unrelated preview error codes', async () => {
+    previewImportTransactions.mockResolvedValueOnce({
+      totalRows: 1,
+      readyCount: 0,
+      skippedCount: 0,
+      errorCount: 1,
+      warningCount: 0,
+      canCommit: false,
+      writeOrderRowNumbers: [],
+      rows: [
+        {
+          row: 2,
+          status: 'error',
+          rawAssetName: '0050',
+          brokerOrderNo: 'BRK-001',
+          tradeDate: '2026-03-31',
+          resolvedAsset: null,
+          normalizedTransaction: null,
+          errors: [
+            {
+              code: 'INVALID_ROW',
+              field: '委託書號',
+              message: 'missing broker order number',
+            },
+          ],
+          warnings: [],
+        },
+      ],
+    })
+
+    renderPage()
+
+    await waitFor(() => {
+      expect(getAccounts).toHaveBeenCalled()
+    })
+
+    const file = new File(
+      ['股名,日期,成交股數\n0050,2026-03-31,10'],
+      'other-error.csv',
+      { type: 'text/csv' },
+    )
+    fireEvent.change(screen.getByLabelText('File'), {
+      target: { files: [file] },
+    })
+    fireEvent.click(screen.getByRole('button', { name: 'Preview CSV' }))
+
+    expect(await screen.findByText('missing broker order number')).toBeTruthy()
+    expect(screen.queryByRole('button', { name: 'Map asset' })).toBeNull()
   })
 })

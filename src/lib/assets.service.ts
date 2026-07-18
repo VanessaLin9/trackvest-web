@@ -46,6 +46,34 @@ export type AssetListResponse = {
   take: number
 }
 
+/** Alias-create accepts only Cathay in the current repair flow. */
+export const SUPPORTED_BROKER_FOR_ALIAS = 'cathay' as const
+
+export type CreateAssetAliasPayload = {
+  alias: string
+  broker: typeof SUPPORTED_BROKER_FOR_ALIAS
+}
+
+export type AssetAliasMappedAsset = {
+  id: string
+  symbol: string
+  name: string
+}
+
+export type AssetAliasResponse = {
+  id: string
+  assetId: string
+  alias: string
+  broker: string
+  asset: AssetAliasMappedAsset
+}
+
+export type AssetAliasConflictResponse = {
+  code: 'ASSET_ALIAS_CONFLICT'
+  message: string
+  existingAsset: AssetAliasMappedAsset
+}
+
 export const assetsService = {
   async getAssets(params: GetAssetsParams = {}): Promise<AssetListResponse> {
     const response = await api.get<AssetListResponse>('/assets', { params })
@@ -59,6 +87,17 @@ export const assetsService = {
 
   async updateAsset(id: string, payload: SaveAssetPayload): Promise<Asset> {
     const response = await api.patch<Asset>(`/assets/${id}`, payload)
+    return response.data
+  },
+
+  async createAssetAlias(
+    assetId: string,
+    payload: CreateAssetAliasPayload,
+  ): Promise<AssetAliasResponse> {
+    const response = await api.post<AssetAliasResponse>(
+      `/assets/${assetId}/aliases`,
+      payload,
+    )
     return response.data
   },
 }
