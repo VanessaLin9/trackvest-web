@@ -4,8 +4,9 @@ import type { ImportCommitRejectedResponse } from './investments.service'
 /**
  * Extracts a human-readable message from an unknown error.
  *
- * Recognises axios-style errors with `response.data.message`, then falls back
- * to a standard Error's message, and finally to the provided fallback string.
+ * Recognises axios-style errors with `response.data.message` (string or Nest
+ * `string[]`), then falls back to a standard Error's message, and finally to
+ * the provided fallback string.
  */
 export function getApiErrorMessage(err: unknown, fallback: string): string {
   const rejection = parseImportCommitRejection(err)
@@ -21,8 +22,9 @@ export function getApiErrorMessage(err: unknown, fallback: string): string {
   if (err && typeof err === 'object' && 'response' in err) {
     const message = (err as { response?: { data?: { message?: unknown } } })
       .response?.data?.message
-    if (typeof message === 'string' && message) {
-      return message
+    const apiMessage = readApiDataMessage(message)
+    if (apiMessage) {
+      return apiMessage
     }
   }
 
@@ -31,6 +33,24 @@ export function getApiErrorMessage(err: unknown, fallback: string): string {
   }
 
   return fallback
+}
+
+/** Nest 常回 `message: string | string[]`；陣列只取非空字串並以 `; ` 串接。 */
+function readApiDataMessage(message: unknown): string | null {
+  if (typeof message === 'string' && message) {
+    return message
+  }
+
+  if (Array.isArray(message)) {
+    const parts = message.filter(
+      (entry): entry is string => typeof entry === 'string' && entry.length > 0,
+    )
+    if (parts.length > 0) {
+      return parts.join('; ')
+    }
+  }
+
+  return null
 }
 
 export function parseImportCommitRejection(

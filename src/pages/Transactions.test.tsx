@@ -934,6 +934,99 @@ describe('Transactions page trade flows', () => {
     expect(commitImportTransactions).not.toHaveBeenCalled()
   })
 
+  it('keeps the repair dialog open and shows Nest validation array messages', async () => {
+    previewImportTransactions.mockResolvedValueOnce({
+      totalRows: 1,
+      readyCount: 0,
+      skippedCount: 0,
+      errorCount: 1,
+      warningCount: 0,
+      canCommit: false,
+      writeOrderRowNumbers: [],
+      rows: [
+        {
+          row: 2,
+          status: 'error',
+          rawAssetName: '國巨*',
+          brokerOrderNo: 'BRK-001',
+          tradeDate: '2026-03-31',
+          resolvedAsset: null,
+          normalizedTransaction: null,
+          errors: [
+            {
+              code: 'ASSET_ALIAS_NOT_FOUND',
+              field: '股名',
+              message: 'Asset alias not found for 國巨*',
+            },
+          ],
+          warnings: [],
+        },
+      ],
+    })
+    searchAssets.mockResolvedValue({
+      items: [
+        {
+          id: 'asset-2327',
+          symbol: '2327',
+          name: '國巨',
+          type: 'equity',
+          assetClass: 'equity',
+          baseCurrency: 'TWD',
+        },
+      ],
+      total: 1,
+      page: 1,
+      take: 10,
+    })
+    createAssetAlias.mockRejectedValueOnce(
+      Object.assign(new Error('Request failed with status code 400'), {
+        response: {
+          data: {
+            message: ['alias contains unsupported characters'],
+            error: 'Bad Request',
+            statusCode: 400,
+          },
+        },
+      }),
+    )
+
+    renderPage()
+
+    await waitFor(() => {
+      expect(getAccounts).toHaveBeenCalled()
+    })
+
+    const file = new File(
+      ['股名,日期,成交股數\n國巨*,2026-03-31,10'],
+      'alias-validation.csv',
+      { type: 'text/csv' },
+    )
+    fireEvent.change(screen.getByLabelText('File'), {
+      target: { files: [file] },
+    })
+    fireEvent.click(screen.getByRole('button', { name: 'Preview CSV' }))
+    fireEvent.click(await screen.findByRole('button', { name: 'Map asset' }))
+
+    fireEvent.change(screen.getByPlaceholderText('Symbol or name'), {
+      target: { value: '2327' },
+    })
+    fireEvent.click(await screen.findByRole('button', { name: /2327/ }))
+    fireEvent.click(screen.getByRole('button', { name: 'Create alias' }))
+
+    expect(
+      await screen.findByText('alias contains unsupported characters'),
+    ).toBeTruthy()
+    expect(screen.queryByText('Request failed with status code 400')).toBeNull()
+    expect(screen.queryByText('Failed to create asset alias')).toBeNull()
+    expect(screen.getByRole('dialog')).toBeTruthy()
+    expect(previewImportTransactions).toHaveBeenCalledTimes(1)
+    expect(commitImportTransactions).not.toHaveBeenCalled()
+    expect(createAssetAlias).toHaveBeenCalledWith('asset-2327', {
+      alias: '國巨*',
+      broker: 'cathay',
+    })
+  })
+
   it('keeps the repair dialog open on alias conflict and does not re-preview', async () => {
     previewImportTransactions.mockResolvedValueOnce({
       totalRows: 1,
