@@ -35,7 +35,7 @@ export function getApiErrorMessage(err: unknown, fallback: string): string {
   return fallback
 }
 
-/** Nest 常回 `message: string | string[]`；陣列只取非空字串並以 `; ` 串接。 */
+/** Nest 常回 `message: string | string[]`；陣列只取非空字串並以 `; ` 串接，避免落到 Axios status text（PR #24）。 */
 function readApiDataMessage(message: unknown): string | null {
   if (typeof message === 'string' && message) {
     return message
