@@ -1,4 +1,4 @@
-import { useQuery } from '@tanstack/react-query'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { lazy, Suspense, useEffect, useMemo, useState } from 'react'
 import { useAuthenticatedUser } from '../app/use-auth'
 import type {
@@ -7,7 +7,10 @@ import type {
   TrendPoint,
 } from '../components/dashboard/PortfolioCharts'
 import { ChartCardFallback } from '../components/dashboard/ChartCardFallback'
-import { DashboardHero } from '../components/dashboard/DashboardHero'
+import {
+  DashboardHero,
+  type DashboardPriceRefreshFeedback,
+} from '../components/dashboard/DashboardHero'
 import { DashboardLoadingState } from '../components/dashboard/DashboardLoadingState'
 import { HoldingsTable } from '../components/dashboard/HoldingsTable'
 import { KpiCards } from '../components/dashboard/KpiCards'
@@ -25,6 +28,12 @@ import { fxService } from '../lib/fx.service'
 import { SegmentedControl } from '../components/ui/SegmentedControl'
 import { getApiErrorMessage } from '../lib/errors'
 import { formatCompactCurrencyAxis } from '../lib/formatters'
+import {
+  type PriceRefreshMarketFailure,
+  type PriceRefreshResponse,
+  PriceRefreshResponseError,
+  marketPriceService,
+} from '../lib/market-price.service'
 import { queryKeys, resolveDisplayCurrencyKey } from '../lib/query-keys'
 import {
   chartColors,
@@ -48,10 +57,61 @@ const PortfolioTrendChartCard = lazy(() =>
     default: module.PortfolioTrendChartCard,
   })),
 )
+
+function getPriceRefreshMarketLabel(
+  market: PriceRefreshMarketFailure['market'],
+  t: (key: string, values?: Record<string, string | number>) => string,
+) {
+  return t(`dashboard.priceRefreshMarket${market === 'tw' ? 'Tw' : 'Us'}`)
+}
+
+function getPriceRefreshFeedback(
+  result: PriceRefreshResponse,
+  t: (key: string, values?: Record<string, string | number>) => string,
+): DashboardPriceRefreshFeedback {
+  if (result.status === 'success') {
+    return {
+      tone: 'success',
+      message: t('dashboard.priceRefreshSuccess'),
+    }
+  }
+
+  const failures = result.markets.filter(
+    (market): market is PriceRefreshMarketFailure => market.status === 'failed',
+  )
+  const failureDetails = failures
+    .map(
+      (failure) =>
+        `${getPriceRefreshMarketLabel(failure.market, t)}: ${failure.message}`,
+    )
+    .join('; ')
+
+  if (result.status === 'partial_success') {
+    const failedMarket = failures[0]
+    return {
+      tone: 'warning',
+      message: failedMarket
+        ? t('dashboard.priceRefreshPartialSuccess', {
+            market: getPriceRefreshMarketLabel(failedMarket.market, t),
+            message: failedMarket.message,
+          })
+        : t('dashboard.priceRefreshUnexpectedResponse'),
+    }
+  }
+
+  return {
+    tone: 'error',
+    message: t('dashboard.priceRefreshFailed', { details: failureDetails }),
+  }
+}
+
 export default function Dashboard() {
   const currentUserId = useAuthenticatedUser().id
   const { t, locale } = useI18n()
+  const queryClient = useQueryClient()
   const [selectedHoldingId, setSelectedHoldingId] = useState<string | null>(null)
+  const [priceRefreshFeedback, setPriceRefreshFeedback] =
+    useState<DashboardPriceRefreshFeedback | null>(null)
   const {
     displayCurrencyMode,
     preferredBaseCurrency,
@@ -61,6 +121,33 @@ export default function Dashboard() {
   const requestedDisplayCurrency =
     displayCurrencyMode === 'base' ? preferredBaseCurrency : undefined
   const displayCurrencyKey = resolveDisplayCurrencyKey(requestedDisplayCurrency)
+
+  const priceRefreshMutation = useMutation({
+    mutationFn: () => marketPriceService.refreshPrices(),
+    onMutate: () => {
+      setPriceRefreshFeedback(null)
+    },
+    onSuccess: async (result) => {
+      if (result.status === 'success' || result.status === 'partial_success') {
+        await queryClient.invalidateQueries({
+          queryKey: queryKeys.portfolio.all(),
+        })
+      }
+
+      setPriceRefreshFeedback(getPriceRefreshFeedback(result, t))
+    },
+    onError: (error: unknown) => {
+      const message =
+        error instanceof PriceRefreshResponseError
+          ? t('dashboard.priceRefreshUnexpectedResponse')
+          : getApiErrorMessage(error, t('dashboard.priceRefreshRequestFailed'))
+
+      setPriceRefreshFeedback({
+        tone: 'error',
+        message,
+      })
+    },
+  })
 
   const summaryQuery = useQuery({
     queryKey: queryKeys.portfolio.summary(currentUserId, displayCurrencyKey),
@@ -270,6 +357,9 @@ export default function Dashboard() {
         summary={summary}
         displayCurrency={displayCurrency}
         fxRateQuery={fxRateQuery}
+        isRefreshingPrices={priceRefreshMutation.isPending}
+        onRefreshPrices={() => priceRefreshMutation.mutate()}
+        priceRefreshFeedback={priceRefreshFeedback}
       />
 
       {overviewErrorMessage ? (
