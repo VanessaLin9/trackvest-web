@@ -5,6 +5,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { setCurrentUserId } from '../app/current-user'
 import { AuthProvider } from '../app/auth-context'
 import { I18nProvider } from '../i18n'
+import { PriceRefreshResponseError } from '../lib/market-price.service'
 import Dashboard from './Dashboard'
 import { usePreferencesStore } from '../store/preferences'
 
@@ -15,6 +16,7 @@ const {
   getRebalance,
   getHoldingTrend,
   getTodayRate,
+  refreshPrices,
 } = vi.hoisted(() => ({
   getSummary: vi.fn(),
   getHoldings: vi.fn(),
@@ -22,6 +24,7 @@ const {
   getRebalance: vi.fn(),
   getHoldingTrend: vi.fn(),
   getTodayRate: vi.fn(),
+  refreshPrices: vi.fn(),
 }))
 
 vi.mock('../lib/portfolio.service', () => ({
@@ -39,6 +42,19 @@ vi.mock('../lib/fx.service', () => ({
     getTodayRate,
   },
 }))
+
+vi.mock('../lib/market-price.service', async () => {
+  const actual = await vi.importActual<typeof import('../lib/market-price.service')>(
+    '../lib/market-price.service',
+  )
+
+  return {
+    ...actual,
+    marketPriceService: {
+      refreshPrices,
+    },
+  }
+})
 
 vi.mock('../components/dashboard/PortfolioCharts', () => ({
   AllocationChartCard: ({
@@ -450,6 +466,248 @@ describe('Dashboard smoke tests', () => {
       expect(screen.getByText('25,150 TWD')).toBeTruthy()
       expect(screen.getAllByText('2330').length).toBeGreaterThan(0)
       expect(screen.getAllByText('0050').length).toBeGreaterThan(0)
+    })
+  })
+
+  it('refreshes prices once, disables the action while pending, and refetches portfolio data', async () => {
+    const refreshResult = {
+      status: 'success' as const,
+      markets: [
+        {
+          market: 'tw' as const,
+          status: 'success' as const,
+          startDate: '2026-08-06',
+          endDate: '2026-08-19',
+          assetsProcessed: 41,
+          rowsUpserted: 410,
+        },
+        {
+          market: 'us' as const,
+          status: 'success' as const,
+          startDate: '2026-08-06',
+          endDate: '2026-08-19',
+          assetsProcessed: 3,
+          rowsUpserted: 27,
+        },
+      ],
+    }
+    let resolveRefresh: (value: typeof refreshResult) => void = () => undefined
+    refreshPrices.mockImplementationOnce(
+      () => new Promise((resolve) => {
+        resolveRefresh = resolve
+      }),
+    )
+
+    renderPage()
+
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: 'Refresh prices' })).toBeTruthy()
+    })
+    const initialSummaryCalls = getSummary.mock.calls.length
+    const refreshButton = screen.getByRole('button', { name: 'Refresh prices' })
+
+    fireEvent.click(refreshButton)
+
+    await waitFor(() => {
+      expect(refreshButton).toBeDisabled()
+      expect(screen.getByRole('button', { name: 'Refreshing prices...' })).toBeTruthy()
+    })
+    fireEvent.click(refreshButton)
+    expect(refreshPrices).toHaveBeenCalledTimes(1)
+
+    resolveRefresh(refreshResult)
+
+    await waitFor(() => {
+      expect(screen.getByRole('status')).toHaveTextContent(
+        'TW and US prices were refreshed successfully.',
+      )
+      expect(getSummary.mock.calls.length).toBeGreaterThan(initialSummaryCalls)
+    })
+  })
+
+  it('treats a zero-row success as successful and refetches portfolio data', async () => {
+    refreshPrices.mockResolvedValueOnce({
+      status: 'success',
+      markets: [
+        {
+          market: 'tw',
+          status: 'success',
+          startDate: '2026-08-06',
+          endDate: '2026-08-19',
+          assetsProcessed: 0,
+          rowsUpserted: 0,
+        },
+        {
+          market: 'us',
+          status: 'success',
+          startDate: '2026-08-06',
+          endDate: '2026-08-19',
+          assetsProcessed: 0,
+          rowsUpserted: 0,
+        },
+      ],
+    })
+
+    renderPage()
+
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: 'Refresh prices' })).toBeTruthy()
+    })
+    const initialSummaryCalls = getSummary.mock.calls.length
+
+    fireEvent.click(screen.getByRole('button', { name: 'Refresh prices' }))
+
+    await waitFor(() => {
+      expect(screen.getByRole('status')).toHaveTextContent(
+        'TW and US prices were refreshed successfully.',
+      )
+      expect(getSummary.mock.calls.length).toBeGreaterThan(initialSummaryCalls)
+    })
+  })
+
+  it('names the failed market on partial success and still refetches portfolio data', async () => {
+    refreshPrices.mockResolvedValueOnce({
+      status: 'partial_success',
+      markets: [
+        {
+          market: 'tw',
+          status: 'success',
+          startDate: '2026-08-06',
+          endDate: '2026-08-19',
+          assetsProcessed: 41,
+          rowsUpserted: 410,
+        },
+        {
+          market: 'us',
+          status: 'failed',
+          errorCode: 'PRICE_REFRESH_FAILED',
+          message: 'US provider unavailable',
+        },
+      ],
+    })
+
+    renderPage()
+
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: 'Refresh prices' })).toBeTruthy()
+    })
+    const initialSummaryCalls = getSummary.mock.calls.length
+
+    fireEvent.click(screen.getByRole('button', { name: 'Refresh prices' }))
+
+    await waitFor(() => {
+      expect(screen.getByRole('status')).toHaveTextContent(
+        'Prices were partially refreshed. US market failed: US provider unavailable',
+      )
+      expect(getSummary.mock.calls.length).toBeGreaterThan(initialSummaryCalls)
+    })
+  })
+
+  it('shows domain failure without refetching portfolio data', async () => {
+    refreshPrices.mockResolvedValueOnce({
+      status: 'failed',
+      markets: [
+        {
+          market: 'tw',
+          status: 'failed',
+          errorCode: 'PRICE_REFRESH_FAILED',
+          message: 'TW provider unavailable',
+        },
+        {
+          market: 'us',
+          status: 'failed',
+          errorCode: 'PRICE_REFRESH_FAILED',
+          message: 'US provider unavailable',
+        },
+      ],
+    })
+
+    renderPage()
+
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: 'Refresh prices' })).toBeTruthy()
+    })
+    const initialSummaryCalls = getSummary.mock.calls.length
+
+    fireEvent.click(screen.getByRole('button', { name: 'Refresh prices' }))
+
+    await waitFor(() => {
+      expect(screen.getByRole('alert')).toHaveTextContent(
+        'Price refresh failed. No portfolio data was updated. Taiwan market: TW provider unavailable; US market: US provider unavailable',
+      )
+      expect(getSummary.mock.calls.length).toBe(initialSummaryCalls)
+    })
+  })
+
+  it('uses localized fallback for transport failures without refetching', async () => {
+    refreshPrices.mockRejectedValueOnce(new Error('network down'))
+
+    renderPage()
+
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: 'Refresh prices' })).toBeTruthy()
+    })
+    const initialSummaryCalls = getSummary.mock.calls.length
+
+    fireEvent.click(screen.getByRole('button', { name: 'Refresh prices' }))
+
+    await waitFor(() => {
+      expect(screen.getByRole('alert')).toHaveTextContent(
+        'Unable to refresh prices right now.',
+      )
+      expect(screen.queryByText('network down')).toBeNull()
+      expect(getSummary.mock.calls.length).toBe(initialSummaryCalls)
+    })
+  })
+
+  it('keeps meaningful API response messages for request failures', async () => {
+    refreshPrices.mockRejectedValueOnce(
+      Object.assign(new Error('Request failed with status code 429'), {
+        response: {
+          data: {
+            message: ['Price refresh rate limit exceeded'],
+          },
+        },
+      }),
+    )
+
+    renderPage()
+
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: 'Refresh prices' })).toBeTruthy()
+    })
+    const initialSummaryCalls = getSummary.mock.calls.length
+
+    fireEvent.click(screen.getByRole('button', { name: 'Refresh prices' }))
+
+    await waitFor(() => {
+      expect(screen.getByRole('alert')).toHaveTextContent(
+        'Price refresh rate limit exceeded',
+      )
+      expect(
+        screen.queryByText('Request failed with status code 429'),
+      ).toBeNull()
+      expect(getSummary.mock.calls.length).toBe(initialSummaryCalls)
+    })
+  })
+
+  it('uses localized unexpected-response feedback for malformed responses', async () => {
+    refreshPrices.mockRejectedValueOnce(new PriceRefreshResponseError())
+
+    renderPage()
+
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: 'Refresh prices' })).toBeTruthy()
+    })
+    const initialSummaryCalls = getSummary.mock.calls.length
+
+    fireEvent.click(screen.getByRole('button', { name: 'Refresh prices' }))
+
+    await waitFor(() => {
+      expect(screen.getByRole('alert')).toHaveTextContent(
+        'Price refresh returned an unexpected response.',
+      )
+      expect(getSummary.mock.calls.length).toBe(initialSummaryCalls)
     })
   })
 

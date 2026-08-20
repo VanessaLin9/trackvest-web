@@ -12,11 +12,20 @@ import {
 import type { PortfolioSummary } from '../../lib/portfolio.service'
 import { usePreferencesStore } from '../../store/preferences'
 import { SegmentedControl } from '../ui/SegmentedControl'
+import { Button } from '../ui/Button'
+
+export type DashboardPriceRefreshFeedback = {
+  tone: 'success' | 'warning' | 'error'
+  message: string
+}
 
 interface DashboardHeroProps {
   summary: PortfolioSummary | undefined
   displayCurrency: string | null
   fxRateQuery: UseQueryResult<FxCurrentRate, Error>
+  isRefreshingPrices: boolean
+  onRefreshPrices: () => void
+  priceRefreshFeedback: DashboardPriceRefreshFeedback | null
 }
 
 /**
@@ -33,6 +42,9 @@ export function DashboardHero({
   summary,
   displayCurrency,
   fxRateQuery,
+  isRefreshingPrices,
+  onRefreshPrices,
+  priceRefreshFeedback,
 }: DashboardHeroProps) {
   const { t, locale } = useI18n()
   const {
@@ -111,6 +123,36 @@ export function DashboardHero({
                   })
                 : t('dashboard.snapshotLiveNotice')}
             </p>
+            <div className="mt-4 space-y-3">
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={onRefreshPrices}
+                disabled={isRefreshingPrices}
+                aria-busy={isRefreshingPrices}
+              >
+                {isRefreshingPrices
+                  ? t('dashboard.priceRefreshRefreshing')
+                  : t('dashboard.priceRefreshAction')}
+              </Button>
+              {priceRefreshFeedback ? (
+                <p
+                  role={
+                    priceRefreshFeedback.tone === 'error' ? 'alert' : 'status'
+                  }
+                  aria-live="polite"
+                  className={
+                    priceRefreshFeedback.tone === 'success'
+                      ? 'text-sm text-emerald-200'
+                      : priceRefreshFeedback.tone === 'warning'
+                        ? 'text-sm text-amber-200'
+                        : 'text-sm text-red-200'
+                  }
+                >
+                  {priceRefreshFeedback.message}
+                </p>
+              ) : null}
+            </div>
           </div>
         </div>
       </div>

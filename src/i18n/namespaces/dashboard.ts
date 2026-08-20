@@ -10,6 +10,18 @@ export const dashboard = {
     snapshotAsOf: 'Updated {{date}}',
     snapshotLiveNotice:
       'Using the latest portfolio snapshot available to your current accounts.',
+    priceRefreshAction: 'Refresh prices',
+    priceRefreshRefreshing: 'Refreshing prices...',
+    priceRefreshSuccess: 'TW and US prices were refreshed successfully.',
+    priceRefreshPartialSuccess:
+      'Prices were partially refreshed. {{market}} failed: {{message}}',
+    priceRefreshFailed:
+      'Price refresh failed. No portfolio data was updated. {{details}}',
+    priceRefreshRequestFailed: 'Unable to refresh prices right now.',
+    priceRefreshUnexpectedResponse:
+      'Price refresh returned an unexpected response.',
+    priceRefreshMarketTw: 'Taiwan market',
+    priceRefreshMarketUs: 'US market',
     mockDataNotice:
       'This screen is using a mocked portfolio snapshot first so the UI and chart structure can settle before the overview APIs land.',
     scopeEyebrow: 'Planning note',
@@ -163,6 +175,17 @@ export const dashboard = {
     snapshotLabel: '目前快照',
     snapshotAsOf: '更新時間 {{date}}',
     snapshotLiveNotice: '目前顯示的是你現有帳戶可取得的最新投資快照。',
+    priceRefreshAction: '更新投資價格',
+    priceRefreshRefreshing: '正在更新投資價格...',
+    priceRefreshSuccess: '台股與美股價格已成功更新。',
+    priceRefreshPartialSuccess:
+      '投資價格已部分更新，{{market}} 更新失敗：{{message}}',
+    priceRefreshFailed:
+      '投資價格更新失敗，投資組合資料沒有變更。{{details}}',
+    priceRefreshRequestFailed: '目前無法更新投資價格。',
+    priceRefreshUnexpectedResponse: '價格更新服務回傳了非預期結果。',
+    priceRefreshMarketTw: '台股市場',
+    priceRefreshMarketUs: '美股市場',
     mockDataNotice:
       '目前先用 mock portfolio snapshot 切版，等首頁 overview API 定案後，再把這些卡片與圖表接成真資料。',
     scopeEyebrow: '規劃方向',
