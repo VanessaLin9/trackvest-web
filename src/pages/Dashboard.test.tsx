@@ -639,7 +639,7 @@ describe('Dashboard smoke tests', () => {
     })
   })
 
-  it('uses shared error handling for request failures without refetching', async () => {
+  it('uses localized fallback for transport failures without refetching', async () => {
     refreshPrices.mockRejectedValueOnce(new Error('network down'))
 
     renderPage()
@@ -652,7 +652,41 @@ describe('Dashboard smoke tests', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Refresh prices' }))
 
     await waitFor(() => {
-      expect(screen.getByRole('alert')).toHaveTextContent('network down')
+      expect(screen.getByRole('alert')).toHaveTextContent(
+        'Unable to refresh prices right now.',
+      )
+      expect(screen.queryByText('network down')).toBeNull()
+      expect(getSummary.mock.calls.length).toBe(initialSummaryCalls)
+    })
+  })
+
+  it('keeps meaningful API response messages for request failures', async () => {
+    refreshPrices.mockRejectedValueOnce(
+      Object.assign(new Error('Request failed with status code 429'), {
+        response: {
+          data: {
+            message: ['Price refresh rate limit exceeded'],
+          },
+        },
+      }),
+    )
+
+    renderPage()
+
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: 'Refresh prices' })).toBeTruthy()
+    })
+    const initialSummaryCalls = getSummary.mock.calls.length
+
+    fireEvent.click(screen.getByRole('button', { name: 'Refresh prices' }))
+
+    await waitFor(() => {
+      expect(screen.getByRole('alert')).toHaveTextContent(
+        'Price refresh rate limit exceeded',
+      )
+      expect(
+        screen.queryByText('Request failed with status code 429'),
+      ).toBeNull()
       expect(getSummary.mock.calls.length).toBe(initialSummaryCalls)
     })
   })

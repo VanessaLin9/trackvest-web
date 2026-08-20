@@ -105,6 +105,23 @@ function getPriceRefreshFeedback(
   }
 }
 
+function hasApiResponseMessage(error: unknown): boolean {
+  if (!error || typeof error !== 'object' || !('response' in error)) {
+    return false
+  }
+
+  const message = (error as { response?: { data?: { message?: unknown } } })
+    .response?.data?.message
+
+  return (
+    (typeof message === 'string' && message.length > 0) ||
+    (Array.isArray(message) &&
+      message.some(
+        (entry) => typeof entry === 'string' && entry.length > 0,
+      ))
+  )
+}
+
 export default function Dashboard() {
   const currentUserId = useAuthenticatedUser().id
   const { t, locale } = useI18n()
@@ -137,10 +154,13 @@ export default function Dashboard() {
       setPriceRefreshFeedback(getPriceRefreshFeedback(result, t))
     },
     onError: (error: unknown) => {
+      const requestFailureFallback = t('dashboard.priceRefreshRequestFailed')
       const message =
         error instanceof PriceRefreshResponseError
           ? t('dashboard.priceRefreshUnexpectedResponse')
-          : getApiErrorMessage(error, t('dashboard.priceRefreshRequestFailed'))
+          : hasApiResponseMessage(error)
+            ? getApiErrorMessage(error, requestFailureFallback)
+            : requestFailureFallback
 
       setPriceRefreshFeedback({
         tone: 'error',
