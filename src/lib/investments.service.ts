@@ -133,7 +133,12 @@ export const investmentsService = {
   },
 
   async getTransactions(
-    params: { accountId?: string; assetId?: string; take?: number } = {},
+    params: {
+      accountId?: string
+      assetId?: string
+      skip?: number
+      take?: number
+    } = {},
   ): Promise<TransactionsResponse> {
     const response = await api.get<TransactionsResponse>('/transactions', { params })
     return response.data

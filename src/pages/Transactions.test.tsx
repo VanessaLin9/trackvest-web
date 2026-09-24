@@ -1193,4 +1193,42 @@ describe('Transactions page trade flows', () => {
     expect(await screen.findByText('missing broker order number')).toBeTruthy()
     expect(screen.queryByRole('button', { name: 'Map asset' })).toBeNull()
   })
+
+  it('requests the next transaction page with skip', async () => {
+    getTransactions.mockResolvedValue({
+      total: 25,
+      skip: 0,
+      take: 20,
+      items: [
+        {
+          id: 'tx-page-1',
+          accountId: 'broker-1',
+          assetId: null,
+          type: 'deposit',
+          amount: 1000,
+          tradeTime: '2026-03-31T09:30:00.000Z',
+          note: null,
+          isDeleted: false,
+          account: {
+            id: 'broker-1',
+            name: 'Broker TWD',
+            currency: 'TWD',
+            userId: 'user-1',
+          },
+        },
+      ],
+    })
+
+    renderPage()
+
+    expect(await screen.findByText('Page 1 / 2')).toBeTruthy()
+    expect(screen.getByText('1-1 of 25')).toBeTruthy()
+    expect(getTransactions).toHaveBeenCalledWith({ skip: 0, take: 20 })
+
+    fireEvent.click(screen.getByRole('button', { name: 'Next' }))
+
+    await waitFor(() => {
+      expect(getTransactions).toHaveBeenCalledWith({ skip: 20, take: 20 })
+    })
+  })
 })

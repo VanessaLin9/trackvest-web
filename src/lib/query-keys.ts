@@ -60,10 +60,14 @@ export const queryKeys = {
   },
 
   transactions: {
-    /** Scope root — use to invalidate every transactions list, regardless of filter. */
+    /** Scope root — use to invalidate every transactions list, regardless of filter or page. */
     all: (userId: string) => ['transactions', userId] as const,
-    list: (userId: string, accountFilter: string) =>
-      ['transactions', userId, accountFilter] as const,
+    /**
+     * `skip` is part of the key so page 2 does not reuse page 1.
+     * 列表分頁走 API 的 skip/take，不再把第一頁 20 筆當成全部歷史（PR #26）。
+     */
+    list: (userId: string, accountFilter: string, skip: number) =>
+      ['transactions', userId, accountFilter, skip] as const,
   },
 
   cashbook: {

@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Link } from 'react-router-dom'
 import {
   IMPORT_ERROR_CODES,
@@ -33,6 +33,7 @@ type InvestmentMode = (typeof INVESTMENT_MODE_OPTIONS)[number]
 const ASSET_SEARCH_DEBOUNCE_MS = 300
 const ASSET_SEARCH_PAGE_SIZE = 10
 const ASSET_SEARCH_MAX_LENGTH = 60
+const TRANSACTION_PAGE_SIZE = 20
 
 type SelectedInvestmentAsset = {
   id: string
@@ -174,6 +175,7 @@ export default function Transactions() {
   const [assetSearchInput, setAssetSearchInput] = useState('')
   const [debouncedAssetQuery, setDebouncedAssetQuery] = useState('')
   const [listAccountId, setListAccountId] = useState('All')
+  const [listSkip, setListSkip] = useState(0)
   const [amount, setAmount] = useState('')
   const [quantity, setQuantity] = useState('')
   const [price, setPrice] = useState('')
@@ -197,16 +199,46 @@ export default function Transactions() {
   const [successMessage, setSuccessMessage] = useState<string | null>(null)
 
   const transactionsQuery = useQuery({
-    queryKey: queryKeys.transactions.list(currentUserId, listAccountId),
+    queryKey: queryKeys.transactions.list(currentUserId, listAccountId, listSkip),
     queryFn: () =>
       investmentsService.getTransactions({
         accountId: listAccountId !== 'All' ? listAccountId : undefined,
-        take: 20,
+        skip: listSkip,
+        take: TRANSACTION_PAGE_SIZE,
       }),
     enabled: Boolean(currentUserId),
+    placeholderData: keepPreviousData,
   })
   const transactions = transactionsQuery.data?.items ?? []
+  const transactionTotal = transactionsQuery.data?.total ?? 0
+  const transactionPageCount = Math.max(
+    1,
+    Math.ceil(transactionTotal / TRANSACTION_PAGE_SIZE),
+  )
+  const transactionPage = Math.floor(listSkip / TRANSACTION_PAGE_SIZE) + 1
+  const transactionRangeFrom = transactionTotal === 0 ? 0 : listSkip + 1
+  const transactionRangeTo = Math.min(listSkip + transactions.length, transactionTotal)
   const loadingTransactions = transactionsQuery.isLoading
+
+  useEffect(() => {
+    if (!transactionsQuery.data || transactionsQuery.isPlaceholderData) {
+      return
+    }
+
+    const total = transactionsQuery.data.total
+    if (total === 0) {
+      if (listSkip !== 0) {
+        setListSkip(0)
+      }
+      return
+    }
+
+    const maxSkip =
+      Math.floor((total - 1) / TRANSACTION_PAGE_SIZE) * TRANSACTION_PAGE_SIZE
+    if (listSkip > maxSkip) {
+      setListSkip(maxSkip)
+    }
+  }, [listSkip, transactionsQuery.data, transactionsQuery.isPlaceholderData])
 
   // Surface query load failures next to the existing form/mutation error banner.
   // Keeping load errors derived (vs. copied into `error` state) means retries
@@ -1423,7 +1455,10 @@ export default function Transactions() {
             </label>
             <select
               value={listAccountId}
-              onChange={(event) => setListAccountId(event.target.value)}
+              onChange={(event) => {
+                setListAccountId(event.target.value)
+                setListSkip(0)
+              }}
               className="rounded border border-gray-300 px-3 py-2 text-sm"
             >
               <option value="All">{t('transactions.allAccounts')}</option>
@@ -1567,6 +1602,48 @@ export default function Transactions() {
                 ))}
               </tbody>
             </table>
+            {transactionTotal > 0 && (
+              <div className="mt-4 flex flex-wrap items-center justify-between gap-3 border-t border-gray-200 pt-4">
+                <div className="flex items-center gap-2 text-sm text-gray-600">
+                  <span>
+                    {t('transactions.listPageStatus', {
+                      current: transactionPage,
+                      totalPages: transactionPageCount,
+                    })}
+                  </span>
+                  <span className="text-gray-400">·</span>
+                  <span>
+                    {t('transactions.listPageRange', {
+                      from: transactionRangeFrom,
+                      to: transactionRangeTo,
+                      total: transactionTotal,
+                    })}
+                  </span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Button
+                    variant="secondary"
+                    size="sm"
+                    type="button"
+                    onClick={() =>
+                      setListSkip(Math.max(0, listSkip - TRANSACTION_PAGE_SIZE))
+                    }
+                    disabled={transactionPage === 1}
+                  >
+                    {t('transactions.previousPage')}
+                  </Button>
+                  <Button
+                    variant="secondary"
+                    size="sm"
+                    type="button"
+                    onClick={() => setListSkip(listSkip + TRANSACTION_PAGE_SIZE)}
+                    disabled={transactionPage === transactionPageCount}
+                  >
+                    {t('transactions.nextPage')}
+                  </Button>
+                </div>
+              </div>
+            )}
           </div>
         )}
       </Card>
