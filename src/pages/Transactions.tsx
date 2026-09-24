@@ -249,6 +249,8 @@ export default function Transactions() {
   const requiresAsset = mode === 'buy' || mode === 'sell' || mode === 'dividend'
   const requiresTradeFields = mode === 'buy' || mode === 'sell'
   const catalogEmpty = catalogProbeQuery.data?.total === 0
+  // 探測只為了分辨「目錄是空的」和「使用者還沒搜尋」。total 含現金資產，
+  // 所以只有現金時不會出現建立提示（PR #26）。
   const isEditing = Boolean(selectedTransactionId)
 
   const computedAmount = useMemo(() => {
@@ -319,11 +321,13 @@ export default function Transactions() {
         take: ASSET_SEARCH_PAGE_SIZE,
       }),
     enabled:
+      // 空字串不送 q。GET /assets 要求 q 長度至少 1，沒關鍵字時不該打搜尋（PR #26）。
       Boolean(currentUserId) && requiresAsset && debouncedAssetQuery.length > 0,
   })
 
   const tradableSearchResults = useMemo(
     () =>
+      // 投資頁不把現金資產當成交標的。搜尋 API 不能一次排除多種 type，所以在這裡濾掉（PR #26）。
       (assetSearchQuery.data?.items ?? []).filter((asset) => asset.type !== 'cash'),
     [assetSearchQuery.data],
   )
@@ -382,6 +386,7 @@ export default function Transactions() {
     setMode(transaction.type)
     setAccountId(transaction.accountId)
     setAssetId(transaction.assetId ?? '')
+    // 已選標的跟搜尋結果分開。編輯時用交易自己的 asset，避免它不在目前搜尋頁就消失（PR #26）。
     setSelectedAsset(
       transaction.asset
         ? {

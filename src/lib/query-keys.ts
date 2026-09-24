@@ -33,6 +33,7 @@ export const queryKeys = {
      * One-row probe so the investment form can tell an empty catalog from
      * “the user has not searched yet”. `total` is the signal; items are not
      * used as a dropdown.
+     * 空目錄看 `total`，不把這一筆 item 當下拉選項（PR #26）。
      */
     catalogProbe: (userId: string) => ['assets', userId, 'catalog-probe'] as const,
     /**
