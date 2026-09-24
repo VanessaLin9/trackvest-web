@@ -1474,7 +1474,11 @@ export default function Transactions() {
         {loadingTransactions ? (
           <p className="text-sm text-gray-600">{t('transactions.loadingTransactions')}</p>
         ) : transactions.length === 0 ? (
-          <p className="text-sm text-gray-600">{t('transactions.noTransactions')}</p>
+          // 初次 GET /transactions 失敗時 data 是 undefined，不能當成空帳本。
+          // 錯誤橫幅已在上面；這裡若再顯示「目前還沒有投資交易」，失敗會看起來像沒有交易（PR #26）。
+          transactionsQuery.isError ? null : (
+            <p className="text-sm text-gray-600">{t('transactions.noTransactions')}</p>
+          )
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full border-collapse text-sm">

@@ -1194,6 +1194,15 @@ describe('Transactions page trade flows', () => {
     expect(screen.queryByRole('button', { name: 'Map asset' })).toBeNull()
   })
 
+  it('hides the empty transaction state when the list request fails', async () => {
+    getTransactions.mockRejectedValue(buildApiError('transactions unavailable'))
+
+    renderPage()
+
+    expect(await screen.findByText(/transactions unavailable/)).toBeTruthy()
+    expect(screen.queryByText('No investment transactions yet.')).toBeNull()
+  })
+
   it('requests the next transaction page with skip', async () => {
     getTransactions.mockResolvedValue({
       total: 25,
