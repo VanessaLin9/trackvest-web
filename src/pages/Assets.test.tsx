@@ -4,6 +4,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { AuthProvider } from '../app/auth-context'
 import { I18nProvider } from '../i18n'
+import { canWriteAssetCatalog } from '../lib/catalog-access'
 import Assets from './Assets'
 import type { Asset, AssetListResponse } from '../lib/assets.service'
 
@@ -78,7 +79,7 @@ describe('Assets page edit mode', () => {
     vi.useRealTimers()
   })
 
-  function renderPage() {
+  function renderPage(role: 'USER' | 'ADMIN' = 'ADMIN') {
     const queryClient = new QueryClient({
       defaultOptions: {
         queries: { retry: false },
@@ -89,7 +90,7 @@ describe('Assets page edit mode', () => {
       <QueryClientProvider client={queryClient}>
         <I18nProvider>
           <AuthProvider
-            initialUser={{ id: 'user-1', email: 'test@example.com', role: 'USER' }}
+            initialUser={{ id: 'user-1', email: 'test@example.com', role }}
           >
             <MemoryRouter>
               <Assets />
@@ -99,6 +100,22 @@ describe('Assets page edit mode', () => {
       </QueryClientProvider>,
     )
   }
+
+  it('treats admin role casing as catalog write access', () => {
+    expect(canWriteAssetCatalog('admin')).toBe(true)
+    expect(canWriteAssetCatalog('ADMIN')).toBe(true)
+    expect(canWriteAssetCatalog('user')).toBe(false)
+    expect(canWriteAssetCatalog('USER')).toBe(false)
+  })
+
+  it('hides catalog writes from a regular user', async () => {
+    renderPage('USER')
+
+    expect(await screen.findByText('Apple Inc.')).toBeTruthy()
+    expect(screen.getByText('Catalog is read-only')).toBeTruthy()
+    expect(screen.queryByText('Create asset')).toBeNull()
+    expect(screen.queryByRole('button', { name: 'Edit' })).toBeNull()
+  })
 
   it('updates the selected asset and keeps it selected after refresh', async () => {
     getAssets
