@@ -30,11 +30,17 @@ export const queryKeys = {
      */
     all: (userId: string) => ['assets', userId] as const,
     /**
-     * Flat list of assets used for dropdowns/lookups (e.g. Transactions form).
-     * The API returns a capped page under the hood, but consumers treat it
-     * as a single pool.
+     * One-row probe so the investment form can tell an empty catalog from
+     * “the user has not searched yet”. `total` is the signal; items are not
+     * used as a dropdown.
      */
-    lookup: (userId: string) => ['assets', userId, 'lookup'] as const,
+    catalogProbe: (userId: string) => ['assets', userId, 'catalog-probe'] as const,
+    /**
+     * Server-side symbol/name search for the investment form. The query
+     * string is part of the key so each debounced term gets its own cache entry.
+     */
+    search: (userId: string, query: string) =>
+      ['assets', userId, 'search', query] as const,
     /**
      * Paged catalog with server-side filters used by the Assets management
      * page. The `params` object participates in the key so changing any

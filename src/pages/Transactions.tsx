@@ -12,6 +12,8 @@ import {
 } from '../lib/investments.service'
 import { useAuthenticatedUser } from '../app/use-auth'
 import { SUPPORTED_BROKER } from '../lib/accounts.service'
+import { assetsService, type Asset } from '../lib/assets.service'
+import { sanitizeStrictTextInput } from '../lib/input-safety'
 import { useI18n } from '../i18n'
 import { ImportAliasRepairDialog } from '../components/ImportAliasRepairDialog'
 import { Button } from '../components/ui/Button'
@@ -28,6 +30,15 @@ import { queryKeys } from '../lib/query-keys'
 
 const INVESTMENT_MODE_OPTIONS = ['deposit', 'buy', 'sell', 'dividend'] as const
 type InvestmentMode = (typeof INVESTMENT_MODE_OPTIONS)[number]
+const ASSET_SEARCH_DEBOUNCE_MS = 300
+const ASSET_SEARCH_PAGE_SIZE = 10
+const ASSET_SEARCH_MAX_LENGTH = 60
+
+type SelectedInvestmentAsset = {
+  id: string
+  symbol: string
+  name: string
+}
 
 function isPositiveNumber(value: string) {
   const numeric = Number(value)
@@ -144,20 +155,24 @@ export default function Transactions() {
     queryFn: () => investmentsService.getAccounts(),
     enabled: Boolean(currentUserId),
   })
-  const assetsQuery = useQuery({
-    queryKey: queryKeys.assets.lookup(currentUserId),
-    queryFn: () => investmentsService.getAssets(),
+  const catalogProbeQuery = useQuery({
+    queryKey: queryKeys.assets.catalogProbe(currentUserId),
+    queryFn: () => assetsService.getAssets({ page: 1, take: 1 }),
     enabled: Boolean(currentUserId),
   })
 
   const accounts = useMemo(() => accountsQuery.data ?? [], [accountsQuery.data])
-  const assets = useMemo(() => assetsQuery.data ?? [], [assetsQuery.data])
-  const loadingMeta = accountsQuery.isLoading || assetsQuery.isLoading
+  const loadingMeta = accountsQuery.isLoading || catalogProbeQuery.isLoading
 
   const [mode, setMode] = useState<InvestmentMode>('deposit')
   const [selectedTransactionId, setSelectedTransactionId] = useState<string | null>(null)
   const [accountId, setAccountId] = useState('')
   const [assetId, setAssetId] = useState('')
+  const [selectedAsset, setSelectedAsset] = useState<SelectedInvestmentAsset | null>(
+    null,
+  )
+  const [assetSearchInput, setAssetSearchInput] = useState('')
+  const [debouncedAssetQuery, setDebouncedAssetQuery] = useState('')
   const [listAccountId, setListAccountId] = useState('All')
   const [amount, setAmount] = useState('')
   const [quantity, setQuantity] = useState('')
@@ -197,7 +212,7 @@ export default function Transactions() {
   // Keeping load errors derived (vs. copied into `error` state) means retries
   // automatically clear the banner once the query succeeds.
   const loadErrorMessage = useMemo(() => {
-    const metaError = accountsQuery.error ?? assetsQuery.error
+    const metaError = accountsQuery.error ?? catalogProbeQuery.error
     if (metaError) {
       return getApiErrorMessage(metaError, t('transactions.failedToLoadData'))
     }
@@ -208,7 +223,7 @@ export default function Transactions() {
       )
     }
     return null
-  }, [accountsQuery.error, assetsQuery.error, transactionsQuery.error, t])
+  }, [accountsQuery.error, catalogProbeQuery.error, transactionsQuery.error, t])
   const displayedError = error ?? loadErrorMessage
 
   const availableAccounts = useMemo(
@@ -222,10 +237,6 @@ export default function Transactions() {
     [accountId, accounts],
   )
 
-  const availableAssets = useMemo(
-    () => assets.filter((asset) => asset.type !== 'cash'),
-    [assets],
-  )
   const importAccounts = useMemo(
     () =>
       accounts.filter(
@@ -235,13 +246,9 @@ export default function Transactions() {
     [accounts],
   )
 
-  const selectedAsset = useMemo(
-    () => assets.find((asset) => asset.id === assetId),
-    [assetId, assets],
-  )
   const requiresAsset = mode === 'buy' || mode === 'sell' || mode === 'dividend'
   const requiresTradeFields = mode === 'buy' || mode === 'sell'
-  const hasTradableAssets = availableAssets.length > 0
+  const catalogEmpty = catalogProbeQuery.data?.total === 0
   const isEditing = Boolean(selectedTransactionId)
 
   const computedAmount = useMemo(() => {
@@ -292,14 +299,50 @@ export default function Transactions() {
   }, [importAccountId, importAccounts, selectedAccount])
 
   useEffect(() => {
-    if (!requiresAsset) {
-      return
-    }
+    const timeoutId = window.setTimeout(() => {
+      setDebouncedAssetQuery(
+        sanitizeStrictTextInput(assetSearchInput, {
+          maxLength: ASSET_SEARCH_MAX_LENGTH,
+        }),
+      )
+    }, ASSET_SEARCH_DEBOUNCE_MS)
 
-    if (!availableAssets.some((asset) => asset.id === assetId)) {
-      setAssetId(availableAssets[0]?.id ?? '')
-    }
-  }, [assetId, availableAssets, requiresAsset])
+    return () => window.clearTimeout(timeoutId)
+  }, [assetSearchInput])
+
+  const assetSearchQuery = useQuery({
+    queryKey: queryKeys.assets.search(currentUserId, debouncedAssetQuery),
+    queryFn: () =>
+      assetsService.getAssets({
+        q: debouncedAssetQuery,
+        page: 1,
+        take: ASSET_SEARCH_PAGE_SIZE,
+      }),
+    enabled:
+      Boolean(currentUserId) && requiresAsset && debouncedAssetQuery.length > 0,
+  })
+
+  const tradableSearchResults = useMemo(
+    () =>
+      (assetSearchQuery.data?.items ?? []).filter((asset) => asset.type !== 'cash'),
+    [assetSearchQuery.data],
+  )
+
+  const chooseAsset = (asset: Asset) => {
+    setSelectedAsset({
+      id: asset.id,
+      symbol: asset.symbol,
+      name: asset.name,
+    })
+    setAssetId(asset.id)
+    setAssetSearchInput('')
+    setDebouncedAssetQuery('')
+  }
+
+  const clearSelectedAsset = () => {
+    setSelectedAsset(null)
+    setAssetId('')
+  }
 
   useEffect(() => {
     if (mode === 'deposit' || mode === 'dividend') {
@@ -320,6 +363,8 @@ export default function Transactions() {
     setBrokerOrderNo('')
     setTradeTime(getDefaultTradeTimeValue())
     setNote('')
+    setAssetSearchInput('')
+    setDebouncedAssetQuery('')
   }
 
   const startEditingTransaction = (transaction: TransactionListItem) => {
@@ -337,6 +382,17 @@ export default function Transactions() {
     setMode(transaction.type)
     setAccountId(transaction.accountId)
     setAssetId(transaction.assetId ?? '')
+    setSelectedAsset(
+      transaction.asset
+        ? {
+            id: transaction.asset.id,
+            symbol: transaction.asset.symbol,
+            name: transaction.asset.name,
+          }
+        : null,
+    )
+    setAssetSearchInput('')
+    setDebouncedAssetQuery('')
     setAmount(String(Number(transaction.amount)))
     setQuantity(
       transaction.quantity === null || transaction.quantity === undefined
@@ -370,7 +426,7 @@ export default function Transactions() {
       return t('transactions.accountRequired')
     }
 
-    if (requiresAsset && !hasTradableAssets) {
+    if (requiresAsset && catalogEmpty) {
       return t('transactions.noAssetAvailable')
     }
 
@@ -808,28 +864,12 @@ export default function Transactions() {
             {requiresAsset && (
               <div className="space-y-1">
                 <label
-                  htmlFor="investment-asset"
+                  htmlFor="investment-asset-search"
                   className="block text-sm font-medium text-gray-700"
                 >
                   {t('transactions.asset')}
                 </label>
-                <select
-                  id="investment-asset"
-                  value={assetId}
-                  onChange={(event) => setAssetId(event.target.value)}
-                  disabled={!hasTradableAssets}
-                  className="w-full rounded border border-gray-300 px-3 py-2"
-                >
-                  {!hasTradableAssets && (
-                    <option value="">{t('transactions.noAssetOption')}</option>
-                  )}
-                  {availableAssets.map((asset) => (
-                    <option key={asset.id} value={asset.id}>
-                      {asset.symbol} · {asset.name}
-                    </option>
-                  ))}
-                </select>
-                {!hasTradableAssets && (
+                {catalogEmpty ? (
                   <div className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-3 text-sm text-amber-900">
                     {t('transactions.assetMissingHintPrefix')}{' '}
                     <Link
@@ -840,6 +880,64 @@ export default function Transactions() {
                     </Link>{' '}
                     {t('transactions.assetMissingHintAfter')}
                   </div>
+                ) : (
+                  <>
+                    <input
+                      id="investment-asset-search"
+                      type="search"
+                      value={assetSearchInput}
+                      placeholder={t('transactions.assetSearchPlaceholder')}
+                      onChange={(event) => setAssetSearchInput(event.target.value)}
+                      className="w-full rounded border border-gray-300 px-3 py-2"
+                    />
+                    {selectedAsset && (
+                      <div className="flex items-center justify-between gap-2 text-sm text-gray-700">
+                        <span>
+                          {t('transactions.assetSelected', {
+                            symbol: selectedAsset.symbol,
+                            name: selectedAsset.name,
+                          })}
+                        </span>
+                        <button
+                          type="button"
+                          onClick={clearSelectedAsset}
+                          className="text-blue-700 underline"
+                        >
+                          {t('transactions.assetClear')}
+                        </button>
+                      </div>
+                    )}
+                    {debouncedAssetQuery && assetSearchQuery.isError && (
+                      <p className="text-sm text-red-700">
+                        {getApiErrorMessage(
+                          assetSearchQuery.error,
+                          t('transactions.failedToLoadData'),
+                        )}
+                      </p>
+                    )}
+                    {debouncedAssetQuery &&
+                      !assetSearchQuery.isFetching &&
+                      !assetSearchQuery.isError &&
+                      (tradableSearchResults.length > 0 ? (
+                        <ul className="overflow-hidden rounded border border-gray-200">
+                          {tradableSearchResults.map((asset) => (
+                            <li key={asset.id}>
+                              <button
+                                type="button"
+                                onClick={() => chooseAsset(asset)}
+                                className="w-full px-3 py-2 text-left text-sm hover:bg-gray-50"
+                              >
+                                {asset.symbol} · {asset.name}
+                              </button>
+                            </li>
+                          ))}
+                        </ul>
+                      ) : (
+                        <p className="text-sm text-gray-500">
+                          {t('transactions.assetSearchEmpty')}
+                        </p>
+                      ))}
+                  </>
                 )}
               </div>
             )}
@@ -1015,7 +1113,7 @@ export default function Transactions() {
                   disabled={
                     saveTransactionMutation.isPending ||
                     !accountId ||
-                    (requiresAsset && !hasTradableAssets)
+                    (requiresAsset && catalogEmpty)
                   }
                 >
                   {saveTransactionMutation.isPending
