@@ -1,5 +1,4 @@
 import { api } from './api'
-import { getRequiredCurrentUserId } from '../app/current-user'
 
 export const ACCOUNT_TYPE_OPTIONS = ['broker', 'bank', 'cash'] as const
 export const CURRENCY_OPTIONS = ['TWD', 'USD'] as const
@@ -36,23 +35,14 @@ export const accountsService = {
     return response.data
   },
 
+  // 擁有者由 API 的 session 決定。body 不帶 userId（PR #26；授權在 trackvest-api PR #46）。
   async createAccount(payload: SaveAccountPayload): Promise<Account> {
-    const userId = getRequiredCurrentUserId()
-
-    const response = await api.post<Account>('/accounts', {
-      ...payload,
-      userId,
-    })
+    const response = await api.post<Account>('/accounts', payload)
     return response.data
   },
 
   async updateAccount(id: string, payload: SaveAccountPayload): Promise<Account> {
-    const userId = getRequiredCurrentUserId()
-
-    const response = await api.patch<Account>(`/accounts/${id}`, {
-      ...payload,
-      userId,
-    })
+    const response = await api.patch<Account>(`/accounts/${id}`, payload)
     return response.data
   },
 }
