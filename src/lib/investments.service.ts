@@ -1,6 +1,5 @@
 import { api } from './api'
 import type { Account } from './accounts.service'
-import type { Asset, AssetListResponse } from './assets.service'
 
 export type { Asset } from './assets.service'
 
@@ -133,18 +132,13 @@ export const investmentsService = {
     return response.data
   },
 
-  async getAssets(): Promise<Asset[]> {
-    const response = await api.get<AssetListResponse>('/assets', {
-      params: {
-        page: 1,
-        take: 100,
-      },
-    })
-    return response.data.items
-  },
-
   async getTransactions(
-    params: { accountId?: string; assetId?: string; take?: number } = {},
+    params: {
+      accountId?: string
+      assetId?: string
+      skip?: number
+      take?: number
+    } = {},
   ): Promise<TransactionsResponse> {
     const response = await api.get<TransactionsResponse>('/transactions', { params })
     return response.data

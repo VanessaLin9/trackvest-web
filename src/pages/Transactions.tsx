@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Link } from 'react-router-dom'
 import {
   IMPORT_ERROR_CODES,
@@ -12,6 +12,8 @@ import {
 } from '../lib/investments.service'
 import { useAuthenticatedUser } from '../app/use-auth'
 import { SUPPORTED_BROKER } from '../lib/accounts.service'
+import { assetsService, type Asset } from '../lib/assets.service'
+import { sanitizeStrictTextInput } from '../lib/input-safety'
 import { useI18n } from '../i18n'
 import { ImportAliasRepairDialog } from '../components/ImportAliasRepairDialog'
 import { Button } from '../components/ui/Button'
@@ -28,6 +30,16 @@ import { queryKeys } from '../lib/query-keys'
 
 const INVESTMENT_MODE_OPTIONS = ['deposit', 'buy', 'sell', 'dividend'] as const
 type InvestmentMode = (typeof INVESTMENT_MODE_OPTIONS)[number]
+const ASSET_SEARCH_DEBOUNCE_MS = 300
+const ASSET_SEARCH_PAGE_SIZE = 10
+const ASSET_SEARCH_MAX_LENGTH = 60
+const TRANSACTION_PAGE_SIZE = 20
+
+type SelectedInvestmentAsset = {
+  id: string
+  symbol: string
+  name: string
+}
 
 function isPositiveNumber(value: string) {
   const numeric = Number(value)
@@ -144,21 +156,26 @@ export default function Transactions() {
     queryFn: () => investmentsService.getAccounts(),
     enabled: Boolean(currentUserId),
   })
-  const assetsQuery = useQuery({
-    queryKey: queryKeys.assets.lookup(currentUserId),
-    queryFn: () => investmentsService.getAssets(),
+  const catalogProbeQuery = useQuery({
+    queryKey: queryKeys.assets.catalogProbe(currentUserId),
+    queryFn: () => assetsService.getAssets({ page: 1, take: 1 }),
     enabled: Boolean(currentUserId),
   })
 
   const accounts = useMemo(() => accountsQuery.data ?? [], [accountsQuery.data])
-  const assets = useMemo(() => assetsQuery.data ?? [], [assetsQuery.data])
-  const loadingMeta = accountsQuery.isLoading || assetsQuery.isLoading
+  const loadingMeta = accountsQuery.isLoading || catalogProbeQuery.isLoading
 
   const [mode, setMode] = useState<InvestmentMode>('deposit')
   const [selectedTransactionId, setSelectedTransactionId] = useState<string | null>(null)
   const [accountId, setAccountId] = useState('')
   const [assetId, setAssetId] = useState('')
+  const [selectedAsset, setSelectedAsset] = useState<SelectedInvestmentAsset | null>(
+    null,
+  )
+  const [assetSearchInput, setAssetSearchInput] = useState('')
+  const [debouncedAssetQuery, setDebouncedAssetQuery] = useState('')
   const [listAccountId, setListAccountId] = useState('All')
+  const [listSkip, setListSkip] = useState(0)
   const [amount, setAmount] = useState('')
   const [quantity, setQuantity] = useState('')
   const [price, setPrice] = useState('')
@@ -182,22 +199,52 @@ export default function Transactions() {
   const [successMessage, setSuccessMessage] = useState<string | null>(null)
 
   const transactionsQuery = useQuery({
-    queryKey: queryKeys.transactions.list(currentUserId, listAccountId),
+    queryKey: queryKeys.transactions.list(currentUserId, listAccountId, listSkip),
     queryFn: () =>
       investmentsService.getTransactions({
         accountId: listAccountId !== 'All' ? listAccountId : undefined,
-        take: 20,
+        skip: listSkip,
+        take: TRANSACTION_PAGE_SIZE,
       }),
     enabled: Boolean(currentUserId),
+    placeholderData: keepPreviousData,
   })
   const transactions = transactionsQuery.data?.items ?? []
+  const transactionTotal = transactionsQuery.data?.total ?? 0
+  const transactionPageCount = Math.max(
+    1,
+    Math.ceil(transactionTotal / TRANSACTION_PAGE_SIZE),
+  )
+  const transactionPage = Math.floor(listSkip / TRANSACTION_PAGE_SIZE) + 1
+  const transactionRangeFrom = transactionTotal === 0 ? 0 : listSkip + 1
+  const transactionRangeTo = Math.min(listSkip + transactions.length, transactionTotal)
   const loadingTransactions = transactionsQuery.isLoading
+
+  useEffect(() => {
+    if (!transactionsQuery.data || transactionsQuery.isPlaceholderData) {
+      return
+    }
+
+    const total = transactionsQuery.data.total
+    if (total === 0) {
+      if (listSkip !== 0) {
+        setListSkip(0)
+      }
+      return
+    }
+
+    const maxSkip =
+      Math.floor((total - 1) / TRANSACTION_PAGE_SIZE) * TRANSACTION_PAGE_SIZE
+    if (listSkip > maxSkip) {
+      setListSkip(maxSkip)
+    }
+  }, [listSkip, transactionsQuery.data, transactionsQuery.isPlaceholderData])
 
   // Surface query load failures next to the existing form/mutation error banner.
   // Keeping load errors derived (vs. copied into `error` state) means retries
   // automatically clear the banner once the query succeeds.
   const loadErrorMessage = useMemo(() => {
-    const metaError = accountsQuery.error ?? assetsQuery.error
+    const metaError = accountsQuery.error ?? catalogProbeQuery.error
     if (metaError) {
       return getApiErrorMessage(metaError, t('transactions.failedToLoadData'))
     }
@@ -208,7 +255,7 @@ export default function Transactions() {
       )
     }
     return null
-  }, [accountsQuery.error, assetsQuery.error, transactionsQuery.error, t])
+  }, [accountsQuery.error, catalogProbeQuery.error, transactionsQuery.error, t])
   const displayedError = error ?? loadErrorMessage
 
   const availableAccounts = useMemo(
@@ -222,10 +269,6 @@ export default function Transactions() {
     [accountId, accounts],
   )
 
-  const availableAssets = useMemo(
-    () => assets.filter((asset) => asset.type !== 'cash'),
-    [assets],
-  )
   const importAccounts = useMemo(
     () =>
       accounts.filter(
@@ -235,13 +278,11 @@ export default function Transactions() {
     [accounts],
   )
 
-  const selectedAsset = useMemo(
-    () => assets.find((asset) => asset.id === assetId),
-    [assetId, assets],
-  )
   const requiresAsset = mode === 'buy' || mode === 'sell' || mode === 'dividend'
   const requiresTradeFields = mode === 'buy' || mode === 'sell'
-  const hasTradableAssets = availableAssets.length > 0
+  const catalogEmpty = catalogProbeQuery.data?.total === 0
+  // 探測只為了分辨「目錄是空的」和「使用者還沒搜尋」。total 含現金資產，
+  // 所以只有現金時不會出現建立提示（PR #26）。
   const isEditing = Boolean(selectedTransactionId)
 
   const computedAmount = useMemo(() => {
@@ -292,14 +333,52 @@ export default function Transactions() {
   }, [importAccountId, importAccounts, selectedAccount])
 
   useEffect(() => {
-    if (!requiresAsset) {
-      return
-    }
+    const timeoutId = window.setTimeout(() => {
+      setDebouncedAssetQuery(
+        sanitizeStrictTextInput(assetSearchInput, {
+          maxLength: ASSET_SEARCH_MAX_LENGTH,
+        }),
+      )
+    }, ASSET_SEARCH_DEBOUNCE_MS)
 
-    if (!availableAssets.some((asset) => asset.id === assetId)) {
-      setAssetId(availableAssets[0]?.id ?? '')
-    }
-  }, [assetId, availableAssets, requiresAsset])
+    return () => window.clearTimeout(timeoutId)
+  }, [assetSearchInput])
+
+  const assetSearchQuery = useQuery({
+    queryKey: queryKeys.assets.search(currentUserId, debouncedAssetQuery),
+    queryFn: () =>
+      assetsService.getAssets({
+        q: debouncedAssetQuery,
+        page: 1,
+        take: ASSET_SEARCH_PAGE_SIZE,
+      }),
+    enabled:
+      // 空字串不送 q。GET /assets 要求 q 長度至少 1，沒關鍵字時不該打搜尋（PR #26）。
+      Boolean(currentUserId) && requiresAsset && debouncedAssetQuery.length > 0,
+  })
+
+  const tradableSearchResults = useMemo(
+    () =>
+      // 投資頁不把現金資產當成交標的。搜尋 API 不能一次排除多種 type，所以在這裡濾掉（PR #26）。
+      (assetSearchQuery.data?.items ?? []).filter((asset) => asset.type !== 'cash'),
+    [assetSearchQuery.data],
+  )
+
+  const chooseAsset = (asset: Asset) => {
+    setSelectedAsset({
+      id: asset.id,
+      symbol: asset.symbol,
+      name: asset.name,
+    })
+    setAssetId(asset.id)
+    setAssetSearchInput('')
+    setDebouncedAssetQuery('')
+  }
+
+  const clearSelectedAsset = () => {
+    setSelectedAsset(null)
+    setAssetId('')
+  }
 
   useEffect(() => {
     if (mode === 'deposit' || mode === 'dividend') {
@@ -320,6 +399,8 @@ export default function Transactions() {
     setBrokerOrderNo('')
     setTradeTime(getDefaultTradeTimeValue())
     setNote('')
+    setAssetSearchInput('')
+    setDebouncedAssetQuery('')
   }
 
   const startEditingTransaction = (transaction: TransactionListItem) => {
@@ -337,6 +418,18 @@ export default function Transactions() {
     setMode(transaction.type)
     setAccountId(transaction.accountId)
     setAssetId(transaction.assetId ?? '')
+    // 已選標的跟搜尋結果分開。編輯時用交易自己的 asset，避免它不在目前搜尋頁就消失（PR #26）。
+    setSelectedAsset(
+      transaction.asset
+        ? {
+            id: transaction.asset.id,
+            symbol: transaction.asset.symbol,
+            name: transaction.asset.name,
+          }
+        : null,
+    )
+    setAssetSearchInput('')
+    setDebouncedAssetQuery('')
     setAmount(String(Number(transaction.amount)))
     setQuantity(
       transaction.quantity === null || transaction.quantity === undefined
@@ -370,7 +463,7 @@ export default function Transactions() {
       return t('transactions.accountRequired')
     }
 
-    if (requiresAsset && !hasTradableAssets) {
+    if (requiresAsset && catalogEmpty) {
       return t('transactions.noAssetAvailable')
     }
 
@@ -808,28 +901,12 @@ export default function Transactions() {
             {requiresAsset && (
               <div className="space-y-1">
                 <label
-                  htmlFor="investment-asset"
+                  htmlFor="investment-asset-search"
                   className="block text-sm font-medium text-gray-700"
                 >
                   {t('transactions.asset')}
                 </label>
-                <select
-                  id="investment-asset"
-                  value={assetId}
-                  onChange={(event) => setAssetId(event.target.value)}
-                  disabled={!hasTradableAssets}
-                  className="w-full rounded border border-gray-300 px-3 py-2"
-                >
-                  {!hasTradableAssets && (
-                    <option value="">{t('transactions.noAssetOption')}</option>
-                  )}
-                  {availableAssets.map((asset) => (
-                    <option key={asset.id} value={asset.id}>
-                      {asset.symbol} · {asset.name}
-                    </option>
-                  ))}
-                </select>
-                {!hasTradableAssets && (
+                {catalogEmpty ? (
                   <div className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-3 text-sm text-amber-900">
                     {t('transactions.assetMissingHintPrefix')}{' '}
                     <Link
@@ -840,6 +917,64 @@ export default function Transactions() {
                     </Link>{' '}
                     {t('transactions.assetMissingHintAfter')}
                   </div>
+                ) : (
+                  <>
+                    <input
+                      id="investment-asset-search"
+                      type="search"
+                      value={assetSearchInput}
+                      placeholder={t('transactions.assetSearchPlaceholder')}
+                      onChange={(event) => setAssetSearchInput(event.target.value)}
+                      className="w-full rounded border border-gray-300 px-3 py-2"
+                    />
+                    {selectedAsset && (
+                      <div className="flex items-center justify-between gap-2 text-sm text-gray-700">
+                        <span>
+                          {t('transactions.assetSelected', {
+                            symbol: selectedAsset.symbol,
+                            name: selectedAsset.name,
+                          })}
+                        </span>
+                        <button
+                          type="button"
+                          onClick={clearSelectedAsset}
+                          className="text-blue-700 underline"
+                        >
+                          {t('transactions.assetClear')}
+                        </button>
+                      </div>
+                    )}
+                    {debouncedAssetQuery && assetSearchQuery.isError && (
+                      <p className="text-sm text-red-700">
+                        {getApiErrorMessage(
+                          assetSearchQuery.error,
+                          t('transactions.failedToLoadData'),
+                        )}
+                      </p>
+                    )}
+                    {debouncedAssetQuery &&
+                      !assetSearchQuery.isFetching &&
+                      !assetSearchQuery.isError &&
+                      (tradableSearchResults.length > 0 ? (
+                        <ul className="overflow-hidden rounded border border-gray-200">
+                          {tradableSearchResults.map((asset) => (
+                            <li key={asset.id}>
+                              <button
+                                type="button"
+                                onClick={() => chooseAsset(asset)}
+                                className="w-full px-3 py-2 text-left text-sm hover:bg-gray-50"
+                              >
+                                {asset.symbol} · {asset.name}
+                              </button>
+                            </li>
+                          ))}
+                        </ul>
+                      ) : (
+                        <p className="text-sm text-gray-500">
+                          {t('transactions.assetSearchEmpty')}
+                        </p>
+                      ))}
+                  </>
                 )}
               </div>
             )}
@@ -1015,7 +1150,7 @@ export default function Transactions() {
                   disabled={
                     saveTransactionMutation.isPending ||
                     !accountId ||
-                    (requiresAsset && !hasTradableAssets)
+                    (requiresAsset && catalogEmpty)
                   }
                 >
                   {saveTransactionMutation.isPending
@@ -1320,7 +1455,10 @@ export default function Transactions() {
             </label>
             <select
               value={listAccountId}
-              onChange={(event) => setListAccountId(event.target.value)}
+              onChange={(event) => {
+                setListAccountId(event.target.value)
+                setListSkip(0)
+              }}
               className="rounded border border-gray-300 px-3 py-2 text-sm"
             >
               <option value="All">{t('transactions.allAccounts')}</option>
@@ -1336,7 +1474,11 @@ export default function Transactions() {
         {loadingTransactions ? (
           <p className="text-sm text-gray-600">{t('transactions.loadingTransactions')}</p>
         ) : transactions.length === 0 ? (
-          <p className="text-sm text-gray-600">{t('transactions.noTransactions')}</p>
+          // 初次 GET /transactions 失敗時 data 是 undefined，不能當成空帳本。
+          // 錯誤橫幅已在上面；這裡若再顯示「目前還沒有投資交易」，失敗會看起來像沒有交易（PR #26）。
+          transactionsQuery.isError ? null : (
+            <p className="text-sm text-gray-600">{t('transactions.noTransactions')}</p>
+          )
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full border-collapse text-sm">
@@ -1464,6 +1606,48 @@ export default function Transactions() {
                 ))}
               </tbody>
             </table>
+            {transactionTotal > 0 && (
+              <div className="mt-4 flex flex-wrap items-center justify-between gap-3 border-t border-gray-200 pt-4">
+                <div className="flex items-center gap-2 text-sm text-gray-600">
+                  <span>
+                    {t('transactions.listPageStatus', {
+                      current: transactionPage,
+                      totalPages: transactionPageCount,
+                    })}
+                  </span>
+                  <span className="text-gray-400">·</span>
+                  <span>
+                    {t('transactions.listPageRange', {
+                      from: transactionRangeFrom,
+                      to: transactionRangeTo,
+                      total: transactionTotal,
+                    })}
+                  </span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Button
+                    variant="secondary"
+                    size="sm"
+                    type="button"
+                    onClick={() =>
+                      setListSkip(Math.max(0, listSkip - TRANSACTION_PAGE_SIZE))
+                    }
+                    disabled={transactionPage === 1}
+                  >
+                    {t('transactions.previousPage')}
+                  </Button>
+                  <Button
+                    variant="secondary"
+                    size="sm"
+                    type="button"
+                    onClick={() => setListSkip(listSkip + TRANSACTION_PAGE_SIZE)}
+                    disabled={transactionPage === transactionPageCount}
+                  >
+                    {t('transactions.nextPage')}
+                  </Button>
+                </div>
+              </div>
+            )}
           </div>
         )}
       </Card>

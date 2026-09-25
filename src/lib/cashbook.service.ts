@@ -1,5 +1,4 @@
 import { api } from './api'
-import { getRequiredCurrentUserId } from '../app/current-user'
 
 export type GlAccountType = 'asset' | 'liability' | 'equity' | 'income' | 'expense'
 
@@ -82,27 +81,22 @@ export const cashbookService = {
   /**
    * Post an expense entry
    */
+  // 分錄擁有者由 API 的 session 決定。body 不帶 userId（PR #26；授權在 trackvest-api PR #46）。
   async postExpense(payload: PostExpensePayload): Promise<void> {
-    const userId = getRequiredCurrentUserId()
-
-    await api.post('/gl/expense', { ...payload, userId })
+    await api.post('/gl/expense', payload)
   },
 
   /**
    * Post an income entry
    */
   async postIncome(payload: PostIncomePayload): Promise<void> {
-    const userId = getRequiredCurrentUserId()
-
-    await api.post('/gl/income', { ...payload, userId })
+    await api.post('/gl/income', payload)
   },
 
   /**
    * Post a transfer entry
    */
   async postTransfer(payload: PostTransferPayload): Promise<void> {
-    const userId = getRequiredCurrentUserId()
-
-    await api.post('/gl/transfer', { ...payload, userId })
+    await api.post('/gl/transfer', payload)
   },
 }
