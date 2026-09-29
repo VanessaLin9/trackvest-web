@@ -8,11 +8,12 @@ export type TransactionListItem = {
   accountId: string
   assetId?: string | null
   type: 'buy' | 'sell' | 'deposit' | 'withdraw' | 'dividend' | 'fee'
-  amount: number | string
-  quantity?: number | string | null
-  price?: number | string | null
-  fee?: number | string | null
-  tax?: number | string | null
+  // 列表與單筆都是十進位字串，對齊 API TransactionResponseDto（PR #26 / trackvest-api PR #46）。
+  amount: string
+  quantity?: string | null
+  price?: string | null
+  fee?: string | null
+  tax?: string | null
   brokerOrderNo?: string | null
   tradeTime: string
   note?: string | null

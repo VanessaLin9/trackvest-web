@@ -1,6 +1,7 @@
 import { api } from './api'
 
-export type AuthUserRole = 'USER' | 'ADMIN'
+/** 與 API `UserRole` 相同：`user` / `admin`。不是 `USER` / `ADMIN`（PR #26）。 */
+export type AuthUserRole = 'user' | 'admin'
 
 export interface AuthUser {
   id: string

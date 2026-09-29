@@ -79,7 +79,7 @@ describe('Assets page edit mode', () => {
     vi.useRealTimers()
   })
 
-  function renderPage(role: 'USER' | 'ADMIN' = 'ADMIN') {
+  function renderPage(role: 'user' | 'admin' = 'admin') {
     const queryClient = new QueryClient({
       defaultOptions: {
         queries: { retry: false },
@@ -101,15 +101,15 @@ describe('Assets page edit mode', () => {
     )
   }
 
-  it('treats admin role casing as catalog write access', () => {
+  it('only treats lowercase admin as catalog write access', () => {
     expect(canWriteAssetCatalog('admin')).toBe(true)
-    expect(canWriteAssetCatalog('ADMIN')).toBe(true)
+    expect(canWriteAssetCatalog('ADMIN')).toBe(false)
     expect(canWriteAssetCatalog('user')).toBe(false)
     expect(canWriteAssetCatalog('USER')).toBe(false)
   })
 
   it('hides catalog writes from a regular user', async () => {
-    renderPage('USER')
+    renderPage('user')
 
     expect(await screen.findByText('Apple Inc.')).toBeTruthy()
     expect(screen.getByText('Catalog is read-only')).toBeTruthy()

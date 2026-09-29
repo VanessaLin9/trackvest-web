@@ -170,7 +170,7 @@ describe('Transactions page trade flows', () => {
       <QueryClientProvider client={queryClient}>
         <I18nProvider>
           <AuthProvider
-            initialUser={{ id: 'user-1', email: 'test@example.com', role: 'USER' }}
+            initialUser={{ id: 'user-1', email: 'test@example.com', role: 'user' }}
           >
             <MemoryRouter>
               <Transactions />

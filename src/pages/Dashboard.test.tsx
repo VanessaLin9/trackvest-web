@@ -443,7 +443,7 @@ describe('Dashboard smoke tests', () => {
       <QueryClientProvider client={queryClient}>
         <I18nProvider>
           <AuthProvider
-            initialUser={{ id: 'user-1', email: 'test@example.com', role: 'USER' }}
+            initialUser={{ id: 'user-1', email: 'test@example.com', role: 'user' }}
           >
             <Dashboard />
           </AuthProvider>
