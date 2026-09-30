@@ -140,7 +140,11 @@ describe('Dashboard smoke tests', () => {
         pnl: 980,
         returnRate: 0.05438402,
         weight: 0.7554672,
-        lastActivitySummary: '台積電股利入帳',
+        lastActivity: {
+          type: 'dividend',
+          tradeDate: '2026-04-01',
+          note: '台積電股利入帳',
+        },
       },
       {
         assetId: 'asset-0050',
@@ -158,7 +162,11 @@ describe('Dashboard smoke tests', () => {
         pnl: 444,
         returnRate: 0.07781283,
         weight: 0.2445328,
-        lastActivitySummary: '0050 部分獲利了結',
+        lastActivity: {
+          type: 'sell',
+          tradeDate: '2026-04-02',
+          note: '0050 部分獲利了結',
+        },
       },
     ],
     allocationByType: [

@@ -30,7 +30,12 @@ export type PortfolioHolding = {
   pnl: number
   returnRate: number
   weight: number
-  lastActivitySummary: string | null
+  /** 結構化最近動作。句子由畫面 i18n 組，備註非空時直接顯示（PR #26）。 */
+  lastActivity: {
+    type: 'buy' | 'sell' | 'deposit' | 'withdraw' | 'dividend' | 'fee'
+    tradeDate: string
+    note: string | null
+  } | null
 }
 
 export type PortfolioAllocationByType = {
