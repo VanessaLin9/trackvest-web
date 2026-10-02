@@ -1,45 +1,14 @@
 import { api } from './api'
 import type { Account } from './accounts.service'
+import type { ApiSchemas } from './api-schema'
 
 export type { Asset } from './assets.service'
 
-export type TransactionListItem = {
-  id: string
-  accountId: string
-  assetId?: string | null
-  type: 'buy' | 'sell' | 'deposit' | 'withdraw' | 'dividend' | 'fee'
-  // 列表與單筆都是十進位字串，對齊 API TransactionResponseDto（PR #26 / trackvest-api PR #46）。
-  amount: string
-  quantity?: string | null
-  price?: string | null
-  fee?: string | null
-  tax?: string | null
-  brokerOrderNo?: string | null
-  tradeTime: string
-  note?: string | null
-  isDeleted: boolean
-  deletedAt?: string | null
-  account?: {
-    id: string
-    name: string
-    currency: string
-    userId: string
-  }
-  asset?: {
-    id: string
-    symbol: string
-    name: string
-    baseCurrency: string
-  } | null
-}
+/** 列表與單筆都是這一個回應。金額是十進位字串（PR #26 / trackvest-api PR #46）。 */
+export type TransactionListItem = ApiSchemas['TransactionResponseDto']
+export type TransactionsResponse = ApiSchemas['TransactionListResponseDto']
 
-export type TransactionsResponse = {
-  total: number
-  skip: number
-  take: number
-  items: TransactionListItem[]
-}
-
+/** 建立與更新的 body 仍是 number。上面的回應型別才走 OpenAPI。 */
 export type CreateTransactionPayload = {
   accountId: string
   assetId?: string

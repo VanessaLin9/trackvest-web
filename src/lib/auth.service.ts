@@ -1,13 +1,9 @@
 import { api } from './api'
+import type { ApiSchemas } from './api-schema'
 
 /** 與 API `UserRole` 相同：`user` / `admin`。不是 `USER` / `ADMIN`（PR #26）。 */
-export type AuthUserRole = 'user' | 'admin'
-
-export interface AuthUser {
-  id: string
-  email: string
-  role: AuthUserRole
-}
+export type AuthUser = ApiSchemas['AuthUserDto']
+export type AuthUserRole = AuthUser['role']
 
 export interface LoginPayload {
   email: string
