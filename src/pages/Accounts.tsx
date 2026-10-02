@@ -6,12 +6,13 @@ import { useI18n } from '../i18n'
 import {
   accountsService,
   ACCOUNT_TYPE_OPTIONS,
-  BROKER_OPTIONS,
   CURRENCY_OPTIONS,
   SUPPORTED_BROKER,
+  brokerSelectOptions,
+  brokerValueForForm,
+  brokerValueForSave,
   type Account,
   type AccountType,
-  type Broker,
   type Currency,
   type SaveAccountPayload,
 } from '../lib/accounts.service'
@@ -25,7 +26,7 @@ type AccountFormState = {
   name: string
   type: AccountType
   currency: Currency
-  broker: Broker | ''
+  broker: string
 }
 
 const DEFAULT_FORM: AccountFormState = {
@@ -78,11 +79,7 @@ export default function Accounts() {
       name: selectedAccount.name,
       type: selectedAccount.type,
       currency: selectedAccount.currency,
-      broker:
-        selectedAccount.type === 'broker' &&
-        selectedAccount.broker === SUPPORTED_BROKER
-          ? SUPPORTED_BROKER
-          : '',
+      broker: brokerValueForForm(selectedAccount),
     })
   }, [selectedAccount])
 
@@ -111,11 +108,7 @@ export default function Accounts() {
         name: savedAccount.name,
         type: savedAccount.type,
         currency: savedAccount.currency,
-        broker:
-          savedAccount.type === 'broker' &&
-          savedAccount.broker === SUPPORTED_BROKER
-            ? SUPPORTED_BROKER
-            : '',
+        broker: brokerValueForForm(savedAccount),
       })
       setErrorMessage(null)
       setSuccessMessage(
@@ -167,7 +160,7 @@ export default function Accounts() {
       name: trimmedName,
       type: form.type,
       currency: form.currency,
-      broker: isBrokerType && form.broker ? SUPPORTED_BROKER : undefined,
+      broker: isBrokerType ? brokerValueForSave(form.type, form.broker) : undefined,
     })
   }
 
@@ -291,16 +284,18 @@ export default function Accounts() {
                   onChange={(event) =>
                     setForm((current) => ({
                       ...current,
-                      broker: event.target.value as Broker,
+                      broker: event.target.value,
                     }))
                   }
                   className="w-full rounded border border-gray-300 px-3 py-2"
                 >
-                  {BROKER_OPTIONS.map((option) => (
-                    <option key={option.value} value={option.value}>
-                      {option.value
-                        ? t('accounts.brokerOptionCathay')
-                        : t('accounts.brokerOptionNone')}
+                  {brokerSelectOptions(form.broker).map((option) => (
+                    <option key={option.value || 'none'} value={option.value}>
+                      {option.value === ''
+                        ? t('accounts.brokerOptionNone')
+                        : option.value === SUPPORTED_BROKER
+                          ? t('accounts.brokerOptionCathay')
+                          : option.value}
                     </option>
                   ))}
                 </select>
