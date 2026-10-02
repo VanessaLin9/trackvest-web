@@ -28,6 +28,7 @@ import {
 import { formatTransactionMode } from '../lib/labels'
 import { queryKeys } from '../lib/query-keys'
 
+/** 畫面只建立這四種。withdraw / fee 仍是 API 類型，列表可顯示，但不進這個表單（PR #26）。 */
 const INVESTMENT_MODE_OPTIONS = ['deposit', 'buy', 'sell', 'dividend'] as const
 type InvestmentMode = (typeof INVESTMENT_MODE_OPTIONS)[number]
 const ASSET_SEARCH_DEBOUNCE_MS = 300

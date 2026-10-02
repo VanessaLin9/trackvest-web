@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { setCurrentUserId } from '../app/current-user'
 import { api } from './api'
-import { accountsService } from './accounts.service'
+import { accountsService, brokerSelectOptions, brokerValueForForm, brokerValueForSave } from './accounts.service'
 
 vi.mock('./api', () => ({
   api: {
@@ -40,5 +40,19 @@ describe('accountsService owner', () => {
 
     expect(patch).toHaveBeenCalledWith('/accounts/acc-1', payload)
     expect(patch.mock.calls[0]?.[1]).not.toHaveProperty('userId')
+  })
+})
+
+describe('broker form values', () => {
+  it('keeps a stored ib broker in the form and the save payload', () => {
+    expect(brokerValueForForm({ type: 'broker', broker: 'IB' })).toBe('ib')
+    expect(brokerValueForSave('broker', 'IB')).toBe('ib')
+    expect(brokerSelectOptions('ib').map((option) => option.value)).toEqual(['', 'cathay', 'ib'])
+  })
+
+  it('does not add cathay twice and clears broker for non-broker accounts', () => {
+    expect(brokerSelectOptions('cathay').map((option) => option.value)).toEqual(['', 'cathay'])
+    expect(brokerValueForSave('cash', 'cathay')).toBeUndefined()
+    expect(brokerValueForForm({ type: 'bank', broker: 'ib' })).toBe('')
   })
 })
