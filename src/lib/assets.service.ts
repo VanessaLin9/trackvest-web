@@ -74,6 +74,38 @@ export type AssetAliasConflictResponse = {
   existingAsset: AssetAliasMappedAsset
 }
 
+/**
+ * `GET /assets` 一次只能篩一種 type，不能排除現金。
+ * 投資搜尋要翻頁，直到湊滿可交易標的或沒有下一頁（PR #26）。
+ */
+export async function collectTradableAssets(
+  fetchPage: (page: number) => Promise<AssetListResponse>,
+  pageSize = 10,
+  maxPages = 10,
+): Promise<Asset[]> {
+  const collected: Asset[] = []
+
+  for (let page = 1; page <= maxPages; page += 1) {
+    const response = await fetchPage(page)
+    for (const asset of response.items) {
+      if (asset.type === 'cash') {
+        continue
+      }
+      collected.push(asset)
+      if (collected.length >= pageSize) {
+        return collected
+      }
+    }
+
+    const fetched = page * (response.take || pageSize)
+    if (response.items.length === 0 || fetched >= response.total) {
+      break
+    }
+  }
+
+  return collected
+}
+
 export const assetsService = {
   async getAssets(params: GetAssetsParams = {}): Promise<AssetListResponse> {
     const response = await api.get<AssetListResponse>('/assets', { params })

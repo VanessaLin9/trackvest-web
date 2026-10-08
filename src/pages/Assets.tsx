@@ -33,6 +33,7 @@ import {
 } from '../lib/input-safety'
 import { Button } from '../components/ui/Button'
 import { Card } from '../components/ui/Card'
+import { canWriteAssetCatalog } from '../lib/catalog-access'
 import { getApiErrorMessage } from '../lib/errors'
 import { formatAssetType, formatAssetClass } from '../lib/labels'
 
@@ -106,7 +107,9 @@ function FilterChevronIcon() {
 
 export default function Assets() {
   const { t } = useI18n()
-  const currentUserId = useAuthenticatedUser().id
+  const currentUser = useAuthenticatedUser()
+  const currentUserId = currentUser.id
+  const canWriteCatalog = canWriteAssetCatalog(currentUser.role)
   const queryClient = useQueryClient()
 
   const [selectedAssetId, setSelectedAssetId] = useState<string | null>(null)
@@ -429,7 +432,7 @@ export default function Assets() {
       <header className="space-y-2">
         <h1 className="text-3xl font-semibold">{t('assets.title')}</h1>
         <p className="max-w-3xl text-sm text-gray-600">
-          {t('assets.subtitle')}
+          {canWriteCatalog ? t('assets.subtitle') : t('assets.subtitleReadOnly')}
         </p>
       </header>
 
@@ -446,6 +449,7 @@ export default function Assets() {
       )}
 
       <section className="grid gap-6 lg:grid-cols-[1.05fr_0.95fr]">
+        {canWriteCatalog ? (
         <Card>
           <div className="mb-4 space-y-1">
             <h2 className="text-lg font-semibold">
@@ -614,6 +618,14 @@ export default function Assets() {
             </div>
           </form>
         </Card>
+        ) : (
+          <Card>
+            <div className="space-y-1">
+              <h2 className="text-lg font-semibold">{t('assets.readOnlyTitle')}</h2>
+              <p className="text-sm text-gray-600">{t('assets.readOnlyDescription')}</p>
+            </div>
+          </Card>
+        )}
 
         <aside className="rounded-xl border border-gray-200 bg-gray-50 p-5 shadow-sm">
           <h2 className="mb-3 text-lg font-semibold">{t('assets.selectedTitle')}</h2>
@@ -636,27 +648,33 @@ export default function Assets() {
               </div>
               <div className="flex items-center justify-between gap-3">
                 <p>{t('assets.selectedDescription')}</p>
-                <Button
-                  variant="secondary"
-                  size="sm"
-                  onClick={startEditingSelectedAsset}
-                  className="shrink-0"
-                >
-                  {t('assets.editAction')}
-                </Button>
+                {canWriteCatalog && (
+                  <Button
+                    variant="secondary"
+                    size="sm"
+                    onClick={startEditingSelectedAsset}
+                    className="shrink-0"
+                  >
+                    {t('assets.editAction')}
+                  </Button>
+                )}
               </div>
             </div>
           ) : (
             <div className="space-y-3 text-sm text-gray-700">
               <p>{t('assets.noSelectedAsset')}</p>
-              <p>
-                {t('assets.selectedCallToActionBefore')}{' '}
-                <Link to="/investments" className="font-medium text-blue-700 hover:text-blue-800">
-                  {t('routes.investments')}
-                </Link>
-                {' '}
-                {t('assets.selectedCallToActionAfter')}
-              </p>
+              {canWriteCatalog ? (
+                <p>
+                  {t('assets.selectedCallToActionBefore')}{' '}
+                  <Link to="/investments" className="font-medium text-blue-700 hover:text-blue-800">
+                    {t('routes.investments')}
+                  </Link>
+                  {' '}
+                  {t('assets.selectedCallToActionAfter')}
+                </p>
+              ) : (
+                <p>{t('assets.readOnlyEmptySelection')}</p>
+              )}
             </div>
           )}
         </aside>

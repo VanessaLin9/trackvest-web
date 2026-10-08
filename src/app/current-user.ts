@@ -1,7 +1,7 @@
 /**
  * Internal cache of the currently authenticated user's id, kept in sync by
- * AuthProvider. Service modules that must include userId in outgoing request
- * bodies (e.g. ownership-checked endpoints) read from this cache.
+ * AuthProvider. Account and GL writes no longer read it to stamp a body
+ * userId; those endpoints take the owner from the session cookie.
  *
  * UI components should use `useAuthenticatedUser()` from `app/use-auth`
  * instead of calling into this module directly.

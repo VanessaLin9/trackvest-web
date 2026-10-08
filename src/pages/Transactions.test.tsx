@@ -16,7 +16,6 @@ import Transactions from './Transactions'
 
 const {
   getAccounts,
-  getAssets,
   getTransactions,
   createTransaction,
   updateTransaction,
@@ -27,7 +26,6 @@ const {
   createAssetAlias,
 } = vi.hoisted(() => ({
   getAccounts: vi.fn(),
-  getAssets: vi.fn(),
   getTransactions: vi.fn(),
   createTransaction: vi.fn(),
   updateTransaction: vi.fn(),
@@ -46,7 +44,6 @@ vi.mock('../lib/investments.service', async () => {
     ...actual,
     investmentsService: {
       getAccounts,
-      getAssets,
       getTransactions,
       createTransaction,
       updateTransaction,
@@ -86,15 +83,6 @@ describe('Transactions page trade flows', () => {
         createdAt: '2026-03-25T00:00:00.000Z',
       },
     ])
-    getAssets.mockResolvedValue([
-      {
-        id: 'asset-2330',
-        symbol: '2330',
-        name: 'TSMC',
-        type: 'equity',
-        baseCurrency: 'TWD',
-      },
-    ])
     getTransactions.mockResolvedValue({
       total: 0,
       skip: 0,
@@ -121,12 +109,35 @@ describe('Transactions page trade flows', () => {
       failureCount: 0,
       createdTransactionIds: [],
     })
-    searchAssets.mockResolvedValue({
-      items: [],
-      total: 0,
-      page: 1,
-      take: 10,
-    })
+    const tsmcAsset = {
+      id: 'asset-2330',
+      symbol: '2330',
+      name: 'TSMC',
+      type: 'equity' as const,
+      assetClass: 'equity' as const,
+      baseCurrency: 'TWD',
+    }
+    searchAssets.mockImplementation(
+      async (params: { q?: string; page?: number; take?: number } = {}) => {
+        if (params.q) {
+          const normalized = params.q.trim().toLowerCase()
+          const matches = normalized === '2330' || normalized === 'tsmc'
+          return {
+            items: matches ? [tsmcAsset] : [],
+            total: matches ? 1 : 0,
+            page: 1,
+            take: params.take ?? 10,
+          }
+        }
+
+        return {
+          items: [tsmcAsset],
+          total: 1,
+          page: 1,
+          take: params.take ?? 1,
+        }
+      },
+    )
     createAssetAlias.mockResolvedValue({
       id: 'alias-1',
       assetId: 'asset-00900',
@@ -146,7 +157,7 @@ describe('Transactions page trade flows', () => {
     setCurrentUserId('')
   })
 
-  function renderPage() {
+  function renderPage(role: 'user' | 'admin' = 'user') {
     const queryClient = new QueryClient({
       defaultOptions: {
         queries: {
@@ -159,7 +170,7 @@ describe('Transactions page trade flows', () => {
       <QueryClientProvider client={queryClient}>
         <I18nProvider>
           <AuthProvider
-            initialUser={{ id: 'user-1', email: 'test@example.com', role: 'USER' }}
+            initialUser={{ id: 'user-1', email: 'test@example.com', role }}
           >
             <MemoryRouter>
               <Transactions />
@@ -243,17 +254,27 @@ describe('Transactions page trade flows', () => {
     })
   }
 
+  async function chooseTsmc() {
+    fireEvent.change(screen.getByLabelText('Asset'), {
+      target: { value: '2330' },
+    })
+
+    const result = await screen.findByRole('button', { name: '2330 · TSMC' })
+    fireEvent.click(result)
+  }
+
   async function switchToMode(mode: 'buy' | 'sell') {
     renderPage()
 
     await waitFor(() => {
       expect(getAccounts).toHaveBeenCalled()
-      expect(getAssets).toHaveBeenCalled()
+      expect(searchAssets).toHaveBeenCalledWith({ page: 1, take: 1 })
       expect(getTransactions).toHaveBeenCalled()
     })
 
     const label = mode === 'buy' ? 'Buy' : 'Sell'
     fireEvent.click(screen.getByRole('button', { name: label }))
+    await chooseTsmc()
   }
 
   async function renderPageWithTransactions() {
@@ -394,13 +415,18 @@ describe('Transactions page trade flows', () => {
   })
 
   it('blocks buy submission when no tradable asset is available', async () => {
-    getAssets.mockResolvedValueOnce([])
+    searchAssets.mockResolvedValue({
+      items: [],
+      total: 0,
+      page: 1,
+      take: 1,
+    })
 
     renderPage()
 
     await waitFor(() => {
       expect(getAccounts).toHaveBeenCalled()
-      expect(getAssets).toHaveBeenCalled()
+      expect(searchAssets).toHaveBeenCalledWith({ page: 1, take: 1 })
     })
 
     fireEvent.click(screen.getByRole('button', { name: 'Buy' }))
@@ -416,11 +442,99 @@ describe('Transactions page trade flows', () => {
     expect((saveButton as HTMLButtonElement).disabled).toBe(true)
 
     const warning = screen.getByText(
+      'No tradable assets yet. Ask an admin to add them to the catalog.',
+    )
+    expect(warning).toBeTruthy()
+    expect(
+      screen.queryByText(
+        (_, element) =>
+          element?.textContent === 'No asset available. Create one in Assets first.',
+      ),
+    ).toBeNull()
+    expect(createTransaction).not.toHaveBeenCalled()
+  })
+
+  it('still sends admins to Assets when the catalog is empty', async () => {
+    searchAssets.mockResolvedValue({
+      items: [],
+      total: 0,
+      page: 1,
+      take: 1,
+    })
+
+    renderPage('admin')
+
+    await waitFor(() => {
+      expect(searchAssets).toHaveBeenCalledWith({ page: 1, take: 1 })
+    })
+
+    fireEvent.click(screen.getByRole('button', { name: 'Buy' }))
+
+    const warning = screen.getByText(
       (_, element) =>
         element?.textContent === 'No asset available. Create one in Assets first.',
     )
     expect(warning).toBeTruthy()
-    expect(createTransaction).not.toHaveBeenCalled()
+  })
+
+  it('pages past cash-only asset search results', async () => {
+    searchAssets.mockImplementation(
+      async (params: { q?: string; page?: number; take?: number } = {}) => {
+        if (!params.q) {
+          return {
+            items: [{ id: 'cash-1', symbol: 'TWD', name: 'Cash', type: 'cash' as const, baseCurrency: 'TWD' }],
+            total: 1,
+            page: 1,
+            take: 1,
+          }
+        }
+
+        if (params.page === 1) {
+          return {
+            items: Array.from({ length: 10 }, (_, index) => ({
+              id: `cash-${index}`,
+              symbol: `CASH${index}`,
+              name: 'Cash',
+              type: 'cash' as const,
+              baseCurrency: 'TWD',
+            })),
+            total: 11,
+            page: 1,
+            take: 10,
+          }
+        }
+
+        return {
+          items: [
+            {
+              id: 'asset-2330',
+              symbol: '2330',
+              name: 'TSMC',
+              type: 'equity' as const,
+              assetClass: 'equity' as const,
+              baseCurrency: 'TWD',
+            },
+          ],
+          total: 11,
+          page: 2,
+          take: 10,
+        }
+      },
+    )
+
+    renderPage()
+
+    await waitFor(() => {
+      expect(getAccounts).toHaveBeenCalled()
+    })
+
+    fireEvent.click(screen.getByRole('button', { name: 'Buy' }))
+    fireEvent.change(screen.getByLabelText('Asset'), {
+      target: { value: 'cash' },
+    })
+
+    expect(await screen.findByRole('button', { name: '2330 · TSMC' })).toBeTruthy()
+    expect(searchAssets).toHaveBeenCalledWith({ q: 'cash', page: 2, take: 10 })
   })
 
   it('blocks buy submission when quantity is missing', async () => {
@@ -550,7 +664,7 @@ describe('Transactions page trade flows', () => {
 
     await waitFor(() => {
       expect(getAccounts).toHaveBeenCalled()
-      expect(getAssets).toHaveBeenCalled()
+      expect(searchAssets).toHaveBeenCalled()
     })
 
     const file = new File(
@@ -1166,5 +1280,123 @@ describe('Transactions page trade flows', () => {
 
     expect(await screen.findByText('missing broker order number')).toBeTruthy()
     expect(screen.queryByRole('button', { name: 'Map asset' })).toBeNull()
+  })
+
+  it('hides the empty transaction state when the list request fails', async () => {
+    getTransactions.mockRejectedValue(buildApiError('transactions unavailable'))
+
+    renderPage()
+
+    expect(await screen.findByText(/transactions unavailable/)).toBeTruthy()
+    expect(screen.queryByText('No investment transactions yet.')).toBeNull()
+  })
+
+  it('requests the next transaction page with skip', async () => {
+    getTransactions.mockResolvedValue({
+      total: 25,
+      skip: 0,
+      take: 20,
+      items: [
+        {
+          id: 'tx-page-1',
+          accountId: 'broker-1',
+          assetId: null,
+          type: 'deposit',
+          amount: 1000,
+          tradeTime: '2026-03-31T09:30:00.000Z',
+          note: null,
+          isDeleted: false,
+          account: {
+            id: 'broker-1',
+            name: 'Broker TWD',
+            currency: 'TWD',
+            userId: 'user-1',
+          },
+        },
+      ],
+    })
+
+    renderPage()
+
+    expect(await screen.findByText('Page 1 / 2')).toBeTruthy()
+    expect(screen.getByText('1-1 of 25')).toBeTruthy()
+    expect(getTransactions).toHaveBeenCalledWith({ skip: 0, take: 20 })
+
+    fireEvent.click(screen.getByRole('button', { name: 'Next' }))
+
+    await waitFor(() => {
+      expect(getTransactions).toHaveBeenCalledWith({ skip: 20, take: 20 })
+    })
+  })
+
+  it('hides the previous page rows while the next page is loading', async () => {
+    let releaseNextPage: (value: unknown) => void = () => undefined
+    getTransactions.mockImplementation(async (query?: { skip?: number }) => {
+      if (query?.skip === 20) {
+        return new Promise((resolve) => {
+          releaseNextPage = resolve
+        })
+      }
+
+      return {
+        total: 25,
+        skip: 0,
+        take: 20,
+        items: [
+          {
+            id: 'tx-page-1',
+            accountId: 'broker-1',
+            assetId: null,
+            type: 'deposit',
+            amount: 1000,
+            tradeTime: '2026-03-31T09:30:00.000Z',
+            note: null,
+            isDeleted: false,
+            account: {
+              id: 'broker-1',
+              name: 'Broker TWD',
+              currency: 'TWD',
+              userId: 'user-1',
+            },
+          },
+        ],
+      }
+    })
+
+    renderPage()
+
+    expect(await screen.findByRole('button', { name: 'Edit Deposit transaction' })).toBeTruthy()
+    fireEvent.click(screen.getByRole('button', { name: 'Next' }))
+
+    await waitFor(() => {
+      expect(screen.queryByRole('button', { name: 'Edit Deposit transaction' })).toBeNull()
+    })
+    expect(screen.getByText('Loading transactions...')).toBeTruthy()
+
+    releaseNextPage({
+      total: 25,
+      skip: 20,
+      take: 20,
+      items: [
+        {
+          id: 'tx-page-2',
+          accountId: 'broker-1',
+          assetId: 'asset-1',
+          type: 'buy',
+          amount: 500,
+          tradeTime: '2026-04-02T09:30:00.000Z',
+          note: null,
+          isDeleted: false,
+          account: {
+            id: 'broker-1',
+            name: 'Broker TWD',
+            currency: 'TWD',
+            userId: 'user-1',
+          },
+        },
+      ],
+    })
+
+    expect(await screen.findByRole('button', { name: 'Edit Buy transaction' })).toBeTruthy()
   })
 })
