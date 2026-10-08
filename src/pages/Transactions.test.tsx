@@ -449,6 +449,66 @@ describe('Transactions page trade flows', () => {
     expect(createTransaction).not.toHaveBeenCalled()
   })
 
+  it('pages past cash-only asset search results', async () => {
+    searchAssets.mockImplementation(
+      async (params: { q?: string; page?: number; take?: number } = {}) => {
+        if (!params.q) {
+          return {
+            items: [{ id: 'cash-1', symbol: 'TWD', name: 'Cash', type: 'cash' as const, baseCurrency: 'TWD' }],
+            total: 1,
+            page: 1,
+            take: 1,
+          }
+        }
+
+        if (params.page === 1) {
+          return {
+            items: Array.from({ length: 10 }, (_, index) => ({
+              id: `cash-${index}`,
+              symbol: `CASH${index}`,
+              name: 'Cash',
+              type: 'cash' as const,
+              baseCurrency: 'TWD',
+            })),
+            total: 11,
+            page: 1,
+            take: 10,
+          }
+        }
+
+        return {
+          items: [
+            {
+              id: 'asset-2330',
+              symbol: '2330',
+              name: 'TSMC',
+              type: 'equity' as const,
+              assetClass: 'equity' as const,
+              baseCurrency: 'TWD',
+            },
+          ],
+          total: 11,
+          page: 2,
+          take: 10,
+        }
+      },
+    )
+
+    renderPage()
+
+    await waitFor(() => {
+      expect(getAccounts).toHaveBeenCalled()
+    })
+
+    fireEvent.click(screen.getByRole('button', { name: 'Buy' }))
+    fireEvent.change(screen.getByLabelText('Asset'), {
+      target: { value: 'cash' },
+    })
+
+    expect(await screen.findByRole('button', { name: '2330 · TSMC' })).toBeTruthy()
+    expect(searchAssets).toHaveBeenCalledWith({ q: 'cash', page: 2, take: 10 })
+  })
+
   it('blocks buy submission when quantity is missing', async () => {
     await switchToMode('buy')
 

@@ -12,7 +12,7 @@ import {
 } from '../lib/investments.service'
 import { useAuthenticatedUser } from '../app/use-auth'
 import { SUPPORTED_BROKER } from '../lib/accounts.service'
-import { assetsService, type Asset } from '../lib/assets.service'
+import { assetsService, collectTradableAssets, type Asset } from '../lib/assets.service'
 import { sanitizeStrictTextInput } from '../lib/input-safety'
 import { useI18n } from '../i18n'
 import { ImportAliasRepairDialog } from '../components/ImportAliasRepairDialog'
@@ -349,22 +349,19 @@ export default function Transactions() {
   const assetSearchQuery = useQuery({
     queryKey: queryKeys.assets.search(currentUserId, debouncedAssetQuery),
     queryFn: () =>
-      assetsService.getAssets({
-        q: debouncedAssetQuery,
-        page: 1,
-        take: ASSET_SEARCH_PAGE_SIZE,
-      }),
+      collectTradableAssets((page) =>
+        assetsService.getAssets({
+          q: debouncedAssetQuery,
+          page,
+          take: ASSET_SEARCH_PAGE_SIZE,
+        }),
+      ),
     enabled:
       // 空字串不送 q。GET /assets 要求 q 長度至少 1，沒關鍵字時不該打搜尋（PR #26）。
       Boolean(currentUserId) && requiresAsset && debouncedAssetQuery.length > 0,
   })
 
-  const tradableSearchResults = useMemo(
-    () =>
-      // 投資頁不把現金資產當成交標的。搜尋 API 不能一次排除多種 type，所以在這裡濾掉（PR #26）。
-      (assetSearchQuery.data?.items ?? []).filter((asset) => asset.type !== 'cash'),
-    [assetSearchQuery.data],
-  )
+  const tradableSearchResults = assetSearchQuery.data ?? []
 
   const chooseAsset = (asset: Asset) => {
     setSelectedAsset({
