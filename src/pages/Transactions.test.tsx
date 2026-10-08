@@ -1240,4 +1240,75 @@ describe('Transactions page trade flows', () => {
       expect(getTransactions).toHaveBeenCalledWith({ skip: 20, take: 20 })
     })
   })
+
+  it('hides the previous page rows while the next page is loading', async () => {
+    let releaseNextPage: (value: unknown) => void = () => undefined
+    getTransactions.mockImplementation(async (query?: { skip?: number }) => {
+      if (query?.skip === 20) {
+        return new Promise((resolve) => {
+          releaseNextPage = resolve
+        })
+      }
+
+      return {
+        total: 25,
+        skip: 0,
+        take: 20,
+        items: [
+          {
+            id: 'tx-page-1',
+            accountId: 'broker-1',
+            assetId: null,
+            type: 'deposit',
+            amount: 1000,
+            tradeTime: '2026-03-31T09:30:00.000Z',
+            note: null,
+            isDeleted: false,
+            account: {
+              id: 'broker-1',
+              name: 'Broker TWD',
+              currency: 'TWD',
+              userId: 'user-1',
+            },
+          },
+        ],
+      }
+    })
+
+    renderPage()
+
+    expect(await screen.findByRole('button', { name: 'Edit Deposit transaction' })).toBeTruthy()
+    fireEvent.click(screen.getByRole('button', { name: 'Next' }))
+
+    await waitFor(() => {
+      expect(screen.queryByRole('button', { name: 'Edit Deposit transaction' })).toBeNull()
+    })
+    expect(screen.getByText('Loading transactions...')).toBeTruthy()
+
+    releaseNextPage({
+      total: 25,
+      skip: 20,
+      take: 20,
+      items: [
+        {
+          id: 'tx-page-2',
+          accountId: 'broker-1',
+          assetId: 'asset-1',
+          type: 'buy',
+          amount: 500,
+          tradeTime: '2026-04-02T09:30:00.000Z',
+          note: null,
+          isDeleted: false,
+          account: {
+            id: 'broker-1',
+            name: 'Broker TWD',
+            currency: 'TWD',
+            userId: 'user-1',
+          },
+        },
+      ],
+    })
+
+    expect(await screen.findByRole('button', { name: 'Edit Buy transaction' })).toBeTruthy()
+  })
 })

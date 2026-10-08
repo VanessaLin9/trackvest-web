@@ -219,7 +219,8 @@ export default function Transactions() {
   const transactionPage = Math.floor(listSkip / TRANSACTION_PAGE_SIZE) + 1
   const transactionRangeFrom = transactionTotal === 0 ? 0 : listSkip + 1
   const transactionRangeTo = Math.min(listSkip + transactions.length, transactionTotal)
-  const loadingTransactions = transactionsQuery.isLoading
+  const loadingTransactions =
+    transactionsQuery.isLoading || transactionsQuery.isPlaceholderData
 
   useEffect(() => {
     if (!transactionsQuery.data || transactionsQuery.isPlaceholderData) {
@@ -1473,6 +1474,7 @@ export default function Transactions() {
         </div>
 
         {loadingTransactions ? (
+          // 翻頁時 keepPreviousData 仍握著上一頁。列和編輯、刪除要先收起來，避免改到別頁或別的帳戶（PR #26）。
           <p className="text-sm text-gray-600">{t('transactions.loadingTransactions')}</p>
         ) : transactions.length === 0 ? (
           // 初次 GET /transactions 失敗時 data 是 undefined，不能當成空帳本。
