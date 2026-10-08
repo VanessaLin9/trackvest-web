@@ -157,7 +157,7 @@ describe('Transactions page trade flows', () => {
     setCurrentUserId('')
   })
 
-  function renderPage() {
+  function renderPage(role: 'user' | 'admin' = 'user') {
     const queryClient = new QueryClient({
       defaultOptions: {
         queries: {
@@ -170,7 +170,7 @@ describe('Transactions page trade flows', () => {
       <QueryClientProvider client={queryClient}>
         <I18nProvider>
           <AuthProvider
-            initialUser={{ id: 'user-1', email: 'test@example.com', role: 'user' }}
+            initialUser={{ id: 'user-1', email: 'test@example.com', role }}
           >
             <MemoryRouter>
               <Transactions />
@@ -442,11 +442,39 @@ describe('Transactions page trade flows', () => {
     expect((saveButton as HTMLButtonElement).disabled).toBe(true)
 
     const warning = screen.getByText(
+      'No tradable assets yet. Ask an admin to add them to the catalog.',
+    )
+    expect(warning).toBeTruthy()
+    expect(
+      screen.queryByText(
+        (_, element) =>
+          element?.textContent === 'No asset available. Create one in Assets first.',
+      ),
+    ).toBeNull()
+    expect(createTransaction).not.toHaveBeenCalled()
+  })
+
+  it('still sends admins to Assets when the catalog is empty', async () => {
+    searchAssets.mockResolvedValue({
+      items: [],
+      total: 0,
+      page: 1,
+      take: 1,
+    })
+
+    renderPage('admin')
+
+    await waitFor(() => {
+      expect(searchAssets).toHaveBeenCalledWith({ page: 1, take: 1 })
+    })
+
+    fireEvent.click(screen.getByRole('button', { name: 'Buy' }))
+
+    const warning = screen.getByText(
       (_, element) =>
         element?.textContent === 'No asset available. Create one in Assets first.',
     )
     expect(warning).toBeTruthy()
-    expect(createTransaction).not.toHaveBeenCalled()
   })
 
   it('pages past cash-only asset search results', async () => {

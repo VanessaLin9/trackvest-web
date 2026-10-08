@@ -11,6 +11,7 @@ import {
   type TransactionListItem,
 } from '../lib/investments.service'
 import { useAuthenticatedUser } from '../app/use-auth'
+import { canWriteAssetCatalog } from '../lib/catalog-access'
 import { SUPPORTED_BROKER } from '../lib/accounts.service'
 import { assetsService, collectTradableAssets, type Asset } from '../lib/assets.service'
 import { sanitizeStrictTextInput } from '../lib/input-safety'
@@ -148,7 +149,9 @@ function formatPreviewAsset(row: ImportPreviewRow, t: (key: string) => string) {
 }
 
 export default function Transactions() {
-  const currentUserId = useAuthenticatedUser().id
+  const currentUser = useAuthenticatedUser()
+  const currentUserId = currentUser.id
+  const canWriteCatalog = canWriteAssetCatalog(currentUser.role)
   const queryClient = useQueryClient()
   const { t, locale } = useI18n()
 
@@ -463,7 +466,11 @@ export default function Transactions() {
     }
 
     if (requiresAsset && catalogEmpty) {
-      return t('transactions.noAssetAvailable')
+      return t(
+        canWriteCatalog
+          ? 'transactions.noAssetAvailable'
+          : 'transactions.noAssetAvailableAskAdmin',
+      )
     }
 
     if (!tradeTime || Number.isNaN(new Date(tradeTime).getTime())) {
@@ -907,14 +914,21 @@ export default function Transactions() {
                 </label>
                 {catalogEmpty ? (
                   <div className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-3 text-sm text-amber-900">
-                    {t('transactions.assetMissingHintPrefix')}{' '}
-                    <Link
-                      to="/assets"
-                      className="font-medium underline underline-offset-2"
-                    >
-                      {t('routes.assets')}
-                    </Link>{' '}
-                    {t('transactions.assetMissingHintAfter')}
+                    {canWriteCatalog ? (
+                      // 一般使用者不能寫全域目錄。空目錄不要再叫他們去 Assets 建立（PR #26）。
+                      <>
+                        {t('transactions.assetMissingHintPrefix')}{' '}
+                        <Link
+                          to="/assets"
+                          className="font-medium underline underline-offset-2"
+                        >
+                          {t('routes.assets')}
+                        </Link>{' '}
+                        {t('transactions.assetMissingHintAfter')}
+                      </>
+                    ) : (
+                      t('transactions.noAssetAvailableAskAdmin')
+                    )}
                   </div>
                 ) : (
                   <>

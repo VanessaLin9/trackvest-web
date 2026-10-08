@@ -10,6 +10,8 @@ export const transactions = {
       'Editing {{type}} transactions is not supported in this page yet',
     accountRequired: 'Please select an investment account',
     noAssetAvailable: 'No asset available. Create one in Assets first.',
+    noAssetAvailableAskAdmin:
+      'No tradable assets yet. Ask an admin to add them to the catalog.',
     validTradeTime: 'Please provide a valid trade time',
     assetRequired: 'Please select an asset',
     quantityPositive: 'Quantity must be a positive number for {{mode}} transactions',
@@ -180,6 +182,7 @@ export const transactions = {
     editUnsupported: '這個頁面目前不支援編輯 {{type}} 類型交易',
     accountRequired: '請先選擇投資帳戶',
     noAssetAvailable: '目前沒有可用資產。請先到 Assets 建立。',
+    noAssetAvailableAskAdmin: '目前沒有可交易資產。請管理員把標的加入目錄。',
     validTradeTime: '請提供有效的交易時間',
     assetRequired: '請先選擇資產',
     quantityPositive: '{{mode}} 交易的股數必須是大於 0 的數字',
