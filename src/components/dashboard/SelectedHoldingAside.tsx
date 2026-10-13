@@ -6,6 +6,7 @@ import {
   formatShareQuantity,
 } from '../../lib/formatters'
 import { formatAssetClass, formatAssetType } from '../../lib/labels'
+import { formatHoldingLastActivity } from './last-activity'
 import type { PortfolioHolding } from '../../lib/portfolio.service'
 import { Card } from '../ui/Card'
 import { ChartCardFallback } from './ChartCardFallback'
@@ -119,7 +120,8 @@ export function SelectedHoldingAside({
               {t('dashboard.lastActivity')}
             </p>
             <p className="mt-2 text-sm font-medium text-gray-900">
-              {holding.lastActivitySummary ?? t('dashboard.noRecentActivity')}
+              {formatHoldingLastActivity(holding.lastActivity, t, locale) ??
+                t('dashboard.noRecentActivity')}
             </p>
           </div>
         </div>
