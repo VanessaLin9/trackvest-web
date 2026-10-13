@@ -51,4 +51,23 @@ describe('collectTradableAssets', () => {
     expect(results).toHaveLength(10)
     expect(fetchPage).toHaveBeenCalledTimes(1)
   })
+
+  it('keeps paging after the tenth cash-only page until a tradable row appears', async () => {
+    const fetchPage = vi.fn(async (pageNumber: number) => {
+      if (pageNumber <= 10) {
+        return page(
+          Array.from({ length: 10 }, (_, index) =>
+            asset(`cash-${pageNumber}-${index}`, 'cash'),
+          ),
+          101,
+          pageNumber,
+        )
+      }
+
+      return page([asset('2330', 'equity')], 101, 11)
+    })
+
+    await expect(collectTradableAssets(fetchPage)).resolves.toEqual([asset('2330', 'equity')])
+    expect(fetchPage).toHaveBeenCalledTimes(11)
+  })
 })
