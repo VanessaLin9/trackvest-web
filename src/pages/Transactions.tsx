@@ -337,17 +337,17 @@ export default function Transactions() {
     }
   }, [importAccountId, importAccounts, selectedAccount])
 
+  const sanitizedAssetQuery = sanitizeStrictTextInput(assetSearchInput, {
+    maxLength: ASSET_SEARCH_MAX_LENGTH,
+  })
+
   useEffect(() => {
     const timeoutId = window.setTimeout(() => {
-      setDebouncedAssetQuery(
-        sanitizeStrictTextInput(assetSearchInput, {
-          maxLength: ASSET_SEARCH_MAX_LENGTH,
-        }),
-      )
+      setDebouncedAssetQuery(sanitizedAssetQuery)
     }, ASSET_SEARCH_DEBOUNCE_MS)
 
     return () => window.clearTimeout(timeoutId)
-  }, [assetSearchInput])
+  }, [sanitizedAssetQuery])
 
   const assetSearchQuery = useQuery({
     queryKey: queryKeys.assets.search(currentUserId, debouncedAssetQuery),
@@ -365,6 +365,9 @@ export default function Transactions() {
   })
 
   const tradableSearchResults = assetSearchQuery.data ?? []
+  // 輸入一改就先藏舊結果，避免 debounce 300ms 內點到上一筆關鍵字的資產（PR #26）。
+  const assetSearchMatchesInput =
+    sanitizedAssetQuery === debouncedAssetQuery && debouncedAssetQuery.length > 0
 
   const chooseAsset = (asset: Asset) => {
     setSelectedAsset({
@@ -957,7 +960,7 @@ export default function Transactions() {
                         </button>
                       </div>
                     )}
-                    {debouncedAssetQuery && assetSearchQuery.isError && (
+                    {assetSearchMatchesInput && assetSearchQuery.isError && (
                       <p className="text-sm text-red-700">
                         {getApiErrorMessage(
                           assetSearchQuery.error,
@@ -965,7 +968,7 @@ export default function Transactions() {
                         )}
                       </p>
                     )}
-                    {debouncedAssetQuery &&
+                    {assetSearchMatchesInput &&
                       !assetSearchQuery.isFetching &&
                       !assetSearchQuery.isError &&
                       (tradableSearchResults.length > 0 ? (

@@ -537,6 +537,28 @@ describe('Transactions page trade flows', () => {
     expect(searchAssets).toHaveBeenCalledWith({ q: 'cash', page: 2, take: 10 })
   })
 
+  it('hides previous asset search results while the query is still debouncing', async () => {
+    renderPage()
+
+    await waitFor(() => {
+      expect(getAccounts).toHaveBeenCalled()
+      expect(searchAssets).toHaveBeenCalledWith({ page: 1, take: 1 })
+    })
+
+    fireEvent.click(screen.getByRole('button', { name: 'Buy' }))
+    fireEvent.change(screen.getByLabelText('Asset'), {
+      target: { value: '2330' },
+    })
+
+    expect(await screen.findByRole('button', { name: '2330 · TSMC' })).toBeTruthy()
+
+    fireEvent.change(screen.getByLabelText('Asset'), {
+      target: { value: 'nvda' },
+    })
+
+    expect(screen.queryByRole('button', { name: '2330 · TSMC' })).toBeNull()
+  })
+
   it('blocks buy submission when quantity is missing', async () => {
     await switchToMode('buy')
 
