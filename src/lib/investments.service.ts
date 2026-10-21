@@ -1,45 +1,14 @@
 import { api } from './api'
 import type { Account } from './accounts.service'
-import type { Asset, AssetListResponse } from './assets.service'
+import type { ApiSchemas } from './api-schema'
 
 export type { Asset } from './assets.service'
 
-export type TransactionListItem = {
-  id: string
-  accountId: string
-  assetId?: string | null
-  type: 'buy' | 'sell' | 'deposit' | 'withdraw' | 'dividend' | 'fee'
-  amount: number | string
-  quantity?: number | string | null
-  price?: number | string | null
-  fee?: number | string | null
-  tax?: number | string | null
-  brokerOrderNo?: string | null
-  tradeTime: string
-  note?: string | null
-  isDeleted: boolean
-  deletedAt?: string | null
-  account?: {
-    id: string
-    name: string
-    currency: string
-    userId: string
-  }
-  asset?: {
-    id: string
-    symbol: string
-    name: string
-    baseCurrency: string
-  } | null
-}
+/** 列表與單筆都是這一個回應。金額是十進位字串（PR #26 / trackvest-api PR #46）。 */
+export type TransactionListItem = ApiSchemas['TransactionResponseDto']
+export type TransactionsResponse = ApiSchemas['TransactionListResponseDto']
 
-export type TransactionsResponse = {
-  total: number
-  skip: number
-  take: number
-  items: TransactionListItem[]
-}
-
+/** 建立與更新的 body 仍是 number。上面的回應型別才走 OpenAPI。 */
 export type CreateTransactionPayload = {
   accountId: string
   assetId?: string
@@ -133,18 +102,13 @@ export const investmentsService = {
     return response.data
   },
 
-  async getAssets(): Promise<Asset[]> {
-    const response = await api.get<AssetListResponse>('/assets', {
-      params: {
-        page: 1,
-        take: 100,
-      },
-    })
-    return response.data.items
-  },
-
   async getTransactions(
-    params: { accountId?: string; assetId?: string; take?: number } = {},
+    params: {
+      accountId?: string
+      assetId?: string
+      skip?: number
+      take?: number
+    } = {},
   ): Promise<TransactionsResponse> {
     const response = await api.get<TransactionsResponse>('/transactions', { params })
     return response.data

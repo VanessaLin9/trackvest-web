@@ -1,4 +1,5 @@
 import { api } from './api'
+import type { ApiSchemas } from './api-schema'
 import type { AssetClass, AssetType } from './assets.service'
 
 export type PortfolioSummary = {
@@ -14,24 +15,8 @@ export type PortfolioSummary = {
   holdingsCount: number
 }
 
-export type PortfolioHolding = {
-  assetId: string
-  symbol: string
-  name: string
-  type: AssetType
-  assetClass?: AssetClass | null
-  quantity: number
-  avgCost: number
-  latestPrice: number | null
-  latestPriceCurrency: string | null
-  assetBaseCurrency: string
-  investedAmount: number
-  marketValue: number
-  pnl: number
-  returnRate: number
-  weight: number
-  lastActivitySummary: string | null
-}
+/** 持倉列來自 OpenAPI。最近動作是 type / tradeDate / note，不是英文句子（PR #26）。 */
+export type PortfolioHolding = ApiSchemas['PortfolioHoldingItemResponseDto']
 
 export type PortfolioAllocationByType = {
   type: AssetType

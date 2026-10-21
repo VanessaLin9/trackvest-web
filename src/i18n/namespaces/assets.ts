@@ -4,6 +4,12 @@ export const assets = {
     title: 'Assets',
     subtitle:
       'Create the minimum tradable asset catalog the investment flow needs. If a stock, ETF, or crypto is missing here, buy and dividend entry will stall in Investments.',
+    subtitleReadOnly:
+      'Search the shared asset catalog. Creating and editing assets is limited to admins.',
+    readOnlyTitle: 'Catalog is read-only',
+    readOnlyDescription:
+      'This catalog is shared. You can search and review assets here. Creating, editing, and deleting stay with an admin.',
+    readOnlyEmptySelection: 'Select a row to review an asset. New symbols are added by an admin.',
     failedToLoad: 'Failed to load assets',
     symbolRequired: 'Symbol is required',
     invalidSymbol: 'Symbol can use only letters, numbers, and . _ : / -',
@@ -84,6 +90,11 @@ export const assets = {
     title: '資產',
     subtitle:
       '建立投資流程所需的最小可交易資產清單。如果股票、ETF 或加密貨幣尚未建立，Investments 的買進與股利流程就會卡住。',
+    subtitleReadOnly: '搜尋共用的資產目錄。建立與修改只限管理員。',
+    readOnlyTitle: '目錄唯讀',
+    readOnlyDescription:
+      '這份目錄是所有人共用的。這裡可以搜尋與查看。建立、修改、刪除只留給管理員。',
+    readOnlyEmptySelection: '點一列可以查看資產。新標的由管理員建立。',
     failedToLoad: '載入資產失敗',
     symbolRequired: '代號為必填',
     invalidSymbol: '代號只能使用英數字與 . _ : / -',

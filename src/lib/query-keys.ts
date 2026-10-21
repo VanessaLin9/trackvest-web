@@ -30,11 +30,18 @@ export const queryKeys = {
      */
     all: (userId: string) => ['assets', userId] as const,
     /**
-     * Flat list of assets used for dropdowns/lookups (e.g. Transactions form).
-     * The API returns a capped page under the hood, but consumers treat it
-     * as a single pool.
+     * One-row probe so the investment form can tell an empty catalog from
+     * “the user has not searched yet”. `total` is the signal; items are not
+     * used as a dropdown.
+     * 空目錄看 `total`，不把這一筆 item 當下拉選項（PR #26）。
      */
-    lookup: (userId: string) => ['assets', userId, 'lookup'] as const,
+    catalogProbe: (userId: string) => ['assets', userId, 'catalog-probe'] as const,
+    /**
+     * Server-side symbol/name search for the investment form. The query
+     * string is part of the key so each debounced term gets its own cache entry.
+     */
+    search: (userId: string, query: string) =>
+      ['assets', userId, 'search', query] as const,
     /**
      * Paged catalog with server-side filters used by the Assets management
      * page. The `params` object participates in the key so changing any
@@ -53,10 +60,14 @@ export const queryKeys = {
   },
 
   transactions: {
-    /** Scope root — use to invalidate every transactions list, regardless of filter. */
+    /** Scope root — use to invalidate every transactions list, regardless of filter or page. */
     all: (userId: string) => ['transactions', userId] as const,
-    list: (userId: string, accountFilter: string) =>
-      ['transactions', userId, accountFilter] as const,
+    /**
+     * `skip` is part of the key so page 2 does not reuse page 1.
+     * 列表分頁走 API 的 skip/take，不再把第一頁 20 筆當成全部歷史（PR #26）。
+     */
+    list: (userId: string, accountFilter: string, skip: number) =>
+      ['transactions', userId, accountFilter, skip] as const,
   },
 
   cashbook: {

@@ -48,7 +48,7 @@ describe('Signup page', () => {
     login.mockResolvedValue({
       id: 'user-new',
       email: 'new@example.com',
-      role: 'USER',
+      role: 'user',
     })
   })
 

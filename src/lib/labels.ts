@@ -73,6 +73,10 @@ export function formatTransactionMode(
       return t('transactions.modeSell')
     case 'dividend':
       return t('transactions.modeDividend')
+    case 'withdraw':
+      return t('transactions.modeWithdraw')
+    case 'fee':
+      return t('transactions.modeFee')
     default:
       return String(mode)
   }
