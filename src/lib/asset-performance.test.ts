@@ -15,6 +15,7 @@ describe('asset performance fixtures', () => {
 
     expect(closed.status).toBe('closed')
     expect(closed.quantity).toBe('0')
+    expect(closed.realizedQuantity).toBe('10')
     expect(closed.unrealizedPnl).toBe('0')
     expect(closed.latestPrice).toBeNull()
     expect(closed.recordedDividendAmount).toBeNull()
@@ -26,9 +27,11 @@ describe('asset performance fixtures', () => {
     const missingFifo = getAssetPerformanceScenario('missing_fifo').items[0]
     const zeroPnl = getAssetPerformanceScenario('zero_pnl').items[0]
 
+    expect(missingFifo.realizedQuantity).toBeNull()
     expect(missingFifo.realizedNetPnl).toBeNull()
     expect(missingFifo.tradeNetPnl).toBeNull()
     expect(missingFifo.issues).toEqual(['MISSING_FIFO'])
+    expect(zeroPnl.realizedQuantity).toBe('0')
     expect(zeroPnl.realizedNetPnl).toBe('0')
     expect(zeroPnl.tradeNetPnl).toBe('0')
     expect(zeroPnl.issues).toEqual([])

@@ -69,6 +69,24 @@ function DateCell({ value, locale }: { value: string | null; locale: string }) {
   return <span className="text-gray-700">{formatSnapshotDate(value, locale)}</span>
 }
 
+/** 股數只格式化 API 字串。null 顯示資料不足，不可從剩餘股數或損益反推（PR #27）。 */
+function ShareQuantityCell({ value }: { value: string | null }) {
+  const { t, locale } = useI18n()
+  if (value == null) {
+    return <UnavailableValue />
+  }
+
+  return (
+    <span className="font-mono text-gray-700">
+      {formatShareQuantityFromString(
+        value,
+        locale,
+        t('performance.quantityUnitShares'),
+      )}
+    </span>
+  )
+}
+
 export function AssetHistoryTable({
   items,
   showFilters = false,
@@ -136,7 +154,7 @@ export function AssetHistoryTable({
               {t('performance.currencyGroup', { currency: group.currency })}
             </h3>
             <div className="overflow-x-auto">
-              <table className="w-full min-w-[960px] border-collapse text-sm">
+              <table className="w-full min-w-[1080px] border-collapse text-sm">
                 <thead>
                   <tr className="border-b border-gray-200 text-left text-gray-600">
                     <th className="sticky left-0 z-10 bg-white px-3 py-3 font-medium">
@@ -144,6 +162,9 @@ export function AssetHistoryTable({
                     </th>
                     <th className="px-3 py-3 font-medium">{t('performance.status')}</th>
                     <th className="px-3 py-3 font-medium">{t('performance.quantity')}</th>
+                    <th className="px-3 py-3 font-medium">
+                      {t('performance.realizedQuantity')}
+                    </th>
                     <th className="px-3 py-3 font-medium">
                       {t('performance.realizedNetPnl')}
                     </th>
@@ -183,12 +204,11 @@ export function AssetHistoryTable({
                           ? t('performance.statusHolding')
                           : t('performance.statusClosed')}
                       </td>
-                      <td className="px-3 py-3 font-mono text-gray-700">
-                        {formatShareQuantityFromString(
-                          item.quantity,
-                          locale,
-                          t('performance.quantityUnitShares'),
-                        )}
+                      <td className="px-3 py-3">
+                        <ShareQuantityCell value={item.quantity} />
+                      </td>
+                      <td className="px-3 py-3">
+                        <ShareQuantityCell value={item.realizedQuantity} />
                       </td>
                       <td className="px-3 py-3">
                         <AmountCell

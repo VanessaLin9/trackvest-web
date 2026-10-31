@@ -966,6 +966,8 @@ describe('Dashboard smoke tests', () => {
     expect(await screen.findByText('2330')).toBeTruthy()
     expect(screen.getByText('Asset history results')).toBeTruthy()
     expect(screen.getByText('Closed')).toBeTruthy()
+    expect(screen.getByRole('columnheader', { name: 'Realized shares' })).toBeTruthy()
+    expect(screen.getByText('10 shares')).toBeTruthy()
     expect(screen.getByRole('link', { name: 'Open full table' })).toHaveAttribute(
       'href',
       '/performance',

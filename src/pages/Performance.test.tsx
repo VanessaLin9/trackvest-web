@@ -57,6 +57,9 @@ describe('Performance page', () => {
     expect(await screen.findByText('TWD amounts')).toBeTruthy()
     expect(screen.getByText('Asset history results')).toBeTruthy()
     expect(screen.getByText('USD amounts')).toBeTruthy()
+    expect(screen.getAllByRole('columnheader', { name: 'Realized shares' }).length).toBe(2)
+    expect(screen.getByText('2.5 shares')).toBeTruthy()
+    expect(screen.getByText('10 shares')).toBeTruthy()
     expect(screen.getAllByText('Not recorded').length).toBeGreaterThan(0)
     expect(screen.getAllByText('Closed').length).toBeGreaterThan(1)
     expect(
@@ -120,7 +123,26 @@ describe('Performance page', () => {
     expect(screen.getByText('各標的歷史成果')).toBeTruthy()
     expect(screen.getByText('未登錄')).toBeTruthy()
     expect(screen.getByText('缺少可用行情')).toBeTruthy()
+    expect(screen.getByRole('columnheader', { name: '已實現股數' })).toBeTruthy()
+    expect(screen.getByText('2.5 股')).toBeTruthy()
     expect(screen.queryByText('0 TWD')).toBeNull()
+  })
+
+  it('shows realized shares as unavailable when FIFO is missing, and keeps a true zero distinct', async () => {
+    getAssetPerformance.mockResolvedValue(getAssetPerformanceScenario('missing_fifo'))
+    renderPage()
+
+    expect(await screen.findByRole('columnheader', { name: 'Realized shares' })).toBeTruthy()
+    expect(screen.getByText('12.5 shares')).toBeTruthy()
+    expect((await screen.findAllByText('Insufficient data')).length).toBeGreaterThan(0)
+
+    cleanup()
+    getAssetPerformance.mockResolvedValue(getAssetPerformanceScenario('zero_pnl'))
+    renderPage()
+
+    expect(await screen.findByText('0 shares')).toBeTruthy()
+    expect(screen.getByText('5 shares')).toBeTruthy()
+    expect(screen.queryByText('Insufficient data')).toBeNull()
   })
 
   it('keeps an empty history state with a trade entry point', async () => {

@@ -1538,6 +1538,11 @@ export interface components {
              */
             quantity: string;
             /**
+             * @description Total shares sold through completed FIFO matches for this asset and account currency. Zero when there is no sell. Null when matches are missing or do not cover the sell quantity. Not the remaining quantity, and not the profitable subset.
+             * @example 4
+             */
+            realizedQuantity: string | null;
+            /**
              * @description Recorded net sell proceeds minus FIFO disposed cost. Null when FIFO or lot data cannot support the calculation.
              * @example 50
              */

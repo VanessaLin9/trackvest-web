@@ -191,6 +191,7 @@ export const portfolioService = {
   /**
    * 讀取各標的歷史成果（PR #27 CP3）。金額由 API 算好，前端只做顯示。
    * 對應 GET /portfolio/performance/assets；可選 accountId 必須是自己的帳戶。
+   * realizedQuantity 同樣只展示，不從剩餘股數或損益反推（PR #27）。
    */
   async getAssetPerformance(query?: {
     accountId?: string
