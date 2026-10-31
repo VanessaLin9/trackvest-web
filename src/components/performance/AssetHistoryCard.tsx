@@ -76,10 +76,6 @@ export function AssetHistoryCard({
         ) : null}
       </div>
 
-      <p className="rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-900">
-        {t('performance.mockNotice')}
-      </p>
-
       {generatedAt ? (
         <p className="text-xs text-gray-500" title={t('performance.generatedAtHint')}>
           {t('performance.generatedAt', { date: generatedAt })}

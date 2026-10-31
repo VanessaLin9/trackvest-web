@@ -8,8 +8,6 @@ export const performance = {
     dashboardDescription:
       'Closed positions stay in this table. Amounts are grouped by original currency and are not converted by the homepage display-currency setting.',
     viewAll: 'Open full table',
-    mockNotice:
-      'This table is still using contract fixtures from API PR #48. It is not your live portfolio.',
     generatedAt: 'Table generated {{date}}',
     generatedAtHint: 'This is the response time, not the quote date on each row.',
     currencyGroup: '{{currency}} amounts',
@@ -61,8 +59,6 @@ export const performance = {
     dashboardDescription:
       '已清倉標的仍會留在這張表。金額依原幣分組，不受首頁顯示幣別影響。',
     viewAll: '查看完整表格',
-    mockNotice:
-      '目前仍使用 API PR #48 的契約 fixtures，不是你的即時投資組合資料。',
     generatedAt: '表格產生時間 {{date}}',
     generatedAtHint: '這是回應產生時間，不是各列的行情日期。',
     currencyGroup: '{{currency}} 原幣',

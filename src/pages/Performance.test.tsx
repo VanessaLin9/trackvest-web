@@ -60,8 +60,10 @@ describe('Performance page', () => {
     expect(screen.getAllByText('Not recorded').length).toBeGreaterThan(0)
     expect(screen.getAllByText('Closed').length).toBeGreaterThan(1)
     expect(
-      screen.getByText('This table is still using contract fixtures from API PR #48. It is not your live portfolio.'),
-    ).toBeTruthy()
+      screen.queryByText(
+        'This table is still using contract fixtures from API PR #48. It is not your live portfolio.',
+      ),
+    ).toBeNull()
   })
 
   it('filters closed rows and searches by symbol', async () => {

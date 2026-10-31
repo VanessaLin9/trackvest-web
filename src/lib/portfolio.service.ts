@@ -1,10 +1,7 @@
 import { api } from './api'
 import type { ApiSchemas } from './api-schema'
 import type { AssetClass, AssetType } from './assets.service'
-import {
-  getAssetPerformancePreview,
-  type PortfolioAssetPerformanceResponse,
-} from './asset-performance'
+import type { PortfolioAssetPerformanceResponse } from './asset-performance'
 
 export type PortfolioSummary = {
   displayCurrencyMode: 'portfolio-default' | 'preferred-base'
@@ -192,13 +189,18 @@ export const portfolioService = {
   },
 
   /**
-   * CP2 先回官方 CP0 fixtures，不當成登入使用者的真實歷史（PR #27）。
-   * live GET 要等 API CP1（trackvest-api#48）才會註冊。
+   * 讀取各標的歷史成果（PR #27 CP3）。金額由 API 算好，前端只做顯示。
+   * 對應 GET /portfolio/performance/assets；可選 accountId 必須是自己的帳戶。
    */
   async getAssetPerformance(query?: {
     accountId?: string
   }): Promise<PortfolioAssetPerformanceResponse> {
-    void query
-    return getAssetPerformancePreview()
+    const response = await api.get<PortfolioAssetPerformanceResponse>(
+      '/portfolio/performance/assets',
+      {
+        params: query?.accountId ? { accountId: query.accountId } : undefined,
+      },
+    )
+    return response.data
   },
 }
