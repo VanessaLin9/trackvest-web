@@ -113,9 +113,8 @@ export const queryKeys = {
         targetEquityPercent,
       ] as const,
     /**
-     * Historical per-asset results in account currency. `accountId` is part
-     * of the key so a scoped read cannot reuse another account's cache.
-     * Status / search / page stay client-side and must not enter this key.
+     * 各標的歷史成果（PR #27）：key 含 userId 與 account scope，避免讀到別人的快取。
+     * 狀態／搜尋／分頁只在前端做，不可進入這個 key。
      */
     assetPerformance: (userId: string, accountId: string) =>
       ['portfolio', 'asset-performance', userId, accountId] as const,

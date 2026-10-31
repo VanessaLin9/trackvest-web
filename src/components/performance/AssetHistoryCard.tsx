@@ -28,6 +28,7 @@ export function AssetHistoryCard({
   const [page, setPage] = useState(1)
   const accountScope = resolveAccountScopeKey(accountId)
 
+  // 這張卡獨立取數：失敗時只影響自己，不擋住 KPI／holdings（PR #27）。
   const query = useQuery({
     queryKey: queryKeys.portfolio.assetPerformance(currentUserId, accountScope),
     queryFn: () =>

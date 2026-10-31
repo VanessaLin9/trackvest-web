@@ -11,8 +11,8 @@ const PLACEHOLDER = '-'
 const DECIMAL_STRING_PATTERN = /^-?\d+(\.\d{1,8})?$/
 
 /**
- * Parses an API decimal string. Null / empty / malformed stay null so
- * missing P&L is never coerced to zero.
+ * 解析 API 十進位字串（PR #27）。null／空值／格式不符保持 null，
+ * 缺資料的損益不可被轉成 0。
  */
 export function parseDecimalString(
   value: string | null | undefined,

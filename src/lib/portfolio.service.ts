@@ -192,9 +192,8 @@ export const portfolioService = {
   },
 
   /**
-   * CP2 serves official CP0 fixtures. The live GET is not registered until
-   * API CP1 (trackvest-api#48); do not treat this payload as the signed-in
-   * user's real history.
+   * CP2 先回官方 CP0 fixtures，不當成登入使用者的真實歷史（PR #27）。
+   * live GET 要等 API CP1（trackvest-api#48）才會註冊。
    */
   async getAssetPerformance(query?: {
     accountId?: string

@@ -15,9 +15,8 @@ export type AssetPerformanceStatusFilter = 'all' | PortfolioAssetPerformanceStat
 export const ASSET_PERFORMANCE_PAGE_SIZE = 20
 
 /**
- * CP2 preview is a composition of official CP0 scenarios whose
- * (assetId, currency) keys do not collide. It is mock data, not a live
- * portfolio snapshot. Source: trackvest-api@823f70bacb03e3a22833c082a63ef263d7004556
+ * CP2 preview 只組合官方 CP0 且 (assetId, currency) 不衝突的 scenarios（PR #27）。
+ * 這是 mock，不是即時投組快照。來源：trackvest-api@823f70bacb03e3a22833c082a63ef263d7004556
  */
 const PREVIEW_SCENARIO_KEYS = [
   'holding_partial_sale',
@@ -118,6 +117,7 @@ export function paginateItems<T>(
   }
 }
 
+/** 依帳戶原幣分組展示，不跨幣加總、也不套用首頁顯示幣別（PR #27）。 */
 export function groupAssetPerformanceByCurrency(
   items: PortfolioAssetPerformanceItem[],
 ): Array<{ currency: string; items: PortfolioAssetPerformanceItem[] }> {
@@ -139,6 +139,7 @@ export function groupAssetPerformanceByCurrency(
   return groups
 }
 
+/** 無股利紀錄顯示「未登錄」，不可說實際股利為 0（PR #27）。 */
 export function isDividendUnrecorded(
   item: PortfolioAssetPerformanceItem,
 ): boolean {

@@ -391,6 +391,7 @@ export default function Dashboard() {
 
       <KpiCards summary={summary} displayCurrency={displayCurrency} />
 
+      {/* 歷史成果有自己的 loading／error／empty，不取代 holdings 空狀態（PR #27）。 */}
       <AssetHistoryCard variant="dashboard" />
 
       {holdings.length === 0 ? (
