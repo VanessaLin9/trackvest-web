@@ -13,6 +13,7 @@ export type PortfolioAssetPerformanceIssue =
 export type AssetPerformanceStatusFilter = 'all' | PortfolioAssetPerformanceStatus
 
 export const ASSET_PERFORMANCE_PAGE_SIZE = 20
+export const ASSET_PERFORMANCE_DASHBOARD_LIMIT = 5
 
 /**
  * CP2 preview 只組合官方 CP0 且 (assetId, currency) 不衝突的 scenarios（PR #27）。
@@ -63,6 +64,25 @@ export function sortAssetPerformanceItems(
   items: PortfolioAssetPerformanceItem[],
 ): PortfolioAssetPerformanceItem[] {
   return [...items].sort(compareAssetPerformanceItems)
+}
+
+function lastTradeTimestamp(item: PortfolioAssetPerformanceItem): number {
+  const parsed = Date.parse(item.lastTradeAt)
+  return Number.isFinite(parsed) ? parsed : 0
+}
+
+/** 首頁只展示最近買賣的 N 檔，不重算損益；完整列表在 /performance（PR #27）。 */
+export function selectRecentAssetPerformanceItems(
+  items: PortfolioAssetPerformanceItem[],
+  limit = ASSET_PERFORMANCE_DASHBOARD_LIMIT,
+): PortfolioAssetPerformanceItem[] {
+  return [...items]
+    .sort(
+      (left, right) =>
+        lastTradeTimestamp(right) - lastTradeTimestamp(left) ||
+        compareAssetPerformanceItems(left, right),
+    )
+    .slice(0, limit)
 }
 
 export function getAssetPerformancePreview(): PortfolioAssetPerformanceResponse {

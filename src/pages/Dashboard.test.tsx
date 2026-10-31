@@ -974,6 +974,35 @@ describe('Dashboard smoke tests', () => {
     )
   })
 
+  it('shows only the five most recently traded assets on the homepage card', async () => {
+    const template = getAssetPerformanceScenario('holding_partial_sale').items[0]
+    getAssetPerformance.mockResolvedValue({
+      generatedAt: '2026-10-31T00:00:00.000Z',
+      items: Array.from({ length: 6 }, (_, index) => ({
+        ...template,
+        assetId: `11111111-1111-4111-8111-${String(index).padStart(12, '0')}`,
+        symbol: `S${index}`,
+        name: `Asset ${index}`,
+        lastTradeAt: `2026-10-0${index + 1}T00:00:00.000Z`,
+      })),
+    })
+
+    renderPage()
+
+    expect(await screen.findByText('S5')).toBeTruthy()
+    expect(screen.getByText('S1')).toBeTruthy()
+    expect(screen.queryByText('S0')).toBeNull()
+    expect(
+      screen.getByText(
+        'Showing the 5 most recently traded of 6 assets. Open the full table for the rest.',
+      ),
+    ).toBeTruthy()
+    expect(screen.getByRole('link', { name: 'Open full table' })).toHaveAttribute(
+      'href',
+      '/performance',
+    )
+  })
+
   it('keeps holdings visible when asset history fails to load', async () => {
     getAssetPerformance.mockRejectedValue(new Error('history unavailable'))
 

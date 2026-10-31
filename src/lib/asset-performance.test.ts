@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import {
+  ASSET_PERFORMANCE_DASHBOARD_LIMIT,
   ASSET_PERFORMANCE_PAGE_SIZE,
   filterAssetPerformanceItems,
   getAssetPerformancePreview,
@@ -7,6 +8,7 @@ import {
   groupAssetPerformanceByCurrency,
   isDividendUnrecorded,
   paginateItems,
+  selectRecentAssetPerformanceItems,
 } from './asset-performance'
 
 describe('asset performance fixtures', () => {
@@ -103,5 +105,28 @@ describe('asset performance client filtering', () => {
     expect(firstPage.items).toHaveLength(20)
     expect(secondPage.items).toHaveLength(1)
     expect(firstPage.totalPages).toBe(2)
+  })
+
+  it('keeps the five most recently traded assets for the homepage preview', () => {
+    const many = Array.from({ length: 6 }, (_, index) => ({
+      ...previewItems[0],
+      assetId: `11111111-1111-4111-8111-${String(index).padStart(12, '0')}`,
+      symbol: `S${index}`,
+      lastTradeAt: `2026-10-0${index + 1}T00:00:00.000Z`,
+    }))
+
+    expect(ASSET_PERFORMANCE_DASHBOARD_LIMIT).toBe(5)
+    expect(selectRecentAssetPerformanceItems(many).map((item) => item.symbol)).toEqual([
+      'S5',
+      'S4',
+      'S3',
+      'S2',
+      'S1',
+    ])
+    expect(selectRecentAssetPerformanceItems(many.slice(0, 3)).map((item) => item.symbol)).toEqual([
+      'S2',
+      'S1',
+      'S0',
+    ])
   })
 })

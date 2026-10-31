@@ -3,7 +3,11 @@ import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useAuthenticatedUser } from '../../app/use-auth'
 import { useI18n } from '../../i18n'
-import type { AssetPerformanceStatusFilter } from '../../lib/asset-performance'
+import {
+  ASSET_PERFORMANCE_DASHBOARD_LIMIT,
+  selectRecentAssetPerformanceItems,
+  type AssetPerformanceStatusFilter,
+} from '../../lib/asset-performance'
 import { formatSnapshotDate } from '../../lib/formatters'
 import { portfolioService } from '../../lib/portfolio.service'
 import { queryKeys, resolveAccountScopeKey } from '../../lib/query-keys'
@@ -47,6 +51,12 @@ export function AssetHistoryCard({
   }
 
   const isDashboard = variant === 'dashboard'
+  const items = query.data?.items ?? []
+  const tableItems = isDashboard
+    ? selectRecentAssetPerformanceItems(items)
+    : items
+  const isTruncated =
+    isDashboard && items.length > ASSET_PERFORMANCE_DASHBOARD_LIMIT
   const generatedAt = query.data
     ? formatSnapshotDate(query.data.generatedAt, locale)
     : null
@@ -119,18 +129,28 @@ export function AssetHistoryCard({
         </div>
       ) : null}
 
-      {!query.isLoading && !query.error && (query.data?.items.length ?? 0) > 0 ? (
-        <AssetHistoryTable
-          items={query.data?.items ?? []}
-          showFilters={!isDashboard}
-          showPagination={!isDashboard}
-          statusFilter={isDashboard ? 'all' : statusFilter}
-          searchQuery={isDashboard ? '' : searchQuery}
-          page={isDashboard ? 1 : page}
-          onStatusFilterChange={setStatusFilter}
-          onSearchQueryChange={setSearchQuery}
-          onPageChange={setPage}
-        />
+      {!query.isLoading && !query.error && items.length > 0 ? (
+        <>
+          <AssetHistoryTable
+            items={tableItems}
+            showFilters={!isDashboard}
+            showPagination={!isDashboard}
+            statusFilter={isDashboard ? 'all' : statusFilter}
+            searchQuery={isDashboard ? '' : searchQuery}
+            page={isDashboard ? 1 : page}
+            onStatusFilterChange={setStatusFilter}
+            onSearchQueryChange={setSearchQuery}
+            onPageChange={setPage}
+          />
+          {isTruncated ? (
+            <p className="text-xs text-gray-500">
+              {t('performance.dashboardPreviewNote', {
+                shown: tableItems.length,
+                total: items.length,
+              })}
+            </p>
+          ) : null}
+        </>
       ) : null}
     </Card>
   )

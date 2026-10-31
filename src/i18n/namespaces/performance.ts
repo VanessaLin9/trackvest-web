@@ -6,7 +6,9 @@ export const performance = {
       'Results for every asset you have bought or sold, including closed positions. Amounts stay in the original account currency.',
     dashboardTitle: 'Asset history results',
     dashboardDescription:
-      'Closed positions stay in this table. Amounts are grouped by original currency and are not converted by the homepage display-currency setting.',
+      'The homepage lists the 5 most recently traded assets, including closed positions. Open the full table for the rest. Amounts stay in the original account currency.',
+    dashboardPreviewNote:
+      'Showing the {{shown}} most recently traded of {{total}} assets. Open the full table for the rest.',
     viewAll: 'Open full table',
     generatedAt: 'Table generated {{date}}',
     generatedAtHint: 'This is the response time, not the quote date on each row.',
@@ -58,7 +60,9 @@ export const performance = {
       '列出所有曾買賣過的標的，包含已清倉部位。金額依帳戶原幣呈現，不會套用首頁的顯示幣別換算。',
     dashboardTitle: '各標的歷史成果',
     dashboardDescription:
-      '已清倉標的仍會留在這張表。金額依原幣分組，不受首頁顯示幣別影響。',
+      '首頁只列出最近買賣的 5 檔標的，包含已清倉。完整列表請到績效頁查看。金額依原幣分組，不受首頁顯示幣別影響。',
+    dashboardPreviewNote:
+      '目前顯示最近 {{shown}} 檔，共 {{total}} 檔。完整列表請到績效頁查看。',
     viewAll: '查看完整表格',
     generatedAt: '表格產生時間 {{date}}',
     generatedAtHint: '這是回應產生時間，不是各列的行情日期。',
