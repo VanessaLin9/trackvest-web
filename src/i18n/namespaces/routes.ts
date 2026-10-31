@@ -2,6 +2,7 @@
 export const routes = {
   en: {
     dashboard: 'Dashboard',
+    performance: 'Performance',
     cashbook: 'Cashbook',
     investments: 'Investments',
     health: 'Health',
@@ -12,6 +13,7 @@ export const routes = {
   },
   'zh-TW': {
     dashboard: '總覽',
+    performance: '績效',
     cashbook: '現金帳',
     investments: '投資',
     health: '健康檢查',

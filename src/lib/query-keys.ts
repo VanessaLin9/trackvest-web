@@ -112,6 +112,13 @@ export const queryKeys = {
         displayCurrency,
         targetEquityPercent,
       ] as const,
+    /**
+     * Historical per-asset results in account currency. `accountId` is part
+     * of the key so a scoped read cannot reuse another account's cache.
+     * Status / search / page stay client-side and must not enter this key.
+     */
+    assetPerformance: (userId: string, accountId: string) =>
+      ['portfolio', 'asset-performance', userId, accountId] as const,
   },
 } as const
 
@@ -125,4 +132,8 @@ export function resolveDisplayCurrencyKey(
   requestedDisplayCurrency: string | undefined,
 ): string {
   return requestedDisplayCurrency ?? 'default'
+}
+
+export function resolveAccountScopeKey(accountId: string | undefined): string {
+  return accountId ?? 'all'
 }

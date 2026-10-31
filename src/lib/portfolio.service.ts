@@ -1,6 +1,10 @@
 import { api } from './api'
 import type { ApiSchemas } from './api-schema'
 import type { AssetClass, AssetType } from './assets.service'
+import {
+  getAssetPerformancePreview,
+  type PortfolioAssetPerformanceResponse,
+} from './asset-performance'
 
 export type PortfolioSummary = {
   displayCurrencyMode: 'portfolio-default' | 'preferred-base'
@@ -185,5 +189,17 @@ export const portfolioService = {
       },
     )
     return response.data
+  },
+
+  /**
+   * CP2 serves official CP0 fixtures. The live GET is not registered until
+   * API CP1 (trackvest-api#48); do not treat this payload as the signed-in
+   * user's real history.
+   */
+  async getAssetPerformance(query?: {
+    accountId?: string
+  }): Promise<PortfolioAssetPerformanceResponse> {
+    void query
+    return getAssetPerformancePreview()
   },
 }

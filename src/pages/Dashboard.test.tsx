@@ -1,6 +1,7 @@
 import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import type { ReactNode } from 'react'
+import { MemoryRouter } from 'react-router-dom'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { setCurrentUserId } from '../app/current-user'
 import { AuthProvider } from '../app/auth-context'
@@ -8,6 +9,10 @@ import { I18nProvider } from '../i18n'
 import { PriceRefreshResponseError } from '../lib/market-price.service'
 import Dashboard from './Dashboard'
 import { usePreferencesStore } from '../store/preferences'
+import {
+  getAssetPerformancePreview,
+  getAssetPerformanceScenario,
+} from '../lib/asset-performance'
 
 const {
   getSummary,
@@ -15,6 +20,7 @@ const {
   getTrend,
   getRebalance,
   getHoldingTrend,
+  getAssetPerformance,
   getTodayRate,
   refreshPrices,
 } = vi.hoisted(() => ({
@@ -23,6 +29,7 @@ const {
   getTrend: vi.fn(),
   getRebalance: vi.fn(),
   getHoldingTrend: vi.fn(),
+  getAssetPerformance: vi.fn(),
   getTodayRate: vi.fn(),
   refreshPrices: vi.fn(),
 }))
@@ -34,6 +41,7 @@ vi.mock('../lib/portfolio.service', () => ({
     getTrend,
     getRebalance,
     getHoldingTrend,
+    getAssetPerformance,
   },
 }))
 
@@ -404,6 +412,7 @@ describe('Dashboard smoke tests', () => {
     getTrend.mockResolvedValue(twdTrend)
     getRebalance.mockResolvedValue(twdRebalance)
     getHoldingTrend.mockResolvedValue(twdHoldingTrend)
+    getAssetPerformance.mockResolvedValue(getAssetPerformancePreview())
     getTodayRate.mockImplementation(
       async ({ base, quote }: { base?: string; quote?: string } = {}) => {
         if (base === 'TWD' && quote === 'USD') {
@@ -453,7 +462,9 @@ describe('Dashboard smoke tests', () => {
           <AuthProvider
             initialUser={{ id: 'user-1', email: 'test@example.com', role: 'user' }}
           >
-            <Dashboard />
+            <MemoryRouter>
+              <Dashboard />
+            </MemoryRouter>
           </AuthProvider>
         </I18nProvider>
       </QueryClientProvider>,
@@ -936,5 +947,38 @@ describe('Dashboard smoke tests', () => {
       expect(screen.getByText('30.45 USD')).toBeTruthy()
       expect(screen.getByDisplayValue('3.53')).toBeTruthy()
     })
+  })
+
+  it('still shows closed-history rows when current holdings are empty', async () => {
+    getHoldings.mockResolvedValue({
+      ...twdHoldings,
+      items: [],
+      allocationByType: [],
+      allocationByAssetClass: [],
+    })
+    getAssetPerformance.mockResolvedValue(
+      getAssetPerformanceScenario('closed_without_quote'),
+    )
+
+    renderPage()
+
+    expect(await screen.findByText('No active holdings yet')).toBeTruthy()
+    expect(await screen.findByText('2330')).toBeTruthy()
+    expect(screen.getByText('Asset history results')).toBeTruthy()
+    expect(screen.getByText('Closed')).toBeTruthy()
+    expect(screen.getByRole('link', { name: 'Open full table' })).toHaveAttribute(
+      'href',
+      '/performance',
+    )
+  })
+
+  it('keeps holdings visible when asset history fails to load', async () => {
+    getAssetPerformance.mockRejectedValue(new Error('history unavailable'))
+
+    renderPage()
+
+    expect(await screen.findByText('TSMC')).toBeTruthy()
+    expect(await screen.findByText('Could not load asset history results.')).toBeTruthy()
+    expect(screen.getByRole('button', { name: 'Retry' })).toBeTruthy()
   })
 })

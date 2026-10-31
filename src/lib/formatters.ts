@@ -8,6 +8,26 @@
 type Nullable<T> = T | null | undefined
 
 const PLACEHOLDER = '-'
+const DECIMAL_STRING_PATTERN = /^-?\d+(\.\d{1,8})?$/
+
+/**
+ * Parses an API decimal string. Null / empty / malformed stay null so
+ * missing P&L is never coerced to zero.
+ */
+export function parseDecimalString(
+  value: string | null | undefined,
+): number | null {
+  if (value == null || value === '') {
+    return null
+  }
+
+  if (!DECIMAL_STRING_PATTERN.test(value)) {
+    return null
+  }
+
+  const parsed = Number(value)
+  return Number.isFinite(parsed) ? parsed : null
+}
 
 /** Share count with a unit suffix (not currency). */
 export function formatShareQuantity(
@@ -29,6 +49,63 @@ export function formatCurrency(value: number, locale: string): string {
     minimumFractionDigits: 0,
     maximumFractionDigits: 2,
   })
+}
+
+/** Formats an API decimal string, or null when the value cannot be shown. */
+export function formatDecimalAmount(
+  value: string | null | undefined,
+  locale: string,
+  currency?: string | null,
+): string | null {
+  const parsed = parseDecimalString(value)
+  if (parsed === null) {
+    return null
+  }
+
+  return formatCurrencyWithCode(parsed, locale, currency)
+}
+
+/** Signed display for API decimal strings. Null means data is unavailable. */
+export function formatSignedDecimalAmount(
+  value: string | null | undefined,
+  locale: string,
+  currency?: string | null,
+): string | null {
+  const parsed = parseDecimalString(value)
+  if (parsed === null) {
+    return null
+  }
+
+  return formatSignedCurrency(parsed, locale, currency)
+}
+
+export function formatShareQuantityFromString(
+  quantity: string,
+  locale: string,
+  unit: string,
+): string {
+  const parsed = parseDecimalString(quantity)
+  if (parsed === null) {
+    return PLACEHOLDER
+  }
+
+  return formatShareQuantity(parsed, locale, unit)
+}
+
+export function signedAmountClassName(
+  value: string | null | undefined,
+): string {
+  const parsed = parseDecimalString(value)
+  if (parsed === null) {
+    return 'text-gray-500'
+  }
+  if (parsed > 0) {
+    return 'text-emerald-700'
+  }
+  if (parsed < 0) {
+    return 'text-red-600'
+  }
+  return 'text-gray-700'
 }
 
 /** Formats a number with an optional currency code suffix (e.g. "1,234.56 USD"). */
