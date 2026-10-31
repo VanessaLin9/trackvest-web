@@ -128,6 +128,33 @@ describe('Performance page', () => {
     expect(screen.queryByText('0 TWD')).toBeNull()
   })
 
+  it('keeps fractional remaining and realized shares visible in English and Traditional Chinese', async () => {
+    const template = getAssetPerformanceScenario('holding_partial_sale').items[0]
+    getAssetPerformance.mockResolvedValue({
+      generatedAt: '2026-10-31T00:00:00.000Z',
+      items: [
+        {
+          ...template,
+          quantity: '0.00001',
+          realizedQuantity: '0.00000001',
+        },
+      ],
+    })
+    renderPage()
+
+    expect(await screen.findByText('0.00001 shares')).toBeTruthy()
+    expect(screen.getByText('0.00000001 shares')).toBeTruthy()
+    expect(screen.queryByText('0 shares')).toBeNull()
+
+    cleanup()
+    window.localStorage.setItem('trackvest.locale', 'zh-TW')
+    renderPage()
+
+    expect(await screen.findByText('0.00001 股')).toBeTruthy()
+    expect(screen.getByText('0.00000001 股')).toBeTruthy()
+    expect(screen.queryByText('0 股')).toBeNull()
+  })
+
   it('shows realized shares as unavailable when FIFO is missing, and keeps a true zero distinct', async () => {
     getAssetPerformance.mockResolvedValue(getAssetPerformanceScenario('missing_fifo'))
     renderPage()

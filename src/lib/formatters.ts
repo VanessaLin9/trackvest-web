@@ -79,6 +79,10 @@ export function formatSignedDecimalAmount(
   return formatSignedCurrency(parsed, locale, currency)
 }
 
+/**
+ * 歷史成果股數沿用 API 最多 8 位小數（PR #27）。
+ * 不可交給 formatShareQuantity 的 4 位上限，否則 0.00001 會顯示成 0。
+ */
 export function formatShareQuantityFromString(
   quantity: string,
   locale: string,
@@ -89,7 +93,11 @@ export function formatShareQuantityFromString(
     return PLACEHOLDER
   }
 
-  return formatShareQuantity(parsed, locale, unit)
+  const formatted = parsed.toLocaleString(locale, {
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 8,
+  })
+  return `${formatted} ${unit}`
 }
 
 export function signedAmountClassName(
