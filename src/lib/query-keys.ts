@@ -112,6 +112,13 @@ export const queryKeys = {
         displayCurrency,
         targetEquityPercent,
       ] as const,
+    /**
+     * 各標的歷史成果（PR #27）：key 含 userId 與 account scope，避免讀到別人的快取。
+     * 掛在 portfolio.all 底下，交易／CSV commit／手動更新價格成功後會一起失效。
+     * 狀態／搜尋／分頁只在前端做，不可進入這個 key。
+     */
+    assetPerformance: (userId: string, accountId: string) =>
+      ['portfolio', 'asset-performance', userId, accountId] as const,
   },
 } as const
 
@@ -125,4 +132,8 @@ export function resolveDisplayCurrencyKey(
   requestedDisplayCurrency: string | undefined,
 ): string {
   return requestedDisplayCurrency ?? 'default'
+}
+
+export function resolveAccountScopeKey(accountId: string | undefined): string {
+  return accountId ?? 'all'
 }

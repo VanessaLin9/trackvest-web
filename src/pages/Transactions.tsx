@@ -515,7 +515,7 @@ export default function Transactions() {
   }
 
   // Any write to transactions also invalidates the portfolio scope so the
-  // Dashboard's summary/holdings/trend panels refresh to reflect the change.
+  // Dashboard summary/holdings/trend and asset-history card refresh (PR #27).
   const invalidateTransactionScopes = async () => {
     await Promise.all([
       queryClient.invalidateQueries({

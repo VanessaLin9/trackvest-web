@@ -4,6 +4,7 @@ import { locales } from './namespaces/locales'
 import { routes } from './namespaces/routes'
 import { common } from './namespaces/common'
 import { dashboard } from './namespaces/dashboard'
+import { performance } from './namespaces/performance'
 import { health } from './namespaces/health'
 import { users } from './namespaces/users'
 import { endpointTester } from './namespaces/endpointTester'
@@ -21,6 +22,7 @@ export const messages = {
     routes: routes.en,
     common: common.en,
     dashboard: dashboard.en,
+    performance: performance.en,
     health: health.en,
     users: users.en,
     endpointTester: endpointTester.en,
@@ -37,6 +39,7 @@ export const messages = {
     routes: routes['zh-TW'],
     common: common['zh-TW'],
     dashboard: dashboard['zh-TW'],
+    performance: performance['zh-TW'],
     health: health['zh-TW'],
     users: users['zh-TW'],
     endpointTester: endpointTester['zh-TW'],

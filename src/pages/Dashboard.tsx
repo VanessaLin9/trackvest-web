@@ -12,6 +12,7 @@ import {
   type DashboardPriceRefreshFeedback,
 } from '../components/dashboard/DashboardHero'
 import { DashboardLoadingState } from '../components/dashboard/DashboardLoadingState'
+import { AssetHistoryCard } from '../components/performance/AssetHistoryCard'
 import { HoldingsTable } from '../components/dashboard/HoldingsTable'
 import { KpiCards } from '../components/dashboard/KpiCards'
 import { RebalancePanel } from '../components/dashboard/RebalancePanel'
@@ -389,6 +390,9 @@ export default function Dashboard() {
       ) : null}
 
       <KpiCards summary={summary} displayCurrency={displayCurrency} />
+
+      {/* 歷史成果有自己的 loading／error／empty，不取代 holdings 空狀態（PR #27）。 */}
+      <AssetHistoryCard variant="dashboard" />
 
       {holdings.length === 0 ? (
         <section className="rounded-3xl border border-dashed border-gray-300 bg-gray-50 px-6 py-10 text-center">

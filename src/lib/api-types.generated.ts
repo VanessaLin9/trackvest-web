@@ -558,6 +558,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/portfolio/performance/assets": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["PortfolioController_getAssetPerformance"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/portfolio/holdings": {
         parameters: {
             query?: never;
@@ -1488,6 +1504,107 @@ export interface components {
         DashboardActivityDto: {
             accountOverview: components["schemas"]["DashboardAccountOverviewItemDto"][];
             recentActivity: components["schemas"]["DashboardRecentActivityItemDto"][];
+        };
+        GetPortfolioAssetPerformanceDto: {
+            /**
+             * Format: uuid
+             * @description Optional account scope. The account must belong to the signed-in user, including when the caller is an admin.
+             */
+            accountId?: string;
+        };
+        /** @enum {string} */
+        PortfolioAssetPerformanceStatus: "holding" | "closed";
+        /**
+         * @description Deterministic, unique issue codes. Missing data must remain distinguishable from genuine zero P&L.
+         * @enum {string}
+         */
+        PortfolioAssetPerformanceIssue: "MISSING_FIFO" | "MISSING_PRICE" | "CURRENCY_MISMATCH" | "INCONSISTENT_LOTS";
+        PortfolioAssetPerformanceItemResponseDto: {
+            /** Format: uuid */
+            assetId: string;
+            /** @example 0050 */
+            symbol: string;
+            /** @example 元大台灣50 */
+            name: string;
+            /**
+             * @description Account currency. One row per assetId + currency; no FX conversion or cross-currency totals.
+             * @example TWD
+             */
+            currency: string;
+            status: components["schemas"]["PortfolioAssetPerformanceStatus"];
+            /**
+             * @description Remaining lot quantity. Never a JavaScript number.
+             * @example 12.5
+             */
+            quantity: string;
+            /**
+             * @description Total shares sold through completed FIFO matches for this asset and account currency. Zero when there is no sell. Null when matches are missing or do not cover the sell quantity. Not the remaining quantity, and not the profitable subset.
+             * @example 4
+             */
+            realizedQuantity: string | null;
+            /**
+             * @description Recorded net sell proceeds minus FIFO disposed cost. Null when FIFO or lot data cannot support the calculation.
+             * @example 50
+             */
+            realizedNetPnl: string | null;
+            /**
+             * @description Remaining lot cost in account currency. Zero for a consistent closed position.
+             * @example 1250
+             */
+            remainingCost: string | null;
+            /**
+             * @description Latest usable non-seed quote in the row currency. Null if unavailable or its currency differs. Closed rows do not require a quote.
+             * @example 120
+             */
+            latestPrice: string | null;
+            /**
+             * Format: date-time
+             * @description UTC ISO timestamp of the usable quote, not the response generation time. Null when latestPrice is null.
+             */
+            priceAsOf: string | null;
+            /**
+             * @description Source of the usable quote. Null when latestPrice is null.
+             * @example finmind
+             */
+            priceSource: string | null;
+            /**
+             * @description Quantity times usable quote minus remaining cost. Zero for a consistent closed position; null when required data is unavailable.
+             * @example 250
+             */
+            unrealizedPnl: string | null;
+            /**
+             * @description Realized net P&L plus unrealized P&L, excluding dividends. Null if either term is unavailable.
+             * @example 300
+             */
+            tradeNetPnl: string | null;
+            /**
+             * @description Only the dividend amounts recorded in this scope. Null when there are no dividend records; this does not establish the actual dividend total.
+             * @example 20
+             */
+            recordedDividendAmount: string | null;
+            /** @example 1 */
+            recordedDividendCount: number;
+            /**
+             * Format: date-time
+             * @description First active buy timestamp (UTC ISO). Null if no buy history is recorded.
+             */
+            firstBuyAt: string | null;
+            /**
+             * Format: date-time
+             * @description Latest active buy/sell timestamp (UTC ISO), excluding dividends.
+             */
+            lastTradeAt: string;
+            /** @description Deterministic, unique issue codes. Missing data must remain distinguishable from genuine zero P&L. */
+            issues: components["schemas"]["PortfolioAssetPerformanceIssue"][];
+        };
+        PortfolioAssetPerformanceResponseDto: {
+            /**
+             * Format: date-time
+             * @description UTC ISO response generation time. Each row carries its own quote timestamp.
+             */
+            generatedAt: string;
+            /** @description All active buy/sell history, including closed holdings. Ordered by symbol, currency, assetId. */
+            items: components["schemas"]["PortfolioAssetPerformanceItemResponseDto"][];
         };
         PortfolioSummaryResponseDto: {
             /**
@@ -3009,6 +3126,28 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["PortfolioSummaryResponseDto"];
+                };
+            };
+        };
+    };
+    PortfolioController_getAssetPerformance: {
+        parameters: {
+            query?: {
+                /** @description Optional account scope. The account must belong to the signed-in user, including when the caller is an admin. */
+                accountId?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PortfolioAssetPerformanceResponseDto"];
                 };
             };
         };
