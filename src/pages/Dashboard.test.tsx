@@ -1,4 +1,4 @@
-import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react'
+import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import type { ReactNode } from 'react'
 import { MemoryRouter } from 'react-router-dom'
@@ -9,6 +9,9 @@ import { I18nProvider } from '../i18n'
 import { PriceRefreshResponseError } from '../lib/market-price.service'
 import Dashboard from './Dashboard'
 import { usePreferencesStore } from '../store/preferences'
+import {
+  getAnnualRealizedScenario,
+} from '../lib/annual-realized'
 import {
   getAssetPerformancePreview,
   getAssetPerformanceScenario,
@@ -21,6 +24,7 @@ const {
   getRebalance,
   getHoldingTrend,
   getAssetPerformance,
+  getAnnualRealized,
   getTodayRate,
   refreshPrices,
 } = vi.hoisted(() => ({
@@ -30,6 +34,7 @@ const {
   getRebalance: vi.fn(),
   getHoldingTrend: vi.fn(),
   getAssetPerformance: vi.fn(),
+  getAnnualRealized: vi.fn(),
   getTodayRate: vi.fn(),
   refreshPrices: vi.fn(),
 }))
@@ -42,6 +47,7 @@ vi.mock('../lib/portfolio.service', () => ({
     getRebalance,
     getHoldingTrend,
     getAssetPerformance,
+    getAnnualRealized,
   },
 }))
 
@@ -413,6 +419,7 @@ describe('Dashboard smoke tests', () => {
     getRebalance.mockResolvedValue(twdRebalance)
     getHoldingTrend.mockResolvedValue(twdHoldingTrend)
     getAssetPerformance.mockResolvedValue(getAssetPerformancePreview())
+    getAnnualRealized.mockResolvedValue(getAnnualRealizedScenario('empty'))
     getTodayRate.mockImplementation(
       async ({ base, quote }: { base?: string; quote?: string } = {}) => {
         if (base === 'TWD' && quote === 'USD') {
@@ -1011,5 +1018,51 @@ describe('Dashboard smoke tests', () => {
     expect(await screen.findByText('TSMC')).toBeTruthy()
     expect(await screen.findByText('Could not load asset history results.')).toBeTruthy()
     expect(screen.getByRole('button', { name: 'Retry' })).toBeTruthy()
+  })
+
+  it('keeps holdings and asset history visible when the annual card fails', async () => {
+    getAnnualRealized.mockRejectedValue(new Error('annual unavailable'))
+
+    renderPage()
+
+    expect(await screen.findByText('TSMC')).toBeTruthy()
+    expect(await screen.findByText('Could not load annual realized net P&L.')).toBeTruthy()
+    expect(screen.getByText('Asset history results')).toBeTruthy()
+  })
+
+  it('keeps the annual realized figure when a price refresh changes portfolio value', async () => {
+    refreshPrices.mockResolvedValue({
+      status: 'success',
+      markets: [],
+    })
+    getAnnualRealized.mockResolvedValue(
+      getAnnualRealizedScenario('sell_year_with_zero_year'),
+    )
+    renderPage()
+
+    const annualTable = await screen.findByRole('table', {
+      name: 'Annual realized net P&L by year',
+    })
+    expect(within(annualTable).getByText('-20 TWD')).toBeTruthy()
+    expect(screen.getByRole('link', { name: 'See asset history' })).toHaveAttribute(
+      'href',
+      '/performance#asset-history',
+    )
+    const annualCalls = getAnnualRealized.mock.calls.length
+    getSummary.mockResolvedValue({
+      ...twdSummary,
+      marketValue: 33333,
+      totalPnl: 88888,
+    })
+
+    fireEvent.click(screen.getByRole('button', { name: 'Refresh prices' }))
+
+    await waitFor(() => {
+      expect(screen.getByText('33,333 TWD')).toBeTruthy()
+      expect(screen.getAllByText('+88,888 TWD').length).toBeGreaterThan(0)
+    })
+    expect(within(annualTable).getByText('-20 TWD')).toBeTruthy()
+    expect(within(annualTable).queryByText('+88,888 TWD')).toBeNull()
+    expect(getAnnualRealized.mock.calls.length).toBeGreaterThan(annualCalls)
   })
 })

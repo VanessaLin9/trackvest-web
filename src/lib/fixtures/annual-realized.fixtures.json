@@ -1,0 +1,160 @@
+{
+  "contract": {
+    "method": "GET",
+    "path": "/portfolio/performance/annual-realized",
+    "query": {
+      "accountId": "optional UUID"
+    }
+  },
+  "scenarios": {
+    "empty": {
+      "generatedAt": "2026-06-15T04:00:00.000Z",
+      "timeZone": "Asia/Taipei",
+      "items": []
+    },
+    "sell_year_with_zero_year": {
+      "generatedAt": "2026-06-15T04:00:00.000Z",
+      "timeZone": "Asia/Taipei",
+      "items": [
+        {
+          "year": 2026,
+          "currency": "TWD",
+          "sellCount": 1,
+          "netProceeds": "80",
+          "disposedCost": "100",
+          "realizedNetPnl": "-20",
+          "issues": []
+        },
+        {
+          "year": 2025,
+          "currency": "TWD",
+          "sellCount": 1,
+          "netProceeds": "500",
+          "disposedCost": "400",
+          "realizedNetPnl": "100",
+          "issues": []
+        },
+        {
+          "year": 2024,
+          "currency": "TWD",
+          "sellCount": 0,
+          "netProceeds": "0",
+          "disposedCost": "0",
+          "realizedNetPnl": "0",
+          "issues": []
+        }
+      ]
+    },
+    "currencies": {
+      "generatedAt": "2026-06-15T04:00:00.000Z",
+      "timeZone": "Asia/Taipei",
+      "items": [
+        {
+          "year": 2026,
+          "currency": "TWD",
+          "sellCount": 2,
+          "netProceeds": "25",
+          "disposedCost": "9",
+          "realizedNetPnl": "16",
+          "issues": []
+        },
+        {
+          "year": 2026,
+          "currency": "USD",
+          "sellCount": 1,
+          "netProceeds": "7",
+          "disposedCost": "3",
+          "realizedNetPnl": "4",
+          "issues": []
+        }
+      ]
+    },
+    "missing_fifo_and_zero": {
+      "generatedAt": "2026-06-15T04:00:00.000Z",
+      "timeZone": "Asia/Taipei",
+      "items": [
+        {
+          "year": 2026,
+          "currency": "TWD",
+          "sellCount": 2,
+          "netProceeds": "600",
+          "disposedCost": null,
+          "realizedNetPnl": null,
+          "issues": ["MISSING_FIFO"]
+        },
+        {
+          "year": 2025,
+          "currency": "TWD",
+          "sellCount": 0,
+          "netProceeds": "0",
+          "disposedCost": "0",
+          "realizedNetPnl": "0",
+          "issues": []
+        }
+      ]
+    },
+    "fractional": {
+      "generatedAt": "2026-06-15T04:00:00.000Z",
+      "timeZone": "Asia/Taipei",
+      "items": [
+        {
+          "year": 2026,
+          "currency": "TWD",
+          "sellCount": 1,
+          "netProceeds": "1.00000001",
+          "disposedCost": "0",
+          "realizedNetPnl": "1.00000001",
+          "issues": []
+        }
+      ]
+    },
+    "taipei_new_year": {
+      "generatedAt": "2025-12-31T16:00:00.000Z",
+      "timeZone": "Asia/Taipei",
+      "items": [
+        {
+          "year": 2026,
+          "currency": "TWD",
+          "sellCount": 1,
+          "netProceeds": "80",
+          "disposedCost": "100",
+          "realizedNetPnl": "-20",
+          "issues": []
+        },
+        {
+          "year": 2025,
+          "currency": "TWD",
+          "sellCount": 1,
+          "netProceeds": "500",
+          "disposedCost": "400",
+          "realizedNetPnl": "100",
+          "issues": []
+        }
+      ]
+    },
+    "taipei_before_new_year": {
+      "generatedAt": "2025-12-31T15:59:59.000Z",
+      "timeZone": "Asia/Taipei",
+      "items": [
+        {
+          "year": 2025,
+          "currency": "TWD",
+          "sellCount": 1,
+          "netProceeds": "500",
+          "disposedCost": "400",
+          "realizedNetPnl": "100",
+          "issues": []
+        },
+        {
+          "year": 2024,
+          "currency": "TWD",
+          "sellCount": 0,
+          "netProceeds": "0",
+          "disposedCost": "0",
+          "realizedNetPnl": "0",
+          "issues": []
+        }
+      ]
+    }
+  }
+}

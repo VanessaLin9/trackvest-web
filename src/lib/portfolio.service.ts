@@ -1,6 +1,7 @@
 import { api } from './api'
 import type { ApiSchemas } from './api-schema'
 import type { AssetClass, AssetType } from './assets.service'
+import type { PortfolioAnnualRealizedResponse } from './annual-realized'
 import type { PortfolioAssetPerformanceResponse } from './asset-performance'
 
 export type PortfolioSummary = {
@@ -198,6 +199,22 @@ export const portfolioService = {
   }): Promise<PortfolioAssetPerformanceResponse> {
     const response = await api.get<PortfolioAssetPerformanceResponse>(
       '/portfolio/performance/assets',
+      {
+        params: query?.accountId ? { accountId: query.accountId } : undefined,
+      },
+    )
+    return response.data
+  },
+
+  /**
+   * 讀取年度已實現淨損益。金額由 API 算好，前端只依原幣分組展示。
+   * 對應 GET /portfolio/performance/annual-realized；可選 accountId 必須是自己的帳戶。
+   */
+  async getAnnualRealized(query?: {
+    accountId?: string
+  }): Promise<PortfolioAnnualRealizedResponse> {
+    const response = await api.get<PortfolioAnnualRealizedResponse>(
+      '/portfolio/performance/annual-realized',
       {
         params: query?.accountId ? { accountId: query.accountId } : undefined,
       },

@@ -574,6 +574,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/portfolio/performance/annual-realized": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["PortfolioController_getAnnualRealized"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/portfolio/holdings": {
         parameters: {
             query?: never;
@@ -1605,6 +1621,53 @@ export interface components {
             generatedAt: string;
             /** @description All active buy/sell history, including closed holdings. Ordered by symbol, currency, assetId. */
             items: components["schemas"]["PortfolioAssetPerformanceItemResponseDto"][];
+        };
+        GetPortfolioAnnualRealizedDto: {
+            /**
+             * Format: uuid
+             * @description Optional account scope. The account must belong to the signed-in user, including when the caller is an admin.
+             */
+            accountId?: string;
+        };
+        /** @enum {string} */
+        PortfolioAnnualRealizedIssue: "MISSING_FIFO";
+        PortfolioAnnualRealizedItemResponseDto: {
+            /**
+             * @description Sell year in Asia/Taipei. A sale just after UTC 12/31 16:00 belongs to the next Taipei year.
+             * @example 2026
+             */
+            year: number;
+            /**
+             * @description Account currency. Rows are not summed across currencies.
+             * @example TWD
+             */
+            currency: string;
+            /** @example 2 */
+            sellCount: number;
+            /**
+             * @description Sum of active sell amounts (net proceeds). Fees and tax are already inside amount and are not deducted again.
+             * @example 500
+             */
+            netProceeds: string;
+            /**
+             * @description FIFO match quantity times unit cost for this year and currency. Null when any sell match is missing or incomplete.
+             * @example 420
+             */
+            disposedCost: string | null;
+            /**
+             * @description Net proceeds minus disposed cost. Null when disposed cost is unavailable. This is not an annual return rate.
+             * @example 80
+             */
+            realizedNetPnl: string | null;
+            issues: components["schemas"]["PortfolioAnnualRealizedIssue"][];
+        };
+        PortfolioAnnualRealizedResponseDto: {
+            /** Format: date-time */
+            generatedAt: string;
+            /** @example Asia/Taipei */
+            timeZone: string;
+            /** @description One row per year and account currency, from the first buy/sell year through the current Taipei year. Ordered by year descending, then currency ascending. */
+            items: components["schemas"]["PortfolioAnnualRealizedItemResponseDto"][];
         };
         PortfolioSummaryResponseDto: {
             /**
@@ -3148,6 +3211,28 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["PortfolioAssetPerformanceResponseDto"];
+                };
+            };
+        };
+    };
+    PortfolioController_getAnnualRealized: {
+        parameters: {
+            query?: {
+                /** @description Optional account scope. The account must belong to the signed-in user, including when the caller is an admin. */
+                accountId?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PortfolioAnnualRealizedResponseDto"];
                 };
             };
         };

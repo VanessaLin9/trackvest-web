@@ -52,6 +52,26 @@ export const performance = {
     issueMISSING_PRICE: 'Quote unavailable',
     issueCURRENCY_MISMATCH: 'Quote currency differs',
     issueINCONSISTENT_LOTS: 'Lot data inconsistent',
+    annualTitle: 'Annual realized net P&L',
+    annualDescription:
+      'Realized net P&L attributed to the year a position was sold, in Asia/Taipei. Shares bought last year and sold this year count in the sell year. Unrealized P&L and dividends are excluded. This is not an annual return.',
+    annualTimeZoneNote:
+      'Years use {{timeZone}}. A sale at 16:00 UTC on 31 Dec belongs to the next year. The open year is marked year to date, not a finished-year return.',
+    annualCurrencyLabel: 'Currency',
+    annualYearToDate: 'Year to date',
+    annualYear: 'Year',
+    annualSellCount: 'Sells',
+    annualNetProceeds: 'Net proceeds',
+    annualDisposedCost: 'Disposed cost',
+    annualChartSequence: 'Chart order, earliest year first',
+    annualChartOmitsMissing:
+      'Years with insufficient data are left off the chart. They are not drawn as zero.',
+    annualHistoryLink: 'See asset history',
+    annualEmptyTitle: 'No annual realized results yet',
+    annualEmptyDescription:
+      'Years appear after an active buy or sell. Dividends alone do not create a year. Amounts stay in the original account currency.',
+    annualLoadError: 'Could not load annual realized net P&L.',
+    annualTableLabel: 'Annual realized net P&L by year',
   },
   'zh-TW': {
     navLabel: '績效',
@@ -105,5 +125,24 @@ export const performance = {
     issueMISSING_PRICE: '缺少可用行情',
     issueCURRENCY_MISMATCH: '行情幣別不符',
     issueINCONSISTENT_LOTS: 'lot 資料不一致',
+    annualTitle: '年度已實現淨損益',
+    annualDescription:
+      '依賣出當下的台北時間年份，比較當年賣出交易的已實現淨損益。去年買進、今年賣出的損益歸在賣出那年。未實現損益與股利都不含在內，這也不是年度報酬率。',
+    annualTimeZoneNote:
+      '年份依 {{timeZone}} 計算。UTC 12/31 16:00 起的賣出歸入下一年。尚未結束的年份標示為截至目前，不是完整年度的報酬率。',
+    annualCurrencyLabel: '幣別',
+    annualYearToDate: '截至目前',
+    annualYear: '年份',
+    annualSellCount: '賣出筆數',
+    annualNetProceeds: '淨收款',
+    annualDisposedCost: '已售成本',
+    annualChartSequence: '圖表順序，由早到晚',
+    annualChartOmitsMissing: '資料不足的年度不會畫進圖裡，也不會當成 0。',
+    annualHistoryLink: '查看各標的歷史成果',
+    annualEmptyTitle: '目前沒有年度已實現淨損益',
+    annualEmptyDescription:
+      '要先有有效的買進或賣出才會出現年度。只有股利不會產生年度。金額維持帳戶原幣，不會跨幣加總。',
+    annualLoadError: '年度已實現淨損益載入失敗。',
+    annualTableLabel: '各年度已實現淨損益',
   },
 } as const

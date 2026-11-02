@@ -12,6 +12,7 @@ import {
   type DashboardPriceRefreshFeedback,
 } from '../components/dashboard/DashboardHero'
 import { DashboardLoadingState } from '../components/dashboard/DashboardLoadingState'
+import { AnnualRealizedCard } from '../components/performance/AnnualRealizedCard'
 import { AssetHistoryCard } from '../components/performance/AssetHistoryCard'
 import { HoldingsTable } from '../components/dashboard/HoldingsTable'
 import { KpiCards } from '../components/dashboard/KpiCards'
@@ -391,7 +392,8 @@ export default function Dashboard() {
 
       <KpiCards summary={summary} displayCurrency={displayCurrency} />
 
-      {/* 歷史成果有自己的 loading／error／empty，不取代 holdings 空狀態（PR #27）。 */}
+      {/* 年度卡與歷史成果各自 loading／error／empty，不取代 holdings 空狀態（PR #27）。 */}
+      <AnnualRealizedCard />
       <AssetHistoryCard variant="dashboard" />
 
       {holdings.length === 0 ? (

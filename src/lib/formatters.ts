@@ -65,6 +65,52 @@ export function formatDecimalAmount(
   return formatCurrencyWithCode(parsed, locale, currency)
 }
 
+/**
+ * 年度已實現金額沿用 API 最多 8 位小數。
+ * 不可走 formatCurrency 的 2 位上限，否則 1.00000001 會顯示成 1。
+ * null 維持 null，不能把缺資料格式化成 0。
+ */
+export function formatExactDecimalAmount(
+  value: string | null | undefined,
+  locale: string,
+  currency?: string | null,
+): string | null {
+  const parsed = parseDecimalString(value)
+  if (parsed === null) {
+    return null
+  }
+
+  return appendCurrencyCode(formatExactNumber(parsed, locale), currency)
+}
+
+export function formatSignedExactDecimalAmount(
+  value: string | null | undefined,
+  locale: string,
+  currency?: string | null,
+): string | null {
+  const parsed = parseDecimalString(value)
+  if (parsed === null) {
+    return null
+  }
+
+  const prefix = parsed > 0 ? '+' : parsed < 0 ? '-' : ''
+  return `${prefix}${appendCurrencyCode(
+    formatExactNumber(Math.abs(parsed), locale),
+    currency,
+  )}`
+}
+
+function formatExactNumber(value: number, locale: string): string {
+  return value.toLocaleString(locale, {
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 8,
+  })
+}
+
+function appendCurrencyCode(formatted: string, currency?: string | null): string {
+  return currency ? `${formatted} ${currency}` : formatted
+}
+
 /** Signed display for API decimal strings. Null means data is unavailable. */
 export function formatSignedDecimalAmount(
   value: string | null | undefined,
