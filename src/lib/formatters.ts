@@ -66,7 +66,7 @@ export function formatDecimalAmount(
 }
 
 /**
- * 年度已實現金額沿用 API 最多 8 位小數。
+ * 年度已實現金額沿用 API 最多 8 位小數（PR #28）。
  * 不可走 formatCurrency 的 2 位上限，否則 1.00000001 會顯示成 1。
  * null 維持 null，不能把缺資料格式化成 0。
  */

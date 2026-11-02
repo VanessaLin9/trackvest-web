@@ -30,7 +30,7 @@ export function AnnualRealizedCard({
   const [selectedCurrency, setSelectedCurrency] = useState<string | null>(null)
   const accountScope = resolveAccountScopeKey(accountId)
 
-  // 這張卡獨立取數：失敗時只影響自己，不擋住 KPI、holdings 或歷史成果。
+  // 這張卡獨立取數：失敗時只影響自己，不擋住 KPI、holdings 或歷史成果（PR #28）。
   const query = useQuery({
     queryKey: queryKeys.portfolio.annualRealized(currentUserId, accountScope),
     queryFn: () =>

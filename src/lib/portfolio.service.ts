@@ -207,7 +207,7 @@ export const portfolioService = {
   },
 
   /**
-   * 讀取年度已實現淨損益。金額由 API 算好，前端只依原幣分組展示。
+   * 讀取年度已實現淨損益（PR #28）。金額由 API 算好，前端只依原幣分組展示。
    * 對應 GET /portfolio/performance/annual-realized；可選 accountId 必須是自己的帳戶。
    */
   async getAnnualRealized(query?: {

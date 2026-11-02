@@ -10,8 +10,8 @@ export type PortfolioAnnualRealizedIssue =
   ApiSchemas['PortfolioAnnualRealizedIssue']
 
 /**
- * 年度卡片的展示契約。數字沿用 API calculator spec 的結果，前端不另算損益。
- * 來源：trackvest-api `codex/annual-realized-pnl`（GET /portfolio/performance/annual-realized）。
+ * 年度卡片的展示契約（PR #28）。數字沿用 API 的十進位字串，前端不另算損益。
+ * 來源：GET /portfolio/performance/annual-realized（trackvest-api PR #49）。
  */
 export type AnnualChartPoint = {
   year: number
@@ -43,8 +43,8 @@ export function getAnnualRealizedScenario(
 }
 
 /**
- * 目前年份跟回應的 timeZone，不用瀏覽器時區。
- * Asia/Taipei 下 UTC 12/31 16:00 整點起算下一年。
+ * 目前年份跟回應的 timeZone，不用瀏覽器時區（PR #28）。
+ * Asia/Taipei 下 UTC 12/31 16:00 整點起算下一年；時區無效就不標「截至目前」。
  */
 export function yearInTimeZone(iso: string, timeZone: string): number | null {
   const instant = new Date(iso)
@@ -86,8 +86,8 @@ export function annualRowsForCurrency(
 }
 
 /**
- * 圖表改按年升冪。損益直接用 realizedNetPnl，不拿淨收款減已售成本。
- * chartValue 為 null 的年度留給表格顯示「資料不足」，不進長條圖。
+ * 圖表改按年升冪（PR #28）。損益直接用 realizedNetPnl，不拿淨收款減已售成本。
+ * chartValue 為 null 的年度留給表格顯示「資料不足」，不進長條圖，也不能畫成 0。
  */
 export function annualChartPoints(
   items: PortfolioAnnualRealizedItem[],
