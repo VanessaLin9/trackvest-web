@@ -127,7 +127,7 @@ export const queryKeys = {
     annualRealized: (userId: string, accountId: string) =>
       ['portfolio', 'annual-realized', userId, accountId] as const,
     /**
-     * 年度買進配置：key 含 userId 與 account scope。
+     * 年度買進配置（PR #29）：key 含 userId 與 account scope。
      * 掛在 portfolio.all 底下，交易與 CSV commit 會重取。
      * 買進金額與占比來自年度 API，不從持倉市值或行情換算。
      */

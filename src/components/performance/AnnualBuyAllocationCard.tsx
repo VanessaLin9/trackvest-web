@@ -52,7 +52,8 @@ export function AnnualBuyAllocationCard({
   const [selectedYear, setSelectedYear] = useState<number | null>(null)
   const accountScope = resolveAccountScopeKey(accountId)
 
-  // 這張卡獨立取數：失敗時只影響自己，不擋住持倉、歷史成果或年度已實現。
+  // 這張卡獨立取數：失敗時只影響自己，不擋住持倉、歷史成果或年度已實現（PR #29）。
+  // 首頁只摘要當年；完整年度、占比與月份在成果頁，避免跟持倉配置圖混在一起。
   const query = useQuery({
     queryKey: queryKeys.portfolio.annualBuys(currentUserId, accountScope),
     queryFn: () =>

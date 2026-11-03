@@ -8,7 +8,7 @@ export type PortfolioAnnualBuyItem = ApiSchemas['PortfolioAnnualBuyItemResponseD
 export type PortfolioAnnualBuysResponse = ApiSchemas['PortfolioAnnualBuysResponseDto']
 export type PortfolioAnnualBuyAssetType = ApiSchemas['PortfolioAnnualBuyAssetType']
 
-/** 與 API 的類型順序一致。股票型 ETF 仍是 etf，不併進 equity。 */
+/** 與 API 的類型順序一致。股票型 ETF 仍是 etf，不併進 equity（PR #29）。 */
 export const ANNUAL_BUY_TYPES = [
   'equity',
   'etf',
@@ -55,7 +55,7 @@ export function getAnnualBuysScenario(name: string): PortfolioAnnualBuysResponse
 
 /**
  * 年與月跟回應的 timeZone，不用瀏覽器時區。
- * Asia/Taipei 下 UTC 12/31 16:00 是下一年的 1 月。時區無效就不標截至目前。
+ * Asia/Taipei 下 UTC 12/31 16:00 是下一年的 1 月。時區無效就不標截至目前（PR #29）。
  */
 export function calendarParts(
   iso: string,
@@ -121,14 +121,14 @@ export function yearsWithBuyMix(points: AnnualBuyYearPoint[]): AnnualBuyYearPoin
   )
 }
 
-/** 月份沿用 API 陣列。當年沒回傳的未來月份不在前端補 0。 */
+/** 月份沿用 API 陣列。當年沒回傳的未來月份不在前端補 0（PR #29）。 */
 export function monthsAsReturned(item: PortfolioAnnualBuyItem): PortfolioAnnualBuyMonth[] {
   return [...item.months].sort((left, right) => left.month - right.month)
 }
 
 /**
  * 占比只平移 API 字串的小數點。不拿買進金額再除一次總額。
- * null 維持 null，不能顯示成 0%。
+ * null 維持 null，不能顯示成 0%（PR #29）。
  */
 export function formatSharePercent(share: string | null | undefined): string | null {
   if (share == null || share === '' || !DECIMAL_STRING_PATTERN.test(share)) {

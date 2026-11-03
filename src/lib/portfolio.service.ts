@@ -224,7 +224,7 @@ export const portfolioService = {
   },
 
   /**
-   * 讀取年度買進金額與類型配置。金額與占比由 API 算好，前端只展示。
+   * 讀取年度買進金額與類型配置（PR #29）。金額與占比由 API 算好，前端只展示。
    * 對應 GET /portfolio/performance/annual-buys；可選 accountId 必須是自己的帳戶。
    */
   async getAnnualBuys(query?: {

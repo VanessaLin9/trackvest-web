@@ -517,7 +517,7 @@ export default function Transactions() {
   // Any write to transactions also invalidates the portfolio scope so the
   // Dashboard summary/holdings/trend and asset-history card refresh (PR #27).
   // 年度已實現淨損益的 query key 也在這個 scope，買賣與 CSV commit 會一起重取（PR #28）。
-  // 年度買進配置的 query key 同樣掛在這裡，買賣與 CSV commit 會一起重取。
+  // 年度買進配置的 query key 同樣掛在這裡，買賣與 CSV commit 會一起重取（PR #29）。
   const invalidateTransactionScopes = async () => {
     await Promise.all([
       queryClient.invalidateQueries({
