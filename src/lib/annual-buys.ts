@@ -1,6 +1,6 @@
 import type { ApiSchemas } from './api-schema'
 import fixtureFile from './fixtures/annual-buys.fixtures.json'
-import { parseDecimalString } from './formatters'
+import { formatExactDecimalAmount, parseDecimalString } from './formatters'
 
 export type PortfolioAnnualBuyType = ApiSchemas['PortfolioAnnualBuyTypeResponseDto']
 export type PortfolioAnnualBuyMonth = ApiSchemas['PortfolioAnnualBuyMonthResponseDto']
@@ -143,6 +143,28 @@ export function formatSharePercent(share: string | null | undefined): string | n
   const percentFraction = padded.slice(2).replace(/0+$/, '')
   const body = percentFraction ? `${percentWhole}.${percentFraction}` : percentWhole
   return `${negative ? '-' : ''}${body}%`
+}
+
+/**
+ * 月份圖的 tooltip 文字。長條高度可以用數字，但顯示必須回到 API 字串。
+ * JS number 會把 100000000.00000002 改成 100000000.00000001（PR #29）。
+ * 該月沒有這個類型時回傳 missingLabel，不顯示 0。
+ */
+export function monthChartTooltipText(
+  item: PortfolioAnnualBuyItem,
+  month: number,
+  type: PortfolioAnnualBuyAssetType,
+  locale: string,
+  currency: string,
+  missingLabel: string,
+): string {
+  const amount = item.months
+    .find((entry) => entry.month === month)
+    ?.types.find((entry) => entry.type === type)?.buyAmount
+  if (amount == null) {
+    return missingLabel
+  }
+  return formatExactDecimalAmount(amount, locale, currency) ?? missingLabel
 }
 
 export function formatBuyMonth(month: number, locale: string): string {

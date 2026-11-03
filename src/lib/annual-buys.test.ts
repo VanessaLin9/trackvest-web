@@ -6,6 +6,7 @@ import {
   calendarParts,
   formatSharePercent,
   getAnnualBuysScenario,
+  monthChartTooltipText,
   monthsAsReturned,
   yearsWithBuyMix,
 } from './annual-buys'
@@ -58,6 +59,32 @@ describe('annual buy display contract', () => {
     expect(
       getAnnualBuysScenario('all_types').items[0].types.map((type) => type.type),
     ).toEqual(['crypto', 'cash', 'other'])
+  })
+
+  it('formats a monthly type tooltip from the API decimal string', () => {
+    const item = getAnnualBuysScenario('mixed_years').items[0]
+    const precise = {
+      ...item,
+      months: [
+        {
+          month: 1,
+          buyAmount: '100000000.00000002',
+          types: [
+            {
+              type: 'equity' as const,
+              buyAmount: '100000000.00000002',
+              share: '1',
+            },
+          ],
+        },
+      ],
+    }
+
+    expect(monthChartTooltipText(precise, 1, 'equity', 'en', 'TWD', 'missing')).toBe(
+      '100,000,000.00000002 TWD',
+    )
+    expect(monthChartTooltipText(precise, 1, 'etf', 'en', 'TWD', 'missing')).toBe('missing')
+    expect(monthChartTooltipText(item, 2, 'etf', 'en', 'TWD', 'missing')).toBe('missing')
   })
 
   it('turns a ratio string into a percent without dividing amounts again', () => {

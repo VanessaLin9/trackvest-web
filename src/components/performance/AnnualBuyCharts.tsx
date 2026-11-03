@@ -13,6 +13,7 @@ import {
   ANNUAL_BUY_TYPES,
   formatBuyMonth,
   formatSharePercent,
+  monthChartTooltipText,
   monthsAsReturned,
   type AnnualBuyYearPoint,
   type PortfolioAnnualBuyAssetType,
@@ -189,6 +190,7 @@ export function AnnualBuyMonthChart({ item, currency }: MonthChartProps) {
     const byType = new Map(month.types.map((entry) => [entry.type, entry]))
     return {
       month: formatBuyMonth(month.month, locale),
+      monthNumber: month.month,
       ...Object.fromEntries(
         types.map((type) => [type, parseDecimalString(byType.get(type)?.buyAmount) ?? 0]),
       ),
@@ -220,7 +222,27 @@ export function AnnualBuyMonthChart({ item, currency }: MonthChartProps) {
                 axisLine={false}
                 tickFormatter={(value: number) => formatCompactCurrencyAxis(value, locale)}
               />
-              <Tooltip />
+              <Tooltip
+                formatter={(value, name, tooltipItem) => {
+                  const monthNumber = Number(
+                    (tooltipItem as { payload?: { monthNumber?: number } }).payload
+                      ?.monthNumber,
+                  )
+                  const type = String(name) as PortfolioAnnualBuyAssetType
+                  void value
+                  return [
+                    monthChartTooltipText(
+                      item,
+                      monthNumber,
+                      type,
+                      locale,
+                      currency,
+                      t('performance.annualBuyNoType'),
+                    ),
+                    t(typeLabelKey(type)),
+                  ]
+                }}
+              />
               <Legend formatter={(value) => t(typeLabelKey(value as PortfolioAnnualBuyAssetType))} />
               {types.map((type) => (
                 <Bar key={type} dataKey={type} stackId="month" fill={TYPE_COLORS[type]} />
