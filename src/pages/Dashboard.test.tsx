@@ -10,6 +10,9 @@ import { PriceRefreshResponseError } from '../lib/market-price.service'
 import Dashboard from './Dashboard'
 import { usePreferencesStore } from '../store/preferences'
 import {
+  getAnnualBuysScenario,
+} from '../lib/annual-buys'
+import {
   getAnnualRealizedScenario,
 } from '../lib/annual-realized'
 import {
@@ -25,6 +28,7 @@ const {
   getHoldingTrend,
   getAssetPerformance,
   getAnnualRealized,
+  getAnnualBuys,
   getTodayRate,
   refreshPrices,
 } = vi.hoisted(() => ({
@@ -35,6 +39,7 @@ const {
   getHoldingTrend: vi.fn(),
   getAssetPerformance: vi.fn(),
   getAnnualRealized: vi.fn(),
+  getAnnualBuys: vi.fn(),
   getTodayRate: vi.fn(),
   refreshPrices: vi.fn(),
 }))
@@ -48,6 +53,7 @@ vi.mock('../lib/portfolio.service', () => ({
     getHoldingTrend,
     getAssetPerformance,
     getAnnualRealized,
+    getAnnualBuys,
   },
 }))
 
@@ -420,6 +426,7 @@ describe('Dashboard smoke tests', () => {
     getHoldingTrend.mockResolvedValue(twdHoldingTrend)
     getAssetPerformance.mockResolvedValue(getAssetPerformancePreview())
     getAnnualRealized.mockResolvedValue(getAnnualRealizedScenario('empty'))
+    getAnnualBuys.mockResolvedValue(getAnnualBuysScenario('empty'))
     getTodayRate.mockImplementation(
       async ({ base, quote }: { base?: string; quote?: string } = {}) => {
         if (base === 'TWD' && quote === 'USD') {
@@ -1064,5 +1071,27 @@ describe('Dashboard smoke tests', () => {
     expect(within(annualTable).getByText('-20 TWD')).toBeTruthy()
     expect(within(annualTable).queryByText('+88,888 TWD')).toBeNull()
     expect(getAnnualRealized.mock.calls.length).toBeGreaterThan(annualCalls)
+  })
+
+  it('links the open-year buy summary to the performance page', async () => {
+    getAnnualBuys.mockResolvedValue(getAnnualBuysScenario('mixed_years'))
+    renderPage()
+
+    expect(await screen.findByText(/not the current holdings mix/)).toBeTruthy()
+    expect(screen.getByText('351 TWD')).toBeTruthy()
+    expect(screen.getByText(/ETF 301 TWD \(85\.754986%\)/)).toBeTruthy()
+    expect(screen.getByRole('link', { name: 'See yearly and monthly buys' })).toHaveAttribute(
+      'href',
+      '/performance#annual-buys',
+    )
+    expect(screen.getAllByText('TSMC').length).toBeGreaterThan(0)
+  })
+
+  it('keeps holdings visible when the buy card fails', async () => {
+    getAnnualBuys.mockRejectedValue(new Error('buys unavailable'))
+    renderPage()
+
+    expect(await screen.findByText('TSMC')).toBeTruthy()
+    expect(await screen.findByText('Could not load annual buy allocation.')).toBeTruthy()
   })
 })

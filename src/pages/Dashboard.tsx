@@ -12,6 +12,7 @@ import {
   type DashboardPriceRefreshFeedback,
 } from '../components/dashboard/DashboardHero'
 import { DashboardLoadingState } from '../components/dashboard/DashboardLoadingState'
+import { AnnualBuyAllocationCard } from '../components/performance/AnnualBuyAllocationCard'
 import { AnnualRealizedCard } from '../components/performance/AnnualRealizedCard'
 import { AssetHistoryCard } from '../components/performance/AssetHistoryCard'
 import { HoldingsTable } from '../components/dashboard/HoldingsTable'
@@ -394,6 +395,7 @@ export default function Dashboard() {
 
       {/* 年度卡與歷史成果各自 loading／error／empty，不取代 holdings 空狀態（PR #27）。 */}
       <AnnualRealizedCard />
+      <AnnualBuyAllocationCard variant="dashboard" />
       <AssetHistoryCard variant="dashboard" />
 
       {holdings.length === 0 ? (

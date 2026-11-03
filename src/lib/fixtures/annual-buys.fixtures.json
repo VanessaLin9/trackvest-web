@@ -1,0 +1,479 @@
+{
+  "contract": {
+    "method": "GET",
+    "path": "/portfolio/performance/annual-buys",
+    "query": {
+      "accountId": "optional UUID"
+    }
+  },
+  "scenarios": {
+    "empty": {
+      "generatedAt": "2026-06-15T04:00:00.000Z",
+      "timeZone": "Asia/Taipei",
+      "items": []
+    },
+    "mixed_years": {
+      "generatedAt": "2026-06-15T04:00:00.000Z",
+      "timeZone": "Asia/Taipei",
+      "items": [
+        {
+          "year": 2026,
+          "currency": "TWD",
+          "buyCount": 3,
+          "buyAmount": "351",
+          "sellCount": 1,
+          "sellNetProceeds": "80",
+          "buyMinusSellProceeds": "271",
+          "types": [
+            {
+              "type": "etf",
+              "buyAmount": "301",
+              "share": "0.85754986"
+            },
+            {
+              "type": "crypto",
+              "buyAmount": "50",
+              "share": "0.14245014"
+            }
+          ],
+          "months": [
+            {
+              "month": 1,
+              "buyAmount": "301",
+              "types": [
+                {
+                  "type": "etf",
+                  "buyAmount": "301",
+                  "share": "1"
+                }
+              ]
+            },
+            {
+              "month": 2,
+              "buyAmount": "0",
+              "types": []
+            },
+            {
+              "month": 3,
+              "buyAmount": "50",
+              "types": [
+                {
+                  "type": "crypto",
+                  "buyAmount": "50",
+                  "share": "1"
+                }
+              ]
+            },
+            {
+              "month": 4,
+              "buyAmount": "0",
+              "types": []
+            },
+            {
+              "month": 5,
+              "buyAmount": "0",
+              "types": []
+            },
+            {
+              "month": 6,
+              "buyAmount": "0",
+              "types": []
+            }
+          ]
+        },
+        {
+          "year": 2025,
+          "currency": "TWD",
+          "buyCount": 0,
+          "buyAmount": "0",
+          "sellCount": 0,
+          "sellNetProceeds": "0",
+          "buyMinusSellProceeds": "0",
+          "types": [],
+          "months": [
+            {
+              "month": 1,
+              "buyAmount": "0",
+              "types": []
+            },
+            {
+              "month": 2,
+              "buyAmount": "0",
+              "types": []
+            },
+            {
+              "month": 3,
+              "buyAmount": "0",
+              "types": []
+            },
+            {
+              "month": 4,
+              "buyAmount": "0",
+              "types": []
+            },
+            {
+              "month": 5,
+              "buyAmount": "0",
+              "types": []
+            },
+            {
+              "month": 6,
+              "buyAmount": "0",
+              "types": []
+            },
+            {
+              "month": 7,
+              "buyAmount": "0",
+              "types": []
+            },
+            {
+              "month": 8,
+              "buyAmount": "0",
+              "types": []
+            },
+            {
+              "month": 9,
+              "buyAmount": "0",
+              "types": []
+            },
+            {
+              "month": 10,
+              "buyAmount": "0",
+              "types": []
+            },
+            {
+              "month": 11,
+              "buyAmount": "0",
+              "types": []
+            },
+            {
+              "month": 12,
+              "buyAmount": "0",
+              "types": []
+            }
+          ]
+        },
+        {
+          "year": 2024,
+          "currency": "TWD",
+          "buyCount": 1,
+          "buyAmount": "100",
+          "sellCount": 0,
+          "sellNetProceeds": "0",
+          "buyMinusSellProceeds": "100",
+          "types": [
+            {
+              "type": "equity",
+              "buyAmount": "100",
+              "share": "1"
+            }
+          ],
+          "months": [
+            {
+              "month": 1,
+              "buyAmount": "0",
+              "types": []
+            },
+            {
+              "month": 2,
+              "buyAmount": "0",
+              "types": []
+            },
+            {
+              "month": 3,
+              "buyAmount": "100",
+              "types": [
+                {
+                  "type": "equity",
+                  "buyAmount": "100",
+                  "share": "1"
+                }
+              ]
+            },
+            {
+              "month": 4,
+              "buyAmount": "0",
+              "types": []
+            },
+            {
+              "month": 5,
+              "buyAmount": "0",
+              "types": []
+            },
+            {
+              "month": 6,
+              "buyAmount": "0",
+              "types": []
+            },
+            {
+              "month": 7,
+              "buyAmount": "0",
+              "types": []
+            },
+            {
+              "month": 8,
+              "buyAmount": "0",
+              "types": []
+            },
+            {
+              "month": 9,
+              "buyAmount": "0",
+              "types": []
+            },
+            {
+              "month": 10,
+              "buyAmount": "0",
+              "types": []
+            },
+            {
+              "month": 11,
+              "buyAmount": "0",
+              "types": []
+            },
+            {
+              "month": 12,
+              "buyAmount": "0",
+              "types": []
+            }
+          ]
+        }
+      ]
+    },
+    "currencies": {
+      "generatedAt": "2026-06-15T04:00:00.000Z",
+      "timeZone": "Asia/Taipei",
+      "items": [
+        {
+          "year": 2026,
+          "currency": "TWD",
+          "buyCount": 2,
+          "buyAmount": "25",
+          "sellCount": 0,
+          "sellNetProceeds": "0",
+          "buyMinusSellProceeds": "25",
+          "types": [
+            {
+              "type": "equity",
+              "buyAmount": "25",
+              "share": "1"
+            }
+          ],
+          "months": [
+            {
+              "month": 2,
+              "buyAmount": "25",
+              "types": [
+                {
+                  "type": "equity",
+                  "buyAmount": "25",
+                  "share": "1"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "year": 2026,
+          "currency": "USD",
+          "buyCount": 1,
+          "buyAmount": "7",
+          "sellCount": 0,
+          "sellNetProceeds": "0",
+          "buyMinusSellProceeds": "7",
+          "types": [
+            {
+              "type": "etf",
+              "buyAmount": "7",
+              "share": "1"
+            }
+          ],
+          "months": [
+            {
+              "month": 5,
+              "buyAmount": "7",
+              "types": [
+                {
+                  "type": "etf",
+                  "buyAmount": "7",
+                  "share": "1"
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    "sells_without_buys": {
+      "generatedAt": "2026-06-15T04:00:00.000Z",
+      "timeZone": "Asia/Taipei",
+      "items": [
+        {
+          "year": 2026,
+          "currency": "TWD",
+          "buyCount": 0,
+          "buyAmount": "0",
+          "sellCount": 1,
+          "sellNetProceeds": "40",
+          "buyMinusSellProceeds": "-40",
+          "types": [],
+          "months": [
+            {
+              "month": 1,
+              "buyAmount": "0",
+              "types": []
+            },
+            {
+              "month": 2,
+              "buyAmount": "0",
+              "types": []
+            },
+            {
+              "month": 3,
+              "buyAmount": "0",
+              "types": []
+            },
+            {
+              "month": 4,
+              "buyAmount": "0",
+              "types": []
+            },
+            {
+              "month": 5,
+              "buyAmount": "0",
+              "types": []
+            },
+            {
+              "month": 6,
+              "buyAmount": "0",
+              "types": []
+            }
+          ]
+        }
+      ]
+    },
+    "all_types": {
+      "generatedAt": "2026-06-15T04:00:00.000Z",
+      "timeZone": "Asia/Taipei",
+      "items": [
+        {
+          "year": 2026,
+          "currency": "TWD",
+          "buyCount": 3,
+          "buyAmount": "10",
+          "sellCount": 0,
+          "sellNetProceeds": "0",
+          "buyMinusSellProceeds": "10",
+          "types": [
+            {
+              "type": "crypto",
+              "buyAmount": "2",
+              "share": "0.2"
+            },
+            {
+              "type": "cash",
+              "buyAmount": "3",
+              "share": "0.3"
+            },
+            {
+              "type": "other",
+              "buyAmount": "5",
+              "share": "0.5"
+            }
+          ],
+          "months": [
+            {
+              "month": 2,
+              "buyAmount": "10",
+              "types": [
+                {
+                  "type": "crypto",
+                  "buyAmount": "2",
+                  "share": "0.2"
+                },
+                {
+                  "type": "cash",
+                  "buyAmount": "3",
+                  "share": "0.3"
+                },
+                {
+                  "type": "other",
+                  "buyAmount": "5",
+                  "share": "0.5"
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    "fractional": {
+      "generatedAt": "2026-06-15T04:00:00.000Z",
+      "timeZone": "Asia/Taipei",
+      "items": [
+        {
+          "year": 2026,
+          "currency": "TWD",
+          "buyCount": 2,
+          "buyAmount": "0.00000001",
+          "sellCount": 0,
+          "sellNetProceeds": "0",
+          "buyMinusSellProceeds": "0.00000001",
+          "types": [
+            {
+              "type": "equity",
+              "buyAmount": "0.00000001",
+              "share": "1"
+            }
+          ],
+          "months": [
+            {
+              "month": 1,
+              "buyAmount": "0",
+              "types": []
+            },
+            {
+              "month": 2,
+              "buyAmount": "0",
+              "types": []
+            }
+          ]
+        }
+      ]
+    },
+    "taipei_new_year": {
+      "generatedAt": "2025-12-31T16:00:00.000Z",
+      "timeZone": "Asia/Taipei",
+      "items": [
+        {
+          "year": 2026,
+          "currency": "TWD",
+          "buyCount": 1,
+          "buyAmount": "1",
+          "sellCount": 0,
+          "sellNetProceeds": "0",
+          "buyMinusSellProceeds": "1",
+          "types": [
+            {
+              "type": "etf",
+              "buyAmount": "1",
+              "share": "1"
+            }
+          ],
+          "months": [
+            {
+              "month": 1,
+              "buyAmount": "1",
+              "types": [
+                {
+                  "type": "etf",
+                  "buyAmount": "1",
+                  "share": "1"
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  }
+}
