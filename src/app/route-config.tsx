@@ -1,5 +1,6 @@
 import type React from 'react'
 import Dashboard from '../pages/Dashboard'
+import Overview from '../pages/Overview'
 import Performance from '../pages/Performance'
 import Health from '../pages/dev/Health'
 import Users from '../pages/dev/Users'
@@ -17,7 +18,8 @@ export interface RouteConfig {
 }
 
 export const routeConfig: RouteConfig[] = [
-  { path: '/', labelKey: 'routes.dashboard', element: <Dashboard />, showInNav: true },
+  { path: '/', labelKey: 'routes.dashboard', element: <Overview />, showInNav: true },
+  { path: '/overview-previous', labelKey: 'routes.dashboard', element: <Dashboard />, showInNav: false },
   { path: '/performance', labelKey: 'routes.performance', element: <Performance />, showInNav: true },
   { path: '/cashbook', labelKey: 'routes.cashbook', element: <CashbookPage />, showInNav: true },
   { path: '/investments', labelKey: 'routes.investments', element: <Transactions />, showInNav: true },
