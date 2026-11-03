@@ -18,6 +18,7 @@ export interface RouteConfig {
 }
 
 export const routeConfig: RouteConfig[] = [
+  // 首頁改走 Overview；舊 Dashboard 留在 /overview-previous 方便對照，不要刪（PR #30）
   { path: '/', labelKey: 'routes.dashboard', element: <Overview />, showInNav: true },
   { path: '/overview-previous', labelKey: 'routes.dashboard', element: <Dashboard />, showInNav: false },
   { path: '/performance', labelKey: 'routes.performance', element: <Performance />, showInNav: true },

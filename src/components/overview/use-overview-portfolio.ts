@@ -57,6 +57,7 @@ export function useOverviewPortfolio() {
     mutationFn: () => marketPriceService.refreshPrices(),
     onMutate: () => setPriceFeedback(''),
     onSuccess: async (result) => {
+      // failed 不 invalidate：舊持倉數字仍可信，避免用失敗結果洗掉畫面（PR #30）
       if (result.status !== 'failed') {
         await queryClient.invalidateQueries({
           queryKey: queryKeys.portfolio.all(),

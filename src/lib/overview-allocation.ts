@@ -4,6 +4,7 @@ import type {
   PortfolioAllocationByType,
 } from './portfolio.service'
 
+/** 80/20 只跟資產類別比，不是商品類型。商品類型沒有股債目標（PR #30）。 */
 export const OVERVIEW_TARGET_EQUITY = 0.8
 export const OVERVIEW_TARGET_BOND = 0.2
 
@@ -55,6 +56,7 @@ export function allocationBarPercent(weight: number): number {
   return Math.max(0, Math.min(100, weight * 100))
 }
 
+/** 資產類別用「股票類」，商品類型用「個股」；同一 id 不可共用文案（PR #30）。 */
 export function overviewAllocationLabel(
   id: string,
   view: AllocationViewMode,

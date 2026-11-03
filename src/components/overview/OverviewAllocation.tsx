@@ -98,8 +98,9 @@ export function OverviewAllocation({
         <p className="ov-allocation-note">{t('overview.allocationEmpty')}</p>
       )}
 
+      {/* 股債 80/20 參考只在資產類別顯示；商品類型不是股債切面（PR #30） */}
       {allocationView === 'assetClass' ? (
-        <AssetClassTarget
+        <AssetClassTarget>
           isError={rebalanceQuery.isError}
           isLoading={rebalanceQuery.isLoading}
           trackedMarketValue={plan?.trackedMarketValue ?? 0}

@@ -90,6 +90,7 @@ export function OverviewSummary({
         <div className="ov-value">
           <p>{t('overview.marketValue')}</p>
           <div className="ov-big-number">
+            {/* 載入中或失敗都顯示 —，不要用 0 假裝已載入（PR #30） */}
             {summary ? formatCurrency(summary.marketValue, locale) : '—'}{' '}
             <span>{displayCurrency}</span>
           </div>
