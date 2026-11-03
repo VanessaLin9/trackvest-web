@@ -53,4 +53,17 @@ describe('decimal string formatters', () => {
       '1.00000001 TWD',
     )
   })
+
+  it('keeps exact annual decimals that a JavaScript number would round', () => {
+    expect(formatExactDecimalAmount('100000000.00000002', 'en', 'TWD')).toBe(
+      '100,000,000.00000002 TWD',
+    )
+    expect(formatSignedExactDecimalAmount('1000000000.00000001', 'en', 'TWD')).toBe(
+      '+1,000,000,000.00000001 TWD',
+    )
+    expect(formatSignedExactDecimalAmount('-100000000.00000002', 'zh-TW', 'TWD')).toBe(
+      '-100,000,000.00000002 TWD',
+    )
+    expect(formatExactDecimalAmount('not-a-number', 'en', 'TWD')).toBeNull()
+  })
 })
