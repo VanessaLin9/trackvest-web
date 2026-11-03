@@ -1,9 +1,12 @@
-import { cleanup, fireEvent, render, screen } from '@testing-library/react'
+import { cleanup, fireEvent, render, screen, within } from '@testing-library/react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { MemoryRouter } from 'react-router-dom'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { AuthProvider } from '../app/auth-context'
 import { I18nProvider } from '../i18n'
+import {
+  getAnnualRealizedScenario,
+} from '../lib/annual-realized'
 import {
   getAssetPerformancePreview,
   getAssetPerformanceScenario,
@@ -11,13 +14,15 @@ import {
 } from '../lib/asset-performance'
 import Performance from './Performance'
 
-const { getAssetPerformance } = vi.hoisted(() => ({
+const { getAssetPerformance, getAnnualRealized } = vi.hoisted(() => ({
   getAssetPerformance: vi.fn(),
+  getAnnualRealized: vi.fn(),
 }))
 
 vi.mock('../lib/portfolio.service', () => ({
   portfolioService: {
     getAssetPerformance,
+    getAnnualRealized,
   },
 }))
 
@@ -29,6 +34,9 @@ describe('Performance page', () => {
   })
 
   function renderPage() {
+    if (!getAnnualRealized.getMockImplementation()) {
+      getAnnualRealized.mockResolvedValue(getAnnualRealizedScenario('empty'))
+    }
     const queryClient = new QueryClient({
       defaultOptions: {
         queries: { retry: false },
@@ -191,5 +199,148 @@ describe('Performance page', () => {
     getAssetPerformance.mockResolvedValue(getAssetPerformancePreview())
     fireEvent.click(screen.getByRole('button', { name: 'Retry' }))
     expect(await screen.findByText('0050')).toBeTruthy()
+  })
+
+  it('shows sell-year rows in descending order and marks the open Taipei year', async () => {
+    getAnnualRealized.mockResolvedValue(
+      getAnnualRealizedScenario('sell_year_with_zero_year'),
+    )
+    renderPage()
+
+    const table = await screen.findByRole('table', {
+      name: 'Annual realized net P&L by year',
+    })
+    const rows = within(table).getAllByRole('row')
+    expect(rows[1]).toHaveTextContent('2026')
+    expect(rows[1]).toHaveTextContent('Year to date')
+    expect(rows[2]).toHaveTextContent('2025')
+    expect(rows[2]).not.toHaveTextContent('Year to date')
+    expect(rows[3]).toHaveTextContent('2024')
+    expect(rows[3]).toHaveTextContent('0 TWD')
+    expect(within(table).queryByText('Insufficient data')).toBeNull()
+
+    const chart = screen.getByRole('list', {
+      name: 'Chart order, earliest year first',
+    })
+    expect(within(chart).getAllByRole('listitem').map((item) => item.textContent)).toEqual([
+      '2024: 0 TWD',
+      '2025: +100 TWD',
+      '2026 Year to date: -20 TWD',
+    ])
+  })
+
+  it('keeps currencies separate and does not show a combined total', async () => {
+    getAnnualRealized.mockResolvedValue(getAnnualRealizedScenario('currencies'))
+    renderPage()
+
+    const table = await screen.findByRole('table', {
+      name: 'Annual realized net P&L by year',
+    })
+    expect(within(table).getByText('+16 TWD')).toBeTruthy()
+    expect(within(table).queryByText('+4 USD')).toBeNull()
+
+    fireEvent.click(screen.getByRole('button', { name: 'USD' }))
+
+    expect(await within(table).findByText('+4 USD')).toBeTruthy()
+    expect(within(table).queryByText('+16 TWD')).toBeNull()
+  })
+
+  it('shows insufficient data for a missing FIFO year and zero for a year with no sells', async () => {
+    getAnnualRealized.mockResolvedValue(
+      getAnnualRealizedScenario('missing_fifo_and_zero'),
+    )
+    renderPage()
+
+    const table = await screen.findByRole('table', {
+      name: 'Annual realized net P&L by year',
+    })
+    const rows = within(table).getAllByRole('row')
+    expect(rows[1]).toHaveTextContent('Insufficient data')
+    expect(rows[1]).toHaveTextContent('600 TWD')
+    expect(rows[1]).toHaveTextContent('FIFO match missing')
+    expect(rows[2]).toHaveTextContent('0 TWD')
+    expect(rows[2]).not.toHaveTextContent('Insufficient data')
+
+    const chart = screen.getByRole('list', {
+      name: 'Chart order, earliest year first',
+    })
+    expect(within(chart).getAllByRole('listitem').map((item) => item.textContent)).toEqual([
+      '2025: 0 TWD',
+      '2026 Year to date: Insufficient data',
+    ])
+    expect(screen.getByText(
+      'Years with insufficient data are left off the chart. They are not drawn as zero.',
+    )).toBeTruthy()
+  })
+
+  it('marks 2025 as year to date when Taipei has not reached the new year', async () => {
+    getAnnualRealized.mockResolvedValue(
+      getAnnualRealizedScenario('taipei_before_new_year'),
+    )
+    renderPage()
+
+    const table = await screen.findByRole('table', {
+      name: 'Annual realized net P&L by year',
+    })
+    const yearToDate = within(table).getByText('Year to date')
+    expect(yearToDate.closest('tr')).toHaveTextContent('2025')
+    expect(yearToDate.closest('tr')).not.toHaveTextContent('2026')
+  })
+
+  it('keeps an 8-decimal realized amount visible', async () => {
+    getAnnualRealized.mockResolvedValue(getAnnualRealizedScenario('fractional'))
+    renderPage()
+
+    const table = await screen.findByRole('table', {
+      name: 'Annual realized net P&L by year',
+    })
+    expect(within(table).getByText('+1.00000001 TWD')).toBeTruthy()
+    expect(within(table).queryByText('+1 TWD')).toBeNull()
+  })
+
+  it('keeps an empty annual state without hiding asset history', async () => {
+    getAssetPerformance.mockResolvedValue(getAssetPerformancePreview())
+    getAnnualRealized.mockResolvedValue(getAnnualRealizedScenario('empty'))
+    renderPage()
+
+    expect(await screen.findByText('No annual realized results yet')).toBeTruthy()
+    expect(screen.getByText('0050')).toBeTruthy()
+    expect(screen.queryByRole('table', { name: 'Annual realized net P&L by year' })).toBeNull()
+  })
+
+  it('retries the annual card without clearing asset history', async () => {
+    getAssetPerformance.mockResolvedValue(getAssetPerformancePreview())
+    getAnnualRealized.mockRejectedValueOnce(new Error('annual down'))
+    renderPage()
+
+    expect(await screen.findByText('Could not load annual realized net P&L.')).toBeTruthy()
+    expect(screen.getByText('0050')).toBeTruthy()
+
+    getAnnualRealized.mockResolvedValue(
+      getAnnualRealizedScenario('sell_year_with_zero_year'),
+    )
+    fireEvent.click(screen.getByRole('button', { name: 'Retry' }))
+
+    const table = await screen.findByRole('table', {
+      name: 'Annual realized net P&L by year',
+    })
+    expect(within(table).getByText('-20 TWD')).toBeTruthy()
+    expect(screen.getByText('0050')).toBeTruthy()
+  })
+
+  it('uses Traditional Chinese for the annual card', async () => {
+    window.localStorage.setItem('trackvest.locale', 'zh-TW')
+    getAnnualRealized.mockResolvedValue(
+      getAnnualRealizedScenario('sell_year_with_zero_year'),
+    )
+    renderPage()
+
+    expect(await screen.findByRole('heading', { name: '年度已實現淨損益' })).toBeTruthy()
+    expect(await screen.findByText('截至目前')).toBeTruthy()
+    expect(screen.getByRole('link', { name: '查看各標的歷史成果' })).toHaveAttribute(
+      'href',
+      '/performance#asset-history',
+    )
+    expect(screen.getByText(/Asia\/Taipei/)).toBeTruthy()
   })
 })

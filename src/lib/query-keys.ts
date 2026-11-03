@@ -119,6 +119,13 @@ export const queryKeys = {
      */
     assetPerformance: (userId: string, accountId: string) =>
       ['portfolio', 'asset-performance', userId, accountId] as const,
+    /**
+     * 年度已實現淨損益（PR #28）：key 含 userId 與 account scope。
+     * 掛在 portfolio.all 底下，交易與 CSV commit 會重取。
+     * 數字來自年度 API，不從行情或 summary 損益換算。
+     */
+    annualRealized: (userId: string, accountId: string) =>
+      ['portfolio', 'annual-realized', userId, accountId] as const,
   },
 } as const
 

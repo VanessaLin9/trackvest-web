@@ -1,8 +1,10 @@
 import { describe, expect, it } from 'vitest'
 import {
   formatDecimalAmount,
+  formatExactDecimalAmount,
   formatShareQuantityFromString,
   formatSignedDecimalAmount,
+  formatSignedExactDecimalAmount,
   parseDecimalString,
 } from './formatters'
 
@@ -37,5 +39,31 @@ describe('decimal string formatters', () => {
     )
     expect(formatShareQuantityFromString('0', 'en', 'shares')).toBe('0 shares')
     expect(formatShareQuantityFromString('0', 'zh-TW', '股')).toBe('0 股')
+  })
+
+  it('keeps 8-decimal annual amounts and does not turn null into zero', () => {
+    expect(formatSignedExactDecimalAmount(null, 'en', 'TWD')).toBeNull()
+    expect(formatExactDecimalAmount('0', 'en', 'TWD')).toBe('0 TWD')
+    expect(formatSignedExactDecimalAmount('0', 'zh-TW', 'TWD')).toBe('0 TWD')
+    expect(formatSignedExactDecimalAmount('1.00000001', 'en', 'TWD')).toBe(
+      '+1.00000001 TWD',
+    )
+    expect(formatSignedExactDecimalAmount('-20', 'zh-TW', 'TWD')).toBe('-20 TWD')
+    expect(formatExactDecimalAmount('1.00000001', 'en', 'TWD')).toBe(
+      '1.00000001 TWD',
+    )
+  })
+
+  it('keeps exact annual decimals that a JavaScript number would round', () => {
+    expect(formatExactDecimalAmount('100000000.00000002', 'en', 'TWD')).toBe(
+      '100,000,000.00000002 TWD',
+    )
+    expect(formatSignedExactDecimalAmount('1000000000.00000001', 'en', 'TWD')).toBe(
+      '+1,000,000,000.00000001 TWD',
+    )
+    expect(formatSignedExactDecimalAmount('-100000000.00000002', 'zh-TW', 'TWD')).toBe(
+      '-100,000,000.00000002 TWD',
+    )
+    expect(formatExactDecimalAmount('not-a-number', 'en', 'TWD')).toBeNull()
   })
 })

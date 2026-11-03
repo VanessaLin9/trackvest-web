@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { api } from './api'
+import { getAnnualRealizedScenario } from './annual-realized'
 import { getAssetPerformancePreview } from './asset-performance'
 import { portfolioService } from './portfolio.service'
 import { queryKeys, resolveAccountScopeKey } from './query-keys'
@@ -36,6 +37,45 @@ describe('portfolioService.getAssetPerformance', () => {
       params: { accountId },
     })
     expect(get.mock.calls[0]?.[1]).not.toHaveProperty('userId')
+  })
+})
+
+describe('portfolioService.getAnnualRealized', () => {
+  const response = getAnnualRealizedScenario('sell_year_with_zero_year')
+
+  beforeEach(() => {
+    vi.clearAllMocks()
+    get.mockResolvedValue({ data: response } as never)
+  })
+
+  it('calls the annual realized route without an account scope by default', async () => {
+    await expect(portfolioService.getAnnualRealized()).resolves.toEqual(response)
+
+    expect(get).toHaveBeenCalledWith('/portfolio/performance/annual-realized', {
+      params: undefined,
+    })
+  })
+
+  it('passes owned accountId and does not send a userId', async () => {
+    const accountId = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa'
+    await portfolioService.getAnnualRealized({ accountId })
+
+    expect(get).toHaveBeenCalledWith('/portfolio/performance/annual-realized', {
+      params: { accountId },
+    })
+    expect(get.mock.calls[0]?.[1]).not.toHaveProperty('userId')
+  })
+})
+
+describe('annual realized query keys', () => {
+  it('nests under portfolio.all so transaction writes refetch the annual card', () => {
+    const key = queryKeys.portfolio.annualRealized(
+      'user-1',
+      resolveAccountScopeKey(undefined),
+    )
+
+    expect(key).toEqual(['portfolio', 'annual-realized', 'user-1', 'all'])
+    expect(key.slice(0, 1)).toEqual(queryKeys.portfolio.all())
   })
 })
 

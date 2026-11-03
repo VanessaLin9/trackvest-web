@@ -65,6 +65,111 @@ export function formatDecimalAmount(
   return formatCurrencyWithCode(parsed, locale, currency)
 }
 
+/**
+ * 年度已實現金額沿用 API 字串，最多 8 位小數（PR #28）。
+ * 只加千分位，不經 Number。JS number 會把 100000000.00000002 進位，
+ * 也會讓 1000000000.00000001 的小數消失。
+ * null 與格式不符維持 null，不能把缺資料格式化成 0。
+ * 圖表高度仍用 parseDecimalString，那只影響長條幾何。
+ */
+export function formatExactDecimalAmount(
+  value: string | null | undefined,
+  locale: string,
+  currency?: string | null,
+): string | null {
+  const formatted = formatExactDecimalString(value, locale)
+  if (formatted === null) {
+    return null
+  }
+
+  return appendCurrencyCode(formatted, currency)
+}
+
+export function formatSignedExactDecimalAmount(
+  value: string | null | undefined,
+  locale: string,
+  currency?: string | null,
+): string | null {
+  const parts = splitExactDecimal(value)
+  if (parts === null) {
+    return null
+  }
+
+  const prefix = parts.sign > 0 ? '+' : parts.sign < 0 ? '-' : ''
+  return `${prefix}${appendCurrencyCode(
+    formatExactDecimalDigits(parts.whole, parts.fraction, locale),
+    currency,
+  )}`
+}
+
+function formatExactDecimalString(
+  value: string | null | undefined,
+  locale: string,
+): string | null {
+  const parts = splitExactDecimal(value)
+  if (parts === null) {
+    return null
+  }
+
+  const prefix = parts.sign < 0 ? '-' : ''
+  return `${prefix}${formatExactDecimalDigits(parts.whole, parts.fraction, locale)}`
+}
+
+type ExactDecimalParts = {
+  sign: -1 | 0 | 1
+  whole: string
+  fraction: string | undefined
+}
+
+function splitExactDecimal(
+  value: string | null | undefined,
+): ExactDecimalParts | null {
+  if (value == null || value === '' || !DECIMAL_STRING_PATTERN.test(value)) {
+    return null
+  }
+
+  const negative = value.startsWith('-')
+  const unsigned = negative ? value.slice(1) : value
+  const [whole, fraction] = unsigned.split('.')
+  const isZero = /^0+$/.test(whole) && (fraction === undefined || /^0+$/.test(fraction))
+
+  return {
+    sign: isZero ? 0 : negative ? -1 : 1,
+    whole: whole.replace(/^0+(?=\d)/, ''),
+    fraction,
+  }
+}
+
+function formatExactDecimalDigits(
+  whole: string,
+  fraction: string | undefined,
+  locale: string,
+): string {
+  const separators = decimalSeparators(locale)
+  const grouped = groupIntegerDigits(whole, separators.group)
+  return fraction === undefined ? grouped : `${grouped}${separators.decimal}${fraction}`
+}
+
+function decimalSeparators(locale: string): { group: string; decimal: string } {
+  const parts = new Intl.NumberFormat(locale).formatToParts(1000.1)
+  return {
+    group: parts.find((part) => part.type === 'group')?.value ?? ',',
+    decimal: parts.find((part) => part.type === 'decimal')?.value ?? '.',
+  }
+}
+
+function groupIntegerDigits(digits: string, separator: string): string {
+  const groups: string[] = []
+  for (let index = digits.length; index > 0; index -= 3) {
+    groups.unshift(digits.slice(Math.max(0, index - 3), index))
+  }
+  return groups.join(separator)
+}
+
+function appendCurrencyCode(formatted: string, currency?: string | null): string {
+  return currency ? `${formatted} ${currency}` : formatted
+}
+
 /** Signed display for API decimal strings. Null means data is unavailable. */
 export function formatSignedDecimalAmount(
   value: string | null | undefined,

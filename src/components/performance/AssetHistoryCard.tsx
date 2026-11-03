@@ -62,7 +62,7 @@ export function AssetHistoryCard({
     : null
 
   return (
-    <Card as="section" className="space-y-4">
+    <Card as="section" id="asset-history" className="scroll-mt-6 space-y-4">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div>
           <h2 className="text-xl font-semibold text-slate-900">
