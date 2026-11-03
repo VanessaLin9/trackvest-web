@@ -574,6 +574,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/portfolio/performance/annual-buys": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["PortfolioController_getAnnualBuys"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/portfolio/performance/annual-realized": {
         parameters: {
             query?: never;
@@ -1621,6 +1637,85 @@ export interface components {
             generatedAt: string;
             /** @description All active buy/sell history, including closed holdings. Ordered by symbol, currency, assetId. */
             items: components["schemas"]["PortfolioAssetPerformanceItemResponseDto"][];
+        };
+        GetPortfolioAnnualBuysDto: {
+            /**
+             * Format: uuid
+             * @description Optional account scope. The account must belong to the signed-in user, including when the caller is an admin.
+             */
+            accountId?: string;
+        };
+        /**
+         * @description Asset.type. equity and etf stay separate even when assetClass is equity. Unknown types are other.
+         * @enum {string}
+         */
+        PortfolioAnnualBuyAssetType: "equity" | "etf" | "crypto" | "cash" | "other";
+        PortfolioAnnualBuyTypeResponseDto: {
+            /** @description Asset.type. equity and etf stay separate even when assetClass is equity. Unknown types are other. */
+            type: components["schemas"]["PortfolioAnnualBuyAssetType"];
+            /**
+             * @description Sum of buy.amount for this type. Fees already inside amount are not added again.
+             * @example 300
+             */
+            buyAmount: string;
+            /**
+             * @description This type divided by the buy total of the same year, currency, and month scope. Null when that total is zero.
+             * @example 0.75
+             */
+            share: string | null;
+        };
+        PortfolioAnnualBuyMonthResponseDto: {
+            /** @example 3 */
+            month: number;
+            /**
+             * @description Buy amount in this Taipei month. A finished month with no buys is 0. Future months of the current year are omitted.
+             * @example 350
+             */
+            buyAmount: string;
+            types: components["schemas"]["PortfolioAnnualBuyTypeResponseDto"][];
+        };
+        PortfolioAnnualBuyItemResponseDto: {
+            /**
+             * @description Trade year in Asia/Taipei. UTC 12/31 16:00 belongs to the next Taipei year.
+             * @example 2026
+             */
+            year: number;
+            /**
+             * @description Account currency. Rows are not summed across currencies.
+             * @example TWD
+             */
+            currency: string;
+            /** @example 2 */
+            buyCount: number;
+            /**
+             * @description Sum of active buy amounts. This counts money spent on buys, including buys funded by earlier sells. It is not new principal, net deposits, or market value.
+             * @example 350
+             */
+            buyAmount: string;
+            /** @example 1 */
+            sellCount: number;
+            /**
+             * @description Sum of active sell amounts (net proceeds). Fees and tax already inside amount are not deducted again.
+             * @example 80
+             */
+            sellNetProceeds: string;
+            /**
+             * @description buyAmount minus sellNetProceeds. Not external cash flow and not a return denominator.
+             * @example 270
+             */
+            buyMinusSellProceeds: string;
+            /** @description Buy amount by Asset.type. Empty when the year has no buys; shares are then absent rather than 0%. */
+            types: components["schemas"]["PortfolioAnnualBuyTypeResponseDto"][];
+            /** @description Taipei months 1–12 for a finished year. The current year stops at the as-of month. */
+            months: components["schemas"]["PortfolioAnnualBuyMonthResponseDto"][];
+        };
+        PortfolioAnnualBuysResponseDto: {
+            /** Format: date-time */
+            generatedAt: string;
+            /** @example Asia/Taipei */
+            timeZone: string;
+            /** @description One row per year and account currency, from the first buy/sell year through the current Taipei year. Ordered by year descending, then currency ascending. */
+            items: components["schemas"]["PortfolioAnnualBuyItemResponseDto"][];
         };
         GetPortfolioAnnualRealizedDto: {
             /**
@@ -3211,6 +3306,28 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["PortfolioAssetPerformanceResponseDto"];
+                };
+            };
+        };
+    };
+    PortfolioController_getAnnualBuys: {
+        parameters: {
+            query?: {
+                /** @description Optional account scope. The account must belong to the signed-in user, including when the caller is an admin. */
+                accountId?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PortfolioAnnualBuysResponseDto"];
                 };
             };
         };

@@ -1,6 +1,7 @@
 import { api } from './api'
 import type { ApiSchemas } from './api-schema'
 import type { AssetClass, AssetType } from './assets.service'
+import type { PortfolioAnnualBuysResponse } from './annual-buys'
 import type { PortfolioAnnualRealizedResponse } from './annual-realized'
 import type { PortfolioAssetPerformanceResponse } from './asset-performance'
 
@@ -215,6 +216,22 @@ export const portfolioService = {
   }): Promise<PortfolioAnnualRealizedResponse> {
     const response = await api.get<PortfolioAnnualRealizedResponse>(
       '/portfolio/performance/annual-realized',
+      {
+        params: query?.accountId ? { accountId: query.accountId } : undefined,
+      },
+    )
+    return response.data
+  },
+
+  /**
+   * 讀取年度買進金額與類型配置（PR #29）。金額與占比由 API 算好，前端只展示。
+   * 對應 GET /portfolio/performance/annual-buys；可選 accountId 必須是自己的帳戶。
+   */
+  async getAnnualBuys(query?: {
+    accountId?: string
+  }): Promise<PortfolioAnnualBuysResponse> {
+    const response = await api.get<PortfolioAnnualBuysResponse>(
+      '/portfolio/performance/annual-buys',
       {
         params: query?.accountId ? { accountId: query.accountId } : undefined,
       },

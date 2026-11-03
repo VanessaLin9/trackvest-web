@@ -5,6 +5,9 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 import { AuthProvider } from '../app/auth-context'
 import { I18nProvider } from '../i18n'
 import {
+  getAnnualBuysScenario,
+} from '../lib/annual-buys'
+import {
   getAnnualRealizedScenario,
 } from '../lib/annual-realized'
 import {
@@ -14,15 +17,17 @@ import {
 } from '../lib/asset-performance'
 import Performance from './Performance'
 
-const { getAssetPerformance, getAnnualRealized } = vi.hoisted(() => ({
+const { getAssetPerformance, getAnnualRealized, getAnnualBuys } = vi.hoisted(() => ({
   getAssetPerformance: vi.fn(),
   getAnnualRealized: vi.fn(),
+  getAnnualBuys: vi.fn(),
 }))
 
 vi.mock('../lib/portfolio.service', () => ({
   portfolioService: {
     getAssetPerformance,
     getAnnualRealized,
+    getAnnualBuys,
   },
 }))
 
@@ -36,6 +41,9 @@ describe('Performance page', () => {
   function renderPage() {
     if (!getAnnualRealized.getMockImplementation()) {
       getAnnualRealized.mockResolvedValue(getAnnualRealizedScenario('empty'))
+    }
+    if (!getAnnualBuys.getMockImplementation()) {
+      getAnnualBuys.mockResolvedValue(getAnnualBuysScenario('empty'))
     }
     const queryClient = new QueryClient({
       defaultOptions: {
@@ -341,6 +349,145 @@ describe('Performance page', () => {
       'href',
       '/performance#asset-history',
     )
-    expect(screen.getByText(/Asia\/Taipei/)).toBeTruthy()
+    expect(screen.getAllByText(/Asia\/Taipei/).length).toBeGreaterThan(0)
+  })
+
+  it('shows the buy mix from asset type and stops the open year at the current month', async () => {
+    getAnnualBuys.mockResolvedValue(getAnnualBuysScenario('mixed_years'))
+    renderPage()
+
+    expect(
+      await screen.findByRole('heading', { name: 'Annual buy amount and stock / ETF mix' }),
+    ).toBeTruthy()
+    expect(screen.getByText(/not the current holdings mix/)).toBeTruthy()
+    expect(screen.getByText(/not a return denominator/)).toBeTruthy()
+
+    const yearTable = await screen.findByRole('table', { name: 'Annual buy amounts' })
+    const yearRows = within(yearTable).getAllByRole('row')
+    expect(yearRows[1]).toHaveTextContent('2026')
+    expect(yearRows[1]).toHaveTextContent('Year to date')
+    expect(yearRows[1]).toHaveTextContent('351 TWD')
+    expect(yearRows[2]).toHaveTextContent('2025')
+    expect(yearRows[3]).toHaveTextContent('2024')
+
+    const typeTable = screen.getByRole('table', { name: 'Buy amount by asset type' })
+    expect(within(typeTable).getByText('ETF')).toBeTruthy()
+    expect(within(typeTable).getByText('85.754986%')).toBeTruthy()
+    expect(within(typeTable).getByText('Crypto')).toBeTruthy()
+    expect(within(typeTable).queryByText('Stock')).toBeNull()
+    expect(within(typeTable).queryByText('0%')).toBeNull()
+
+    const monthTable = screen.getByRole('table', { name: 'Monthly buy amounts' })
+    expect(within(monthTable).getByText('Jan')).toBeTruthy()
+    expect(within(monthTable).queryByText('Jul')).toBeNull()
+    expect(within(monthTable).getAllByRole('row')).toHaveLength(7)
+
+    const amountChart = screen.getByRole('list', {
+      name: 'Buy amount by type, earliest year first',
+    })
+    expect(within(amountChart).getAllByRole('listitem').map((item) => item.textContent)).toEqual([
+      '2024: 100 TWD',
+      '2025: 0 TWD',
+      '2026 Year to date: 351 TWD',
+    ])
+    const shareChart = screen.getByRole('list', {
+      name: 'Buy mix by type, earliest year first',
+    })
+    expect(within(shareChart).getAllByRole('listitem').map((item) => item.textContent)).toEqual([
+      '2024: Stock 100%',
+      '2026: ETF 85.754986%, Crypto 14.245014%',
+    ])
+  })
+
+  it('shows a finished year with zero months and no invented allocation', async () => {
+    getAnnualBuys.mockResolvedValue(getAnnualBuysScenario('mixed_years'))
+    renderPage()
+
+    await screen.findByRole('table', { name: 'Annual buy amounts' })
+    fireEvent.change(screen.getByRole('combobox', { name: /Year/ }), {
+      target: { value: '2025' },
+    })
+
+    expect(
+      screen.getByText('No buys this year, so there is no allocation. A missing share is not 0%.'),
+    ).toBeTruthy()
+    expect(screen.queryByText('0%')).toBeNull()
+    const monthTable = screen.getByRole('table', { name: 'Monthly buy amounts' })
+    expect(within(monthTable).getByText('Jul')).toBeTruthy()
+    expect(within(monthTable).getAllByRole('row')).toHaveLength(13)
+  })
+
+  it('keeps a sell-only year from looking like a 0% allocation', async () => {
+    getAnnualBuys.mockResolvedValue(getAnnualBuysScenario('sells_without_buys'))
+    renderPage()
+
+    expect(await screen.findByText('-40 TWD')).toBeTruthy()
+    expect(
+      screen.getByText('No buys this year, so there is no allocation. A missing share is not 0%.'),
+    ).toBeTruthy()
+    expect(screen.queryByRole('list', { name: 'Buy mix by type, earliest year first' })).toBeNull()
+    expect(screen.queryByText('0%')).toBeNull()
+  })
+
+  it('keeps each currency on its own buy mix', async () => {
+    getAnnualBuys.mockResolvedValue(getAnnualBuysScenario('currencies'))
+    renderPage()
+
+    const yearTable = await screen.findByRole('table', { name: 'Annual buy amounts' })
+    expect(within(yearTable).getByText('25 TWD')).toBeTruthy()
+    expect(within(yearTable).queryByText('7 USD')).toBeNull()
+
+    fireEvent.click(screen.getByRole('button', { name: 'USD' }))
+
+    expect(within(yearTable).getByText('7 USD')).toBeTruthy()
+    expect(within(yearTable).queryByText('25 TWD')).toBeNull()
+  })
+
+  it('keeps crypto, cash, and other buys instead of dropping them', async () => {
+    getAnnualBuys.mockResolvedValue(getAnnualBuysScenario('all_types'))
+    renderPage()
+
+    const typeTable = await screen.findByRole('table', { name: 'Buy amount by asset type' })
+    expect(within(typeTable).getByText('Crypto')).toBeTruthy()
+    expect(within(typeTable).getByText('Cash')).toBeTruthy()
+    expect(within(typeTable).getByText('Other')).toBeTruthy()
+    expect(within(typeTable).getByText('20%')).toBeTruthy()
+    expect(within(typeTable).getByText('30%')).toBeTruthy()
+    expect(within(typeTable).getByText('50%')).toBeTruthy()
+  })
+
+  it('keeps an 8-decimal buy amount visible', async () => {
+    getAnnualBuys.mockResolvedValue(getAnnualBuysScenario('fractional'))
+    renderPage()
+
+    const yearTable = await screen.findByRole('table', { name: 'Annual buy amounts' })
+    expect(within(yearTable).getByText('0.00000001 TWD')).toBeTruthy()
+  })
+
+  it('treats UTC 12/31 16:00 as January of the next Taipei year', async () => {
+    getAnnualBuys.mockResolvedValue(getAnnualBuysScenario('taipei_new_year'))
+    renderPage()
+
+    const monthTable = await screen.findByRole('table', { name: 'Monthly buy amounts' })
+    expect(within(monthTable).getByText('Jan')).toBeTruthy()
+    expect(within(monthTable).queryByText('Dec')).toBeNull()
+    expect(within(monthTable).getAllByRole('row')).toHaveLength(2)
+    const yearTable = screen.getByRole('table', { name: 'Annual buy amounts' })
+    expect(within(yearTable).getByText('Year to date')).toBeTruthy()
+  })
+
+  it('retries the buy card without clearing asset history', async () => {
+    getAssetPerformance.mockResolvedValue(getAssetPerformancePreview())
+    getAnnualBuys.mockRejectedValueOnce(new Error('buys down'))
+    renderPage()
+
+    expect(await screen.findByText('Could not load annual buy allocation.')).toBeTruthy()
+    expect(screen.getByText('0050')).toBeTruthy()
+
+    getAnnualBuys.mockResolvedValue(getAnnualBuysScenario('mixed_years'))
+    fireEvent.click(screen.getByRole('button', { name: 'Retry' }))
+
+    expect(await screen.findByText('351 TWD')).toBeTruthy()
+    expect(screen.getByText('0050')).toBeTruthy()
   })
 })
