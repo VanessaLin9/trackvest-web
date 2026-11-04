@@ -1,3 +1,4 @@
+import { performancePoc } from './namespaces/performancePoc'
 import { app } from './namespaces/app'
 import { auth } from './namespaces/auth'
 import { locales } from './namespaces/locales'
@@ -25,6 +26,7 @@ export const messages = {
     dashboard: dashboard.en,
     overview: overview.en,
     performance: performance.en,
+    performancePoc: performancePoc.en,
     health: health.en,
     users: users.en,
     endpointTester: endpointTester.en,
@@ -43,6 +45,7 @@ export const messages = {
     dashboard: dashboard['zh-TW'],
     overview: overview['zh-TW'],
     performance: performance['zh-TW'],
+    performancePoc: performancePoc['zh-TW'],
     health: health['zh-TW'],
     users: users['zh-TW'],
     endpointTester: endpointTester['zh-TW'],

@@ -606,6 +606,54 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/portfolio/performance/realized/periods": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["PortfolioController_getRealizedPeriods"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/portfolio/performance/realized/assets": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["PortfolioController_getRealizedAssets"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/portfolio/performance/realized/trades": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["PortfolioController_getRealizedTrades"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/portfolio/holdings": {
         parameters: {
             query?: never;
@@ -1763,6 +1811,285 @@ export interface components {
             timeZone: string;
             /** @description One row per year and account currency, from the first buy/sell year through the current Taipei year. Ordered by year descending, then currency ascending. */
             items: components["schemas"]["PortfolioAnnualRealizedItemResponseDto"][];
+        };
+        GetRealizedPeriodsDto: {
+            /**
+             * @description Taipei calendar year. Years after the current Taipei year are rejected.
+             * @example 2024
+             */
+            year: number;
+            /**
+             * Format: uuid
+             * @description Optional account scope. The account must belong to the signed-in user, including when the caller is an admin.
+             */
+            accountId?: string;
+        };
+        PortfolioRealizedPeriodScopeDto: {
+            /**
+             * Format: uuid
+             * @description Requested account. Null means every account owned by the signed-in user.
+             */
+            accountId: string | null;
+            /** @example 2024 */
+            year: number;
+            /**
+             * @description Null on the year endpoint and when a month was not requested.
+             * @example null
+             */
+            month: number | null;
+            /**
+             * @description Null on the year endpoint because currencies are returned as separate groups.
+             * @example null
+             */
+            currency: string | null;
+        };
+        /** @enum {string} */
+        PortfolioRealizedPeriodIssue: "MISSING_FIFO";
+        PortfolioRealizedMoneySummaryDto: {
+            /** @example 2 */
+            sellCount: number;
+            /**
+             * @description Sum of active sell amounts (net proceeds). Fees and tax are already inside amount and are not deducted again. Rounded half up to 8 decimal places only after the sum.
+             * @example 540
+             */
+            netProceeds: string;
+            /**
+             * @description Sum of SellLotMatch quantity times unit cost. Null when any sell in this scope is missing a complete FIFO match. Not zero in that case.
+             * @example 384
+             */
+            disposedCost: string | null;
+            /**
+             * @description Net proceeds minus disposed cost, rounded only after subtraction. Null when disposed cost is unavailable. This is not a return rate.
+             * @example 156
+             */
+            realizedNetPnl: string | null;
+            issues: components["schemas"]["PortfolioRealizedPeriodIssue"][];
+        };
+        PortfolioRealizedMonthDto: {
+            /** @example 3 */
+            month: number;
+            /** @description True only for the current Asia/Taipei month of the current year. */
+            isCurrentMonth: boolean;
+            /** @example 2 */
+            sellCount: number;
+            /** @example 330 */
+            netProceeds: string;
+            /** @example 300 */
+            disposedCost: string | null;
+            /** @example 30 */
+            realizedNetPnl: string | null;
+            issues: components["schemas"]["PortfolioRealizedPeriodIssue"][];
+        };
+        PortfolioRealizedPeriodGroupDto: {
+            /**
+             * @description Account currency. Groups are never summed across currencies.
+             * @example TWD
+             */
+            currency: string;
+            summary: components["schemas"]["PortfolioRealizedMoneySummaryDto"];
+            /** @description Taipei months ascending. A finished year has 1–12. The current year stops at the current month. Future months are omitted, not filled with zero. A month with no sells is a real zero. */
+            months: components["schemas"]["PortfolioRealizedMonthDto"][];
+        };
+        PortfolioRealizedPeriodsResponseDto: {
+            /** Format: date-time */
+            generatedAt: string;
+            /** @example Asia/Taipei */
+            timeZone: string;
+            scope: components["schemas"]["PortfolioRealizedPeriodScopeDto"];
+            /**
+             * Format: date-time
+             * @description Start of the selected Taipei year, inclusive.
+             */
+            periodStart: string;
+            /**
+             * Format: date-time
+             * @description Start of the next Taipei year, exclusive. This stays the calendar boundary even when the year is still open.
+             */
+            periodEndExclusive: string;
+            /**
+             * Format: date-time
+             * @description Equal to generatedAt when this year is still open, so sells after this instant are excluded. Null when the calendar year has ended.
+             */
+            asOf: string | null;
+            isCurrentYear: boolean;
+            /** @description One group per account currency that already has an active buy or sell on or before generatedAt, and whose first such trade is in this year or earlier. Ordered by currency ascending. Dividends alone do not open a group. A selected year before that first trade is omitted. */
+            groups: components["schemas"]["PortfolioRealizedPeriodGroupDto"][];
+        };
+        GetRealizedAssetsDto: {
+            /**
+             * @description Taipei calendar year. Years after the current Taipei year are rejected.
+             * @example 2024
+             */
+            year: number;
+            /**
+             * Format: uuid
+             * @description Optional account scope. The account must belong to the signed-in user, including when the caller is an admin.
+             */
+            accountId?: string;
+            /**
+             * @example TWD
+             * @enum {string}
+             */
+            currency: "TWD" | "USD" | "JPY" | "EUR";
+            /** @description Taipei month. Omit for the whole year. A month that has not started is rejected. */
+            month?: number;
+            /** @default 0 */
+            skip: number;
+            /** @default 20 */
+            take: number;
+        };
+        PortfolioRealizedAssetItemDto: {
+            /** Format: uuid */
+            assetId: string;
+            /** @example AAA */
+            symbol: string;
+            /** @example Alpha */
+            name: string;
+            /**
+             * @description Asset.type. This report does not use asset class.
+             * @example etf
+             */
+            type: string;
+            /** @example 22 */
+            sellCount: number;
+            /**
+             * @description Sum of matched sell quantities when every sell in this row has a complete FIFO match. Null when any sell is missing FIFO. This is shares sold in the period, not the remaining position.
+             * @example 23
+             */
+            realizedQuantity: string | null;
+            /** @example 460 */
+            netProceeds: string;
+            /** @example 284 */
+            disposedCost: string | null;
+            /** @example 176 */
+            realizedNetPnl: string | null;
+            issues: components["schemas"]["PortfolioRealizedPeriodIssue"][];
+        };
+        PortfolioRealizedAssetsResponseDto: {
+            /** Format: date-time */
+            generatedAt: string;
+            /** @example Asia/Taipei */
+            timeZone: string;
+            scope: components["schemas"]["PortfolioRealizedPeriodScopeDto"];
+            /** Format: date-time */
+            periodStart: string;
+            /**
+             * Format: date-time
+             * @description Start of the next Taipei year or month, exclusive.
+             */
+            periodEndExclusive: string;
+            /**
+             * Format: date-time
+             * @description Equal to generatedAt when the selected year or month is still open. Null when that calendar period has ended.
+             */
+            asOf: string | null;
+            /** @description Covers every matching asset, not only the current page. */
+            summary: components["schemas"]["PortfolioRealizedMoneySummaryDto"];
+            /** @description Assets with at least one active sell in the period and currency. Ordered by symbol ascending, then assetId ascending. Buys without a sell are omitted. Holding and closed assets are both included. */
+            items: components["schemas"]["PortfolioRealizedAssetItemDto"][];
+            total: number;
+            skip: number;
+            take: number;
+        };
+        GetRealizedTradesDto: {
+            /**
+             * @description Taipei calendar year. Years after the current Taipei year are rejected.
+             * @example 2024
+             */
+            year: number;
+            /**
+             * Format: uuid
+             * @description Optional account scope. The account must belong to the signed-in user, including when the caller is an admin.
+             */
+            accountId?: string;
+            /**
+             * @example TWD
+             * @enum {string}
+             */
+            currency: "TWD" | "USD" | "JPY" | "EUR";
+            /** @description Taipei month. Omit for the whole year. A month that has not started is rejected. */
+            month?: number;
+            /** @default 0 */
+            skip: number;
+            /** @default 20 */
+            take: number;
+            /** Format: uuid */
+            assetId: string;
+        };
+        PortfolioRealizedTradeScopeDto: {
+            /**
+             * Format: uuid
+             * @description Requested account. Null means every account owned by the signed-in user.
+             */
+            accountId: string | null;
+            /** @example 2024 */
+            year: number;
+            /**
+             * @description Null on the year endpoint and when a month was not requested.
+             * @example null
+             */
+            month: number | null;
+            /**
+             * @description Null on the year endpoint because currencies are returned as separate groups.
+             * @example null
+             */
+            currency: string | null;
+            /** Format: uuid */
+            assetId: string;
+        };
+        PortfolioRealizedTradeItemDto: {
+            /** Format: uuid */
+            transactionId: string;
+            /** Format: uuid */
+            accountId: string;
+            /** @example Broker TWD */
+            accountName: string;
+            /** Format: uuid */
+            assetId: string;
+            /** @example AAA */
+            symbol: string;
+            /** @example Alpha */
+            name: string;
+            /** Format: date-time */
+            tradeTime: string;
+            /**
+             * @example sell
+             * @enum {string}
+             */
+            type: "sell";
+            /** @description Quantity stored on the sell. A split is not applied again here. Null stays null. */
+            quantity: string | null;
+            /** @description Price stored on the sell. Null stays null and is not treated as zero. */
+            price: string | null;
+            /** @description Sell amount, which is the net proceeds. Do not subtract fee or tax again. */
+            amount: string;
+            /** @description Recorded fee, returned for reconciliation only. */
+            fee: string;
+            /** @description Recorded tax, returned for reconciliation only. */
+            tax: string;
+            disposedCost: string | null;
+            realizedNetPnl: string | null;
+            issues: components["schemas"]["PortfolioRealizedPeriodIssue"][];
+        };
+        PortfolioRealizedTradesResponseDto: {
+            /** Format: date-time */
+            generatedAt: string;
+            /** @example Asia/Taipei */
+            timeZone: string;
+            scope: components["schemas"]["PortfolioRealizedTradeScopeDto"];
+            /** Format: date-time */
+            periodStart: string;
+            /** Format: date-time */
+            periodEndExclusive: string;
+            /** Format: date-time */
+            asOf: string | null;
+            /** @description Covers every matching sell, including rows on other pages. One missing FIFO match anywhere in the period nulls this summary. */
+            summary: components["schemas"]["PortfolioRealizedMoneySummaryDto"];
+            /** @description One row per sell, including a sell matched to several lots. Ordered by tradeTime descending, then transactionId ascending. */
+            items: components["schemas"]["PortfolioRealizedTradeItemDto"][];
+            total: number;
+            skip: number;
+            take: number;
         };
         PortfolioSummaryResponseDto: {
             /**
@@ -3350,6 +3677,89 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["PortfolioAnnualRealizedResponseDto"];
+                };
+            };
+        };
+    };
+    PortfolioController_getRealizedPeriods: {
+        parameters: {
+            query: {
+                /** @description Taipei calendar year. Years after the current Taipei year are rejected. */
+                year: number;
+                /** @description Optional account scope. The account must belong to the signed-in user, including when the caller is an admin. */
+                accountId?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PortfolioRealizedPeriodsResponseDto"];
+                };
+            };
+        };
+    };
+    PortfolioController_getRealizedAssets: {
+        parameters: {
+            query: {
+                /** @description Taipei calendar year. Years after the current Taipei year are rejected. */
+                year: number;
+                /** @description Optional account scope. The account must belong to the signed-in user, including when the caller is an admin. */
+                accountId?: string;
+                currency: "TWD" | "USD" | "JPY" | "EUR";
+                /** @description Taipei month. Omit for the whole year. A month that has not started is rejected. */
+                month?: number;
+                skip?: number;
+                take?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PortfolioRealizedAssetsResponseDto"];
+                };
+            };
+        };
+    };
+    PortfolioController_getRealizedTrades: {
+        parameters: {
+            query: {
+                /** @description Taipei calendar year. Years after the current Taipei year are rejected. */
+                year: number;
+                /** @description Optional account scope. The account must belong to the signed-in user, including when the caller is an admin. */
+                accountId?: string;
+                currency: "TWD" | "USD" | "JPY" | "EUR";
+                /** @description Taipei month. Omit for the whole year. A month that has not started is rejected. */
+                month?: number;
+                skip?: number;
+                take?: number;
+                assetId: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PortfolioRealizedTradesResponseDto"];
                 };
             };
         };

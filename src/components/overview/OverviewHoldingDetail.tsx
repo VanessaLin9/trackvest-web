@@ -101,7 +101,8 @@ export function OverviewHoldingDetail({
               </dd>
             </div>
           </dl>
-          <Link className="ov-text-button" to="/performance">
+          {/* 裸 /performance 會開已實現績效，不是標的歷史（PR #31） */}
+          <Link className="ov-text-button" to="/performance?tab=history">
             {t('overview.viewHistory')}
           </Link>
         </>
