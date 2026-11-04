@@ -5,9 +5,14 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { I18nProvider } from '../i18n'
 import PerformancePoc from './PerformancePoc'
 
-const { getAnnualRealized } = vi.hoisted(() => ({ getAnnualRealized: vi.fn() }))
+const { getAnnualRealized, getAssetPerformance } = vi.hoisted(() => ({
+  getAnnualRealized: vi.fn(),
+  getAssetPerformance: vi.fn(),
+}))
 vi.mock('../app/use-auth', () => ({ useAuthenticatedUser: () => ({ id: 'poc-test-user' }) }))
-vi.mock('../lib/portfolio.service', () => ({ portfolioService: { getAnnualRealized } }))
+vi.mock('../lib/portfolio.service', () => ({
+  portfolioService: { getAnnualRealized, getAssetPerformance },
+}))
 
 function LocationProbe() {
   const location = useLocation()
@@ -20,6 +25,7 @@ function show(path = '/performance?source=demo') {
 beforeEach(() => {
   vi.resetAllMocks()
   localStorage.setItem('trackvest.locale', 'zh-TW')
+  getAssetPerformance.mockResolvedValue({ generatedAt: '2026-01-01T00:00:00.000Z', items: [] })
 })
 afterEach(() => { cleanup(); localStorage.removeItem('trackvest.locale') })
 
@@ -54,6 +60,14 @@ describe('performance POC', () => {
     fireEvent.click(screen.getByRole('button', { name: '返回全年 →' }))
     expect(screen.getByRole('table')).toBeInTheDocument()
     expect(screen.getByTestId('location')).not.toHaveTextContent('month=')
+  })
+
+  it('opens asset history from tab or hash inbound links, not the realized default', () => {
+    show('/performance?tab=history')
+    expect(screen.getByRole('tab', { name: '標的歷史' })).toHaveAttribute('aria-selected', 'true')
+    cleanup()
+    show('/performance#asset-history')
+    expect(screen.getByRole('tab', { name: '標的歷史' })).toHaveAttribute('aria-selected', 'true')
   })
 
 })

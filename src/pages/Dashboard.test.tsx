@@ -984,7 +984,7 @@ describe('Dashboard smoke tests', () => {
     expect(screen.getByText('10 shares')).toBeTruthy()
     expect(screen.getByRole('link', { name: 'Open full table' })).toHaveAttribute(
       'href',
-      '/performance',
+      '/performance?tab=history',
     )
   })
 
@@ -1013,7 +1013,7 @@ describe('Dashboard smoke tests', () => {
     ).toBeTruthy()
     expect(screen.getByRole('link', { name: 'Open full table' })).toHaveAttribute(
       'href',
-      '/performance',
+      '/performance?tab=history',
     )
   })
 
