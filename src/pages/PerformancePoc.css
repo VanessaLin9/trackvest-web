@@ -29,6 +29,7 @@
 .pf-summary-grid > div > p { color: #839187; font-size: 12px; margin-bottom: 7px; }
 .pf-main-value { display: block; font-size: clamp(30px, 3.5vw, 45px); font-weight: 550; line-height: 1.4; letter-spacing: -.035em; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
 .pf-main-value small { font-size: 11px; color: #91a095; font-weight: 400; letter-spacing: 0; }
+.pf-main-value.pf-long-value { font-size: clamp(22px, 2.8vw, 32px); }
 .performance-poc .pf-gain { color: #27816a; }
 .performance-poc .pf-loss { color: #c54754; }
 .pf-summary dl { display: grid; grid-template-columns: 1fr 1fr .65fr; gap: 22px; border-left: 1px solid #eaf0ec; padding-left: 30px; }
@@ -92,6 +93,16 @@
 .pf-dialog-note { margin-top: 15px; }
 .pf-existing-content > section { border-radius: 12px; border-color: #e0e7e3; box-shadow: none; padding: 24px; }
 .pf-existing-content { min-width: 0; }
+.pf-pagination { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 13px 24px; border-top: 1px solid #edf1ee; color: #8a9990; font-size: 11px; }
+.pf-pagination > div { display: flex; gap: 14px; }
+.pf-pagination button { color: #367969; }
+.pf-pagination button:disabled { color: #adb7b0; cursor: default; }
+.pf-data-warning { color: #99753b; background: #faf6ec; border-radius: 6px; padding: 10px 13px; margin-top: 10px; font-size: 11px; }
+.pf-data-warning button { text-decoration: underline; }
+.pf-current-month { display: block; font-size: 9px; color: #7a9684; }
+.performance-poc .pf-chart-missing .pf-chart-value { color: #a48755; }
+.pf-chart-missing .pf-chart-positive { border-bottom-style: dashed; }
+.pf-chart-value { overflow: hidden; text-overflow: ellipsis; }
 @media (max-width: 1100px) {
   .pf-summary-grid { grid-template-columns: 1fr; gap: 18px; }
   .pf-summary dl { border-left: 0; padding: 16px 0 0; border-top: 1px solid #edf1ee; }
@@ -112,6 +123,10 @@
   .pf-summary dd { font-size: 19px; }
   .pf-summary dl { gap: 15px; }
   .pf-main-value { font-size: 38px; }
+  .pf-precise-summary dl { grid-template-columns: 1fr; gap: 10px; }
+  .pf-precise-summary dl > div { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; }
+  .pf-precise-summary dt { margin-bottom: 0; }
+  .pf-precise-summary dd { font-size: 16px; }
   .pf-panel-heading { padding: 20px 18px; flex-wrap: wrap; align-items: flex-start; }
   .pf-panel-heading input { width: 100%; }
   .pf-panel-heading h2 .pf-badge { display: inline-block; }

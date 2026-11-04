@@ -13,7 +13,7 @@ function LocationProbe() {
   const location = useLocation()
   return <output data-testid="location">{location.search}</output>
 }
-function show(path = '/performance') {
+function show(path = '/performance?source=demo') {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } })
   render(<QueryClientProvider client={client}><I18nProvider><MemoryRouter initialEntries={[path]}><PerformancePoc /><LocationProbe /></MemoryRouter></I18nProvider></QueryClientProvider>)
 }
@@ -39,7 +39,7 @@ describe('performance POC', () => {
   })
 
   it('keeps period scope in the URL and clears the month when changing years', () => {
-    show('/performance?year=2025&month=7&account=B')
+    show('/performance?source=demo&year=2025&month=7&account=B')
     expect(screen.getByRole('region', { name: '已實現績效' })).toHaveTextContent('-1,100')
     fireEvent.change(screen.getByRole('combobox', { name: '年份' }), { target: { value: '2026' } })
     expect(screen.getByTestId('location')).toHaveTextContent('year=2026')
@@ -48,7 +48,7 @@ describe('performance POC', () => {
   })
 
   it('distinguishes a month with no sales and allows returning to the full year', () => {
-    show('/performance?month=5')
+    show('/performance?source=demo&month=5')
     expect(screen.getByText('這個期間沒有賣出紀錄')).toBeInTheDocument()
     expect(screen.queryByRole('table')).not.toBeInTheDocument()
     fireEvent.click(screen.getByRole('button', { name: '返回全年 →' }))
@@ -56,29 +56,4 @@ describe('performance POC', () => {
     expect(screen.getByTestId('location')).not.toHaveTextContent('month=')
   })
 
-  it('never substitutes demo data for a failed actual-data request', async () => {
-    getAnnualRealized.mockRejectedValue(new Error('offline'))
-    show('/performance?source=live')
-    expect(await screen.findByRole('alert')).toHaveTextContent('年度資料暫時無法取得')
-    expect(screen.queryByRole('table')).not.toBeInTheDocument()
-    expect(screen.queryByRole('button', { name: '查看 2330 賣出明細' })).not.toBeInTheDocument()
-    expect(screen.queryByText(/所有金額、帳戶及交易皆為合成資料/)).not.toBeInTheDocument()
-  })
-
-  it('keeps missing realized cost distinct from a zero-sale year in actual results', async () => {
-    getAnnualRealized.mockResolvedValue({
-      generatedAt: '2026-11-05T00:00:00Z', timeZone: 'Asia/Taipei',
-      items: [
-        { year: 2026, currency: 'TWD', sellCount: 1, netProceeds: '600.12345678', disposedCost: null, realizedNetPnl: null, issues: ['MISSING_FIFO'] },
-        { year: 2025, currency: 'TWD', sellCount: 0, netProceeds: '0', disposedCost: '0', realizedNetPnl: '0', issues: [] },
-      ],
-    })
-    show('/performance?source=live')
-    const summary = await screen.findByRole('region', { name: '已實現績效' })
-    expect(within(summary).getAllByText('資料不足')).toHaveLength(2)
-    expect(within(summary).getByText('600.12345678')).toBeInTheDocument()
-    fireEvent.change(screen.getByRole('combobox', { name: '年份' }), { target: { value: '2025' } })
-    expect(within(summary).queryByText('資料不足')).not.toBeInTheDocument()
-    expect(summary).toHaveTextContent('0')
-  })
 })

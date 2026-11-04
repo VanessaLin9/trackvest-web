@@ -1,7 +1,7 @@
 import { Link, useLocation, useSearchParams } from 'react-router-dom'
 import { AnnualBuyAllocationCard } from '../components/performance/AnnualBuyAllocationCard'
 import { AssetHistoryCard } from '../components/performance/AssetHistoryCard'
-import { LiveAnnualResults } from '../components/performance-poc/LiveAnnualResults'
+import { LiveRealizedExplorer } from '../components/performance-poc/LiveRealizedExplorer'
 import { RealizedExplorer } from '../components/performance-poc/RealizedExplorer'
 import { useI18n } from '../i18n'
 import './PerformancePoc.css'
@@ -19,7 +19,7 @@ export default function PerformancePoc() {
     : requestedTab === 'realized' ? 'realized'
       : location.hash === '#asset-history' ? 'history'
         : location.hash === '#annual-buys' ? 'buys' : 'realized'
-  const source = params.get('source') === 'live' ? 'live' : 'demo'
+  const source = params.get('source') === 'demo' ? 'demo' : 'live'
   function select(key: string, value: string) {
     setParams(current => { const next = new URLSearchParams(current); next.set(key, value); return next })
   }
@@ -48,7 +48,7 @@ export default function PerformancePoc() {
         <span aria-hidden="true">◉</span> {text(section !== 'realized' ? 'legacyNotice' : source === 'demo' ? 'demoNotice' : 'liveNotice')}
       </div>
       <div id="pf-content" role="tabpanel" aria-labelledby={`pf-tab-${section}`} className="pf-section-content">
-        {section === 'realized' ? <>{source === 'demo' ? <RealizedExplorer /> : <LiveAnnualResults />}</>
+        {section === 'realized' ? <>{source === 'demo' ? <RealizedExplorer /> : <LiveRealizedExplorer />}</>
           : <div className="pf-existing-content">{section === 'buys' ? <AnnualBuyAllocationCard variant="page" /> : <AssetHistoryCard variant="page" />}</div>}
       </div>
       <footer className="pf-footer"><span>TRACKVEST / {text('eyebrow')}</span><Link to="/performance-previous">{text('previous')} ↗</Link></footer>

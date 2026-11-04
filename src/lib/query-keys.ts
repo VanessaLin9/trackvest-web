@@ -14,6 +14,8 @@
  * `portfolioSummary`) so consumers can also invalidate a whole scope
  * (e.g. `queryClient.invalidateQueries({ queryKey: ['portfolio'] })`).
  */
+import type { RealizedPeriodQuery, RealizedAssetsQuery, RealizedTradesQuery } from './realized-performance'
+
 export const queryKeys = {
   health: () => ['health'] as const,
 
@@ -87,6 +89,13 @@ export const queryKeys = {
   },
 
   portfolio: {
+    // Every API scope and page is keyed separately; portfolio writes invalidate all three.
+    realizedPeriods: (userId: string, query: RealizedPeriodQuery) =>
+      ['portfolio', 'realized-periods', userId, query] as const,
+    realizedAssets: (userId: string, query: RealizedAssetsQuery) =>
+      ['portfolio', 'realized-assets', userId, query] as const,
+    realizedTrades: (userId: string, query: RealizedTradesQuery) =>
+      ['portfolio', 'realized-trades', userId, query] as const,
     /** Scope root — use with `invalidateQueries` to bust every portfolio entry. */
     all: () => ['portfolio'] as const,
     summary: (userId: string, displayCurrency: string) =>
