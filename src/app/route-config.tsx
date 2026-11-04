@@ -2,6 +2,7 @@ import type React from 'react'
 import Dashboard from '../pages/Dashboard'
 import Overview from '../pages/Overview'
 import Performance from '../pages/Performance'
+import PerformancePoc from '../pages/PerformancePoc'
 import Health from '../pages/dev/Health'
 import Users from '../pages/dev/Users'
 import Accounts from '../pages/Accounts'
@@ -21,7 +22,8 @@ export const routeConfig: RouteConfig[] = [
   // 首頁改走 Overview；舊 Dashboard 留在 /overview-previous 方便對照，不要刪（PR #30）
   { path: '/', labelKey: 'routes.dashboard', element: <Overview />, showInNav: true },
   { path: '/overview-previous', labelKey: 'routes.dashboard', element: <Dashboard />, showInNav: false },
-  { path: '/performance', labelKey: 'routes.performance', element: <Performance />, showInNav: true },
+  { path: '/performance', labelKey: 'routes.performance', element: <PerformancePoc />, showInNav: true },
+  { path: '/performance-previous', labelKey: 'routes.performance', element: <Performance />, showInNav: false },
   { path: '/cashbook', labelKey: 'routes.cashbook', element: <CashbookPage />, showInNav: true },
   { path: '/investments', labelKey: 'routes.investments', element: <Transactions />, showInNav: true },
   { path: '/gl', labelKey: 'routes.ledger', element: <GL />, showInNav: false },

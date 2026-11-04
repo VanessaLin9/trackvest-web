@@ -1,0 +1,127 @@
+.performance-poc { max-width: 1180px; margin: auto; color: #263b35; font: 13px/1.6 -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; }
+.performance-poc :is(button, select, input, a):focus-visible { outline: 3px solid #6a9c8e; outline-offset: 3px; }
+.performance-poc button, .performance-poc select, .performance-poc summary { cursor: pointer; }
+.pf-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 26px; }
+.pf-header h1 { font-size: 28px; font-weight: 650; letter-spacing: -.03em; margin: 0 0 5px; }
+.pf-header > div > p:last-child { color: #7b8784; font-size: 12px; }
+.pf-eyebrow { color: #82938d; font-size: 10px; font-weight: 600; letter-spacing: .18em; margin-bottom: 8px; }
+.pf-poc-label { border: 1px solid #dce6e0; background: #f0f5f2; color: #6a8676; font-size: 10px; letter-spacing: .12em; border-radius: 5px; padding: 4px 9px; }
+.pf-navigation { display: flex; align-items: center; justify-content: space-between; gap: 16px; margin-bottom: 17px; border-bottom: 1px solid #e1e8e3; }
+.pf-tabs { display: flex; gap: 28px; }
+.pf-tabs button { border-bottom: 2px solid transparent; padding: 12px 0 13px; font-size: 13px; color: #7b8b82; white-space: nowrap; }
+.pf-tabs button[aria-selected='true'] { border-color: #367969; color: #2e6958; font-weight: 600; }
+.pf-segment { display: flex; border-radius: 7px; border: 1px solid #e2e9e5; padding: 3px; background: #f0f4f2; gap: 3px; flex-shrink: 0; }
+.pf-segment button { border-radius: 5px; padding: 5px 10px; color: #839087; font-size: 11px; white-space: nowrap; }
+.pf-segment button[aria-pressed='true'] { color: #326952; background: #fff; box-shadow: 0 1px 4px #123b2110; font-weight: 600; }
+.pf-source-notice { padding: 10px 13px; display: flex; align-items: baseline; gap: 9px; border: 1px solid #dce7e2; background: #edf4f0; border-radius: 6px; font-size: 11px; color: #698475; margin-bottom: 23px; }
+.pf-source-demo { border-color: #e9e2cc; background: #f8f5eb; color: #93804d; }
+.pf-section-content { display: flex; flex-direction: column; gap: 22px; }
+.pf-filters { display: flex; align-items: end; gap: 16px; padding: 0 0 1px; }
+.pf-filters label { display: flex; flex-direction: column; gap: 6px; color: #87948d; font-size: 10px; }
+.pf-filters select { min-width: 130px; border: 1px solid #dfe7e2; border-radius: 6px; background: #fff; font-size: 12px; color: #476152; padding: 9px 12px; }
+.pf-currency { margin-left: auto; padding: 9px 0; color: #8a9990; font-size: 11px; }
+.pf-currency strong { color: #5c7467; font-weight: 500; margin-left: 7px; }
+.pf-summary { border: 1px solid #dfe7e2; border-radius: 12px; background: #fff; padding: 22px 25px 15px; }
+.pf-summary-title { display: flex; align-items: center; gap: 12px; color: #576f61; font-size: 13px; font-weight: 500; }
+.pf-scope-month { color: #8c9a91; margin-left: 7px; font-weight: 400; font-size: 11px; }
+.pf-badge { font-size: 10px; color: #8b998f; background: #f1f4f2; border-radius: 4px; padding: 2px 6px; font-weight: 400; margin-left: 5px; }
+.pf-summary-grid { display: grid; grid-template-columns: 1fr 1.2fr; align-items: center; gap: 35px; padding: 20px 0; }
+.pf-summary-grid > div > p { color: #839187; font-size: 12px; margin-bottom: 7px; }
+.pf-main-value { display: block; font-size: clamp(30px, 3.5vw, 45px); font-weight: 550; line-height: 1.4; letter-spacing: -.035em; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+.pf-main-value small { font-size: 11px; color: #91a095; font-weight: 400; letter-spacing: 0; }
+.performance-poc .pf-gain { color: #27816a; }
+.performance-poc .pf-loss { color: #c54754; }
+.pf-summary dl { display: grid; grid-template-columns: 1fr 1fr .65fr; gap: 22px; border-left: 1px solid #eaf0ec; padding-left: 30px; }
+.pf-summary dt { font-size: 11px; color: #8b998f; margin-bottom: 8px; }
+.pf-summary dl > div { min-width: 0; }
+.pf-summary dd { font-size: 20px; font-weight: 500; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+.pf-caption { color: #8a9990; font-size: 10px; }
+.pf-summary > .pf-caption { border-top: 1px solid #edf1ee; padding-top: 12px; }
+.pf-panel { border: 1px solid #e0e7e3; background: #fff; border-radius: 12px; overflow: hidden; min-width: 0; }
+.pf-panel-heading { display: flex; justify-content: space-between; align-items: center; gap: 14px; padding: 21px 24px; }
+.performance-poc h2 { font-size: 16px; font-weight: 600; letter-spacing: -.015em; }
+.pf-panel-heading p { font-size: 11px; color: #87968b; margin-top: 5px; }
+.pf-panel-heading input { border: 1px solid #e0e7e2; border-radius: 6px; font-size: 12px; padding: 8px 12px; width: 170px; min-width: 0; background: #fff; }
+.pf-chart-scroll { overflow-x: auto; margin: 0 16px; }
+.pf-chart { display: flex; min-width: 540px; align-items: stretch; gap: 4px; padding: 5px 8px 12px; font-variant-numeric: tabular-nums; }
+.pf-chart-column { flex: 1; min-width: 0; border-radius: 5px; padding: 10px 0 8px; }
+.pf-chart-column:hover { background: #f3f7f4; }
+.pf-chart-column[aria-pressed='true'] { background: #ecf4ef; }
+.pf-chart-value { color: #5f8a76; font-size: 10px; display: block; height: 22px; white-space: nowrap; }
+.pf-chart-loss .pf-chart-value { color: #bf6870; }
+.pf-chart-positive { display: flex; height: 85px; align-items: end; justify-content: center; border-bottom: 1px solid #dbe5de; }
+.pf-chart-negative { display: flex; height: 85px; align-items: start; justify-content: center; }
+.pf-chart-positive > span, .pf-chart-negative > span { width: 50%; max-width: 35px; background: #82aa97; border-radius: 3px 3px 0 0; }
+.pf-chart-column[aria-pressed='true'] .pf-chart-positive > span { background: #367969; }
+.pf-chart-negative > span { background: #dba7ac; border-radius: 0 0 3px 3px; }
+.pf-chart-label { display: block; color: #8a9990; font-size: 11px; margin-top: 3px; }
+.pf-year-chart { min-width: 0; max-width: 750px; margin: auto; }
+.pf-year-chart .pf-chart-positive > span, .pf-year-chart .pf-chart-negative > span { max-width: 75px; }
+.pf-chart-footer { display: flex; align-items: center; justify-content: space-between; padding: 11px 24px; background: #fcfdfc; border-top: 1px solid #edf1ee; color: #8a9990; font-size: 10px; }
+.pf-chart-footer button, .pf-empty button { color: #367969; font-size: 11px; }
+.pf-table-scroll { overflow-x: auto; }
+.performance-poc table { width: 100%; border-collapse: collapse; font-size: 12px; font-variant-numeric: tabular-nums; }
+.performance-poc th { position: relative; background: #f8faf9; color: #8d9a92; font-size: 10px; font-weight: 400; text-align: right; padding: 12px 15px; white-space: nowrap; }
+.performance-poc td { padding: 19px 15px; border-bottom: 1px solid #eef2ef; text-align: right; white-space: nowrap; }
+.performance-poc :is(th, td):first-child { text-align: left; padding-left: 24px; }
+.performance-poc :is(th, td):last-child { padding-right: 24px; }
+.performance-poc tr:last-child td { border-bottom: 0; }
+.performance-poc td strong { font-weight: 550; }
+.performance-poc td small { display: block; color: #8d9a92; font-size: 10px; margin-top: 3px; }
+.pf-asset-link { color: #365846; font-weight: 600; }
+.pf-asset-link:hover { text-decoration: underline; }
+.pf-detail-link { padding: 3px 6px; color: #819b8c; border-radius: 4px; }
+.pf-detail-link:hover { background: #eef4f0; }
+.pf-table-footer { padding: 11px 24px; color: #96a198; font-size: 10px; border-top: 1px solid #edf1ee; }
+.pf-selected-row { background: #edf5f0; }
+.pf-empty { text-align: center; padding: 48px 25px; color: #8d9a92; font-size: 12px; }
+.pf-empty h3 { color: #4e6b59; font-size: 15px; margin-bottom: 8px; }
+.pf-empty button { margin-top: 14px; }
+.pf-method { padding: 0 2px; color: #90a095; font-size: 11px; }
+.pf-method summary { display: list-item; }
+.pf-method p { padding: 15px; background: #f0f4f1; border-radius: 6px; line-height: 1.9; margin-top: 12px; }
+.pf-footer { display: flex; justify-content: space-between; gap: 16px; color: #99a69d; font-size: 9px; letter-spacing: .03em; margin-top: 30px; }
+.pf-footer a { text-decoration: underline; text-underline-offset: 3px; }
+.pf-dialog { position: fixed; margin: auto; width: min(850px, calc(100vw - 30px)); max-height: 85dvh; overflow: auto; border: 1px solid #dfe7e2; border-radius: 14px; padding: 30px; color: #263b35; background: #fff; box-shadow: 0 20px 100px #15342322; }
+.pf-dialog::backdrop { background: #162e2566; backdrop-filter: blur(3px); }
+.pf-close { position: absolute; right: 12px; top: 9px; padding: 5px 10px; font-size: 23px; color: #8a9990; }
+.pf-dialog h2 { font-size: 25px; }
+.pf-dialog h2 span { font-size: 14px; color: #8a9990; margin-left: 7px; font-weight: 400; }
+.pf-detail-total { font-size: 30px; font-weight: 500; margin: 20px 0; }
+.pf-detail-total small { font-size: 11px; font-weight: 400; }
+.pf-dialog-note { margin-top: 15px; }
+.pf-existing-content > section { border-radius: 12px; border-color: #e0e7e3; box-shadow: none; padding: 24px; }
+.pf-existing-content { min-width: 0; }
+@media (max-width: 1100px) {
+  .pf-summary-grid { grid-template-columns: 1fr; gap: 18px; }
+  .pf-summary dl { border-left: 0; padding: 16px 0 0; border-top: 1px solid #edf1ee; }
+  .pf-navigation { flex-wrap: wrap; padding-bottom: 13px; gap: 9px; }
+  .pf-tabs { flex: 1 0 100%; }
+}
+@media (max-width: 640px) {
+  .pf-header { margin-bottom: 17px; }
+  .pf-header h1 { font-size: 24px; }
+  .pf-header > div > p:last-child { font-size: 11px; max-width: 270px; }
+  .pf-tabs { justify-content: space-between; gap: 15px; }
+  .pf-tabs button { font-size: 12px; }
+  .pf-source-notice { font-size: 10px; }
+  .pf-filters { gap: 10px; flex-wrap: wrap; }
+  .pf-filters select { min-width: 100px; max-width: 160px; }
+  .pf-summary { padding: 20px 18px 14px; }
+  .pf-summary-grid { gap: 15px; padding: 18px 0; }
+  .pf-summary dd { font-size: 19px; }
+  .pf-summary dl { gap: 15px; }
+  .pf-main-value { font-size: 38px; }
+  .pf-panel-heading { padding: 20px 18px; flex-wrap: wrap; align-items: flex-start; }
+  .pf-panel-heading input { width: 100%; }
+  .pf-panel-heading h2 .pf-badge { display: inline-block; }
+  .pf-panel-heading .pf-segment { margin-top: 4px; }
+  .pf-chart-scroll { margin: 0 8px; }
+  .pf-chart-footer, .pf-table-footer { padding: 11px 18px; }
+  .performance-poc td { padding: 17px 12px; }
+  .performance-poc :is(th, td):first-child { padding-left: 18px; }
+  .pf-dialog { padding: 25px 17px; }
+  .pf-dialog h2 { font-size: 22px; }
+  .pf-dialog td { font-size: 11px; }
+  .pf-existing-content > section { padding: 18px; }
+}

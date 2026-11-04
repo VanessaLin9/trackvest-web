@@ -17,7 +17,7 @@ export default function Layout() {
   }
 
   return (
-    <div className={`flex min-h-screen ${location.pathname === "/" ? "overview-shell" : ""}`}>
+    <div className={`flex min-h-screen ${(location.pathname === "/" || location.pathname === "/performance") ? "overview-shell" : ""}`}>
       <nav className="w-[200px] bg-gray-100 p-5 border-r border-gray-300">
         <div className="mb-6">
           <div className="mb-4 pb-4 border-b border-gray-200/80">
