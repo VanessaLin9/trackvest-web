@@ -36,6 +36,12 @@ function renderOverview() {
 
 beforeEach(() => {
   vi.resetAllMocks()
+  HTMLDialogElement.prototype.showModal = function showModal() {
+    this.setAttribute('open', '')
+  }
+  HTMLDialogElement.prototype.close = function close() {
+    this.removeAttribute('open')
+  }
   window.localStorage.setItem('trackvest.locale', 'zh-TW')
   usePreferencesStore.setState({
     displayCurrencyMode: 'original',
@@ -60,6 +66,9 @@ beforeEach(() => {
         symbol: '0050',
         name: '元大台灣50',
         quantity: 10,
+        avgCost: 100,
+        latestPrice: 90,
+        latestPriceCurrency: 'TWD',
         marketValue: 900,
         investedAmount: 1000,
         pnl: -100,
@@ -95,6 +104,11 @@ describe('Overview homepage', () => {
     expect(screen.getByRole('link', { name: /回顧你的投資歷程/ })).toHaveAttribute(
       'href',
       '/performance',
+    )
+    fireEvent.click(screen.getByRole('button', { name: '查看 0050 明細' }))
+    expect(screen.getByRole('link', { name: '查看歷史成果 →' })).toHaveAttribute(
+      'href',
+      '/performance?tab=history',
     )
   })
 

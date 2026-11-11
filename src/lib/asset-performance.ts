@@ -71,7 +71,7 @@ function lastTradeTimestamp(item: PortfolioAssetPerformanceItem): number {
   return Number.isFinite(parsed) ? parsed : 0
 }
 
-/** 首頁只展示最近買賣的 N 檔，不重算損益；完整列表在 /performance（PR #27）。 */
+/** 首頁只展示最近買賣的 N 檔，不重算損益；完整列表在 /performance?tab=history（PR #27 / #31）。 */
 export function selectRecentAssetPerformanceItems(
   items: PortfolioAssetPerformanceItem[],
   limit = ASSET_PERFORMANCE_DASHBOARD_LIMIT,

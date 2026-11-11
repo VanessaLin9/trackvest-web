@@ -4,6 +4,10 @@ import type { AssetClass, AssetType } from './assets.service'
 import type { PortfolioAnnualBuysResponse } from './annual-buys'
 import type { PortfolioAnnualRealizedResponse } from './annual-realized'
 import type { PortfolioAssetPerformanceResponse } from './asset-performance'
+import type {
+  RealizedPeriods, RealizedAssets, RealizedTrades,
+  RealizedPeriodQuery, RealizedAssetsQuery, RealizedTradesQuery,
+} from './realized-performance'
 
 export type PortfolioSummary = {
   displayCurrencyMode: 'portfolio-default' | 'preferred-base'
@@ -149,6 +153,21 @@ function buildPortfolioRebalanceParams(query?: PortfolioRebalanceQuery) {
 }
 
 export const portfolioService = {
+  async getRealizedPeriods(query: RealizedPeriodQuery): Promise<RealizedPeriods> {
+    const response = await api.get<RealizedPeriods>('/portfolio/performance/realized/periods', { params: query })
+    return response.data
+  },
+
+  async getRealizedAssets(query: RealizedAssetsQuery): Promise<RealizedAssets> {
+    const response = await api.get<RealizedAssets>('/portfolio/performance/realized/assets', { params: query })
+    return response.data
+  },
+
+  async getRealizedTrades(query: RealizedTradesQuery): Promise<RealizedTrades> {
+    const response = await api.get<RealizedTrades>('/portfolio/performance/realized/trades', { params: query })
+    return response.data
+  },
+
   async getSummary(query?: PortfolioDisplayCurrencyQuery): Promise<PortfolioSummary> {
     const response = await api.get<PortfolioSummary>('/portfolio/summary', {
       params: buildPortfolioDisplayCurrencyParams(query),

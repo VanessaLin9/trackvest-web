@@ -77,8 +77,9 @@ export function AssetHistoryCard({
           </p>
         </div>
         {isDashboard ? (
+          // 完整列表走標的歷史分頁，不要連裸 /performance（PR #31）
           <Link
-            to="/performance"
+            to="/performance?tab=history"
             className="text-sm font-medium text-blue-600 hover:text-blue-700"
           >
             {t('performance.viewAll')}
